@@ -21,10 +21,13 @@
 
 package com.rubenlaguna.en4j.jpaentities;
 
+import javax.persistence.Entity;
+
 /**
  *
  * @author Ruben Laguna <ruben.laguna at gmail.com>
  */
+@Entity
 public class Notes {
 
 }
