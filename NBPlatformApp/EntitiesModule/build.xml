@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See harness/README in the NetBeans platform -->
+<!-- for some information on what you could do (e.g. targets to override). -->
+<!-- If you delete this file and reopen the project it will be recreated. -->
+<project name="com.rubenlaguna.en4j.entities" default="netbeans" basedir=".">
+    <description>Builds, tests, and runs the project com.rubenlaguna.en4j.entities.</description>
+    <import file="nbproject/build-impl.xml"/>
+
+    <property name="original.project.dir" value="../../JpaEntitiesClassLibrary"/>
+    <property name="original.project.jar"
+          value="${original.project.dir}/dist/JpaEntitiesClassLibrary.jar"/>
+
+    <target name="release">
+        <echo message="Building ${original.project.dir}"/>
+        <ant dir="${original.project.dir}"
+         target="jar" inheritall="false" inheritrefs="false"/>
+        <echo message="Done building ${original.project.dir}"/>
+
+        <copy todir="${cluster}/modules/ext"
+          file="${original.project.jar}"/>
+    </target>
+
+
+    <target name="clean" depends="projectized-common.clean">
+        <echo message="Cleaning ${original.project.dir}"/>
+        <ant dir="${original.project.dir}"
+         target="clean" inheritall="false" inheritrefs="false"/>
+        <echo message="Done cleaning ${original.project.dir}"/>
+    </target>
+</project>

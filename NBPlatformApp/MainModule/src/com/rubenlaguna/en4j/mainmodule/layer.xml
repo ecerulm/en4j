@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.2//EN" "http://www.netbeans.org/dtds/filesystem-1_2.dtd">
+<filesystem>
+    <folder name="Actions">
+        <folder name="Window">
+            <file name="com-rubenlaguna-en4j-mainmodule-NoteListAction.instance">
+                <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
+                <attr name="component" methodvalue="com.rubenlaguna.en4j.mainmodule.NoteListTopComponent.findInstance"/>
+                <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.mainmodule.Bundle#CTL_NoteListAction"/>
+                <attr name="instanceCreate" methodvalue="org.openide.windows.TopComponent.openAction"/>
+            </file>
+        </folder>
+    </folder>
+    <folder name="Menu">
+        <folder name="Window">
+            <file name="NoteListAction.shadow">
+                <attr name="originalFile" stringvalue="Actions/Window/com-rubenlaguna-en4j-mainmodule-NoteListAction.instance"/>
+            </file>
+        </folder>
+    </folder>
+    <folder name="Windows2">
+        <folder name="Components">
+            <file name="NoteListTopComponent.settings" url="NoteListTopComponentSettings.xml"/>
+        </folder>
+        <folder name="Modes">
+            <folder name="output">
+                <file name="NoteListTopComponent.wstcref" url="NoteListTopComponentWstcref.xml"/>
+            </folder>
+        </folder>
+    </folder>
+</filesystem>
