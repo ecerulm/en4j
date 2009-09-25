@@ -7,14 +7,6 @@
             <suite-component/>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>com.rubenlaguna.en4j.geronimo</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>1.0</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
                     <code-name-base>com.rubenlaguna.en4j.openjpa</code-name-base>
                     <run-dependency>
                         <specification-version>1.0</specification-version>

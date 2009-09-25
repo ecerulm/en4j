@@ -7,14 +7,6 @@
             <suite-component/>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>com.rubenlaguna.en4j.geronimo</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>1.0</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
                     <code-name-base>com.rubenlaguna.en4j.hsqldb</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -23,7 +15,80 @@
                     </run-dependency>
                 </dependency>
             </module-dependencies>
-            <public-packages/>
+            <public-packages>
+                <package>javax.persistence</package>
+                <package>javax.persistence.spi</package>
+                <package>javax.transaction</package>
+                <package>javax.transaction.xa</package>
+                <package>org.apache.commons.collections</package>
+                <package>org.apache.commons.collections.bag</package>
+                <package>org.apache.commons.collections.bidimap</package>
+                <package>org.apache.commons.collections.buffer</package>
+                <package>org.apache.commons.collections.collection</package>
+                <package>org.apache.commons.collections.comparators</package>
+                <package>org.apache.commons.collections.functors</package>
+                <package>org.apache.commons.collections.iterators</package>
+                <package>org.apache.commons.collections.keyvalue</package>
+                <package>org.apache.commons.collections.list</package>
+                <package>org.apache.commons.collections.map</package>
+                <package>org.apache.commons.collections.set</package>
+                <package>org.apache.commons.lang</package>
+                <package>org.apache.commons.lang.builder</package>
+                <package>org.apache.commons.lang.enums</package>
+                <package>org.apache.commons.lang.exception</package>
+                <package>org.apache.commons.lang.math</package>
+                <package>org.apache.commons.lang.mutable</package>
+                <package>org.apache.commons.lang.time</package>
+                <package>org.apache.commons.pool</package>
+                <package>org.apache.commons.pool.impl</package>
+                <package>org.apache.openjpa.abstractstore</package>
+                <package>org.apache.openjpa.ant</package>
+                <package>org.apache.openjpa.conf</package>
+                <package>org.apache.openjpa.datacache</package>
+                <package>org.apache.openjpa.ee</package>
+                <package>org.apache.openjpa.enhance</package>
+                <package>org.apache.openjpa.event</package>
+                <package>org.apache.openjpa.jdbc.ant</package>
+                <package>org.apache.openjpa.jdbc.conf</package>
+                <package>org.apache.openjpa.jdbc.kernel</package>
+                <package>org.apache.openjpa.jdbc.kernel.exps</package>
+                <package>org.apache.openjpa.jdbc.meta</package>
+                <package>org.apache.openjpa.jdbc.meta.strats</package>
+                <package>org.apache.openjpa.jdbc.schema</package>
+                <package>org.apache.openjpa.jdbc.sql</package>
+                <package>org.apache.openjpa.kernel</package>
+                <package>org.apache.openjpa.kernel.exps</package>
+                <package>org.apache.openjpa.kernel.jpql</package>
+                <package>org.apache.openjpa.lib.ant</package>
+                <package>org.apache.openjpa.lib.conf</package>
+                <package>org.apache.openjpa.lib.graph</package>
+                <package>org.apache.openjpa.lib.jdbc</package>
+                <package>org.apache.openjpa.lib.log</package>
+                <package>org.apache.openjpa.lib.meta</package>
+                <package>org.apache.openjpa.lib.rop</package>
+                <package>org.apache.openjpa.lib.util</package>
+                <package>org.apache.openjpa.lib.util.concurrent</package>
+                <package>org.apache.openjpa.lib.xml</package>
+                <package>org.apache.openjpa.meta</package>
+                <package>org.apache.openjpa.persistence</package>
+                <package>org.apache.openjpa.persistence.jdbc</package>
+                <package>org.apache.openjpa.slice</package>
+                <package>org.apache.openjpa.slice.jdbc</package>
+                <package>org.apache.openjpa.util</package>
+                <package>org.apache.openjpa.xmlstore</package>
+                <package>serp.bytecode</package>
+                <package>serp.bytecode.lowlevel</package>
+                <package>serp.bytecode.visitor</package>
+                <package>serp.util</package>
+            </public-packages>
+            <class-path-extension>
+                <runtime-relative-path>ext/geronimo-jta_1.1_spec-1.1.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/geronimo-jta_1.1_spec-1.1.jar</binary-origin>
+            </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/geronimo-jpa_3.0_spec-1.0.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/geronimo-jpa_3.0_spec-1.0.jar</binary-origin>
+            </class-path-extension>
             <class-path-extension>
                 <runtime-relative-path>ext/commons-lang-2.1.jar</runtime-relative-path>
                 <binary-origin>release/modules/ext/commons-lang-2.1.jar</binary-origin>
