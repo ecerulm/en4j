@@ -44,7 +44,7 @@ public final class NoteListTopComponent extends TopComponent {
     private void initComponents() {
 
         entityManager = java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU").createEntityManager(); // NOI18N
-        query1 = java.beans.Beans.isDesignTime() ? null : ((javax.persistence.EntityManager)null).createQuery("");
+        query1 = java.beans.Beans.isDesignTime() ? null : entityManager.createQuery(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.query1.query")); // NOI18N
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
 
