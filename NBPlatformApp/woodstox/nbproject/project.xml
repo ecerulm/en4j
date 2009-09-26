@@ -23,6 +23,11 @@
                 <package>com.ctc.wstx.stax</package>
                 <package>com.ctc.wstx.sw</package>
                 <package>com.ctc.wstx.util</package>
+                <package>javax.xml</package>
+                <package>javax.xml.namespace</package>
+                <package>javax.xml.stream</package>
+                <package>javax.xml.stream.events</package>
+                <package>javax.xml.stream.util</package>
                 <package>org.codehaus.stax2</package>
                 <package>org.codehaus.stax2.evt</package>
                 <package>org.codehaus.stax2.io</package>
@@ -35,6 +40,10 @@
                 <package>org.codehaus.stax2.util</package>
                 <package>org.codehaus.stax2.validation</package>
             </public-packages>
+            <class-path-extension>
+                <runtime-relative-path>ext/stax-api-1.0.1.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/stax-api-1.0.1.jar</binary-origin>
+            </class-path-extension>
             <class-path-extension>
                 <runtime-relative-path>ext/stax2-api-3.0.1.jar</runtime-relative-path>
                 <binary-origin>release/modules/ext/stax2-api-3.0.1.jar</binary-origin>
