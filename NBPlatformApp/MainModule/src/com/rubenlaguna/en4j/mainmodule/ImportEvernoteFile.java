@@ -84,6 +84,7 @@ public final class ImportEvernoteFile implements ActionListener {
                                 entityManager1.persist(entityNode);
                                 entityManager1.getTransaction().commit();
                                 System.out.println("persisted: " + n.getTitle());
+                                ph.progress(entityNode.getTitle());
                             } //end if
                             break;
 
