@@ -2,6 +2,15 @@
 <!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.2//EN" "http://www.netbeans.org/dtds/filesystem-1_2.dtd">
 <filesystem>
     <folder name="Actions">
+        <folder name="File">
+            <file name="com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.instance">
+                <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
+                <attr name="delegate" newvalue="com.rubenlaguna.en4j.mainmodule.ImportEvernoteFile"/>
+                <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.mainmodule.Bundle#CTL_ImportEvernoteFile"/>
+                <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
+                <attr name="noIconInMenu" boolvalue="false"/>
+            </file>
+        </folder>
         <folder name="Window">
             <file name="com-rubenlaguna-en4j-mainmodule-NoteListAction.instance">
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
@@ -12,6 +21,12 @@
         </folder>
     </folder>
     <folder name="Menu">
+        <folder name="File">
+            <file name="com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.shadow">
+                <attr name="originalFile" stringvalue="Actions/File/com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.instance"/>
+                <attr name="position" intvalue="0"/>
+            </file>
+        </folder>
         <folder name="Window">
             <file name="NoteListAction.shadow">
                 <attr name="originalFile" stringvalue="Actions/Window/com-rubenlaguna-en4j-mainmodule-NoteListAction.instance"/>
