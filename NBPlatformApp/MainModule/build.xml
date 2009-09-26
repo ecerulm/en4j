@@ -23,6 +23,7 @@
 
         <xjc destdir="src" package="com.rubenlaguna.en4j.jaxb">
             <schema  dir="src" includes="**/*.xsd"/>
+            <produces dir="src/com/rubenlaguna/en4j/jaxb" includes="* impl/*" />
         </xjc>
     </target>
     <target name="compile" depends="-pre-compile,projectized-common.compile"/>
