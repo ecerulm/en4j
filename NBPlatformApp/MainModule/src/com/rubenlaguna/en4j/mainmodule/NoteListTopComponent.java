@@ -6,8 +6,10 @@
 package com.rubenlaguna.en4j.mainmodule;
 
 import com.rubenlaguna.en4j.jpaentities.Notes;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import org.jdesktop.observablecollections.ObservableCollections;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -37,6 +39,12 @@ public final class NoteListTopComponent extends TopComponent {
 
     }
 
+    public void refresh()
+    {
+        list1.clear();
+        list1.addAll(query1.getResultList());
+    }
+
     /** This method is called from within the constructor to
      * initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is
@@ -46,9 +54,9 @@ public final class NoteListTopComponent extends TopComponent {
     private void initComponents() {
         bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
-        entityManager = java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU").createEntityManager(); // NOI18N
+        entityManager = java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory(null).createEntityManager();
         query1 = java.beans.Beans.isDesignTime() ? null : entityManager.createQuery(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.query1.query")); // NOI18N
-        list1 = java.beans.Beans.isDesignTime() ? java.util.Collections.emptyList() : query1.getResultList();
+        list1 = getList();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
 
@@ -160,6 +168,12 @@ public final class NoteListTopComponent extends TopComponent {
     @Override
     protected String preferredID() {
         return PREFERRED_ID;
+    }
+
+    private List<Notes> getList() {
+        List<Notes> toReturn = ObservableCollections.observableList(new ArrayList<Notes>());
+        toReturn.addAll(query1.getResultList());
+        return toReturn;
     }
 
 }

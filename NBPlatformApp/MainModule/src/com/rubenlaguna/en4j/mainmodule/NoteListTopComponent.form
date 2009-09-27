@@ -4,7 +4,7 @@
   <NonVisualComponents>
     <Component class="javax.persistence.EntityManager" name="entityManager">
       <Properties>
-        <Property name="persistenceUnit" type="java.lang.String" value="JpaEntitiesClassLibraryPU" noResource="true"/>
+        <Property name="persistenceUnit" type="java.lang.String" value="JpaEntitiesClassLibraryPU"/>
       </Properties>
     </Component>
     <Component class="javax.persistence.Query" name="query1">
@@ -22,8 +22,10 @@
         <Property name="query" type="java.lang.Object" editor="org.netbeans.modules.form.j2ee.J2EEPropertyModifier$QueryBeanProperty$QueryEditor">
           <ComponentRef name="query1"/>
         </Property>
+        <Property name="observable" type="boolean" value="true"/>
       </Properties>
       <AuxValues>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="getList()"/>
         <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;Notes&gt;"/>
       </AuxValues>
     </Component>
