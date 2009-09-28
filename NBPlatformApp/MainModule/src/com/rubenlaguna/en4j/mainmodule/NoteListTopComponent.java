@@ -7,8 +7,11 @@ package com.rubenlaguna.en4j.mainmodule;
 
 import com.rubenlaguna.en4j.jpaentities.Notes;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
+import javax.persistence.EntityManager;
 import org.jdesktop.observablecollections.ObservableCollections;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
@@ -54,7 +57,7 @@ public final class NoteListTopComponent extends TopComponent {
     private void initComponents() {
         bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
-        entityManager = java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory(null).createEntityManager();
+        entityManager = getEntityManagerFactory();
         query1 = java.beans.Beans.isDesignTime() ? null : entityManager.createQuery(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.query1.query")); // NOI18N
         list1 = getList();
         jScrollPane1 = new javax.swing.JScrollPane();
@@ -174,6 +177,13 @@ public final class NoteListTopComponent extends TopComponent {
         List<Notes> toReturn = ObservableCollections.observableList(new ArrayList<Notes>());
         toReturn.addAll(query1.getResultList());
         return toReturn;
+    }
+
+    public EntityManager getEntityManagerFactory() {
+        Map properties = new HashMap();
+        properties.put("openjpa.ConnectionURL","jdbc:hsqldb:file:"+System.getProperty("netbeans.user")+"/db");
+        System.out.println(properties.toString());
+        return java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU",properties).createEntityManager();
     }
 
 }

@@ -14,6 +14,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.swing.SwingWorker;
 import javax.xml.bind.JAXBContext;
@@ -53,8 +55,10 @@ public final class ImportEvernoteFile implements ActionListener {
 
                         final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                         ph.start();
+                        Map properties = new HashMap();
+                        properties.put("openjpa.ConnectionURL", "jdbc:hsqldb:file:" + System.getProperty("netbeans.user")+"/db");
 
-                        EntityManager entityManager1 = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU").createEntityManager();
+                        EntityManager entityManager1 = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties).createEntityManager();
                         int available = (int) toAdd.length();
                         ph.switchToDeterminate(available);
                         InputStream in = null;
@@ -115,9 +119,8 @@ public final class ImportEvernoteFile implements ActionListener {
                                 NoteListTopComponent.findInstance().refresh();
 
                             }
-
                         }.execute();
-                        
+
                         //NoteListTopComponent.findInstance().invalidate();
                     } catch (JAXBException ex) {
                         Exceptions.printStackTrace(ex);

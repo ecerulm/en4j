@@ -6,6 +6,9 @@
       <Properties>
         <Property name="persistenceUnit" type="java.lang.String" value="JpaEntitiesClassLibraryPU"/>
       </Properties>
+      <AuxValues>
+        <AuxValue name="JavaCodeGenerator_CreateCodeCustom" type="java.lang.String" value="getEntityManagerFactory()"/>
+      </AuxValues>
     </Component>
     <Component class="javax.persistence.Query" name="query1">
       <Properties>
