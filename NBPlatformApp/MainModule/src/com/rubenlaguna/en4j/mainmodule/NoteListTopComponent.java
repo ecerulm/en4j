@@ -7,17 +7,28 @@ package com.rubenlaguna.en4j.mainmodule;
 
 import com.rubenlaguna.en4j.jpaentities.Notes;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import org.jdesktop.beansbinding.BeanProperty;
+import org.jdesktop.beansbinding.Property;
 import org.jdesktop.observablecollections.ObservableCollections;
+import org.jdesktop.swingbinding.JTableBinding;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ImageUtilities;
 import org.netbeans.api.settings.ConvertAsProperties;
+import org.openide.util.Lookup;
+import org.openide.util.lookup.AbstractLookup;
+import org.openide.util.lookup.InstanceContent;
 
 /**
  * Top component which displays something.
@@ -26,7 +37,7 @@ import org.netbeans.api.settings.ConvertAsProperties;
     dtd="-//com.rubenlaguna.en4j.mainmodule//NoteList//EN",
     autostore=false
 )
-public final class NoteListTopComponent extends TopComponent {
+public final class NoteListTopComponent extends TopComponent implements ListSelectionListener {
 
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
@@ -34,12 +45,16 @@ public final class NoteListTopComponent extends TopComponent {
 
     private static final String PREFERRED_ID = "NoteListTopComponent";
 
+
+    private final InstanceContent ic = new InstanceContent();
+
     public NoteListTopComponent() {
         initComponents();
         setName(NbBundle.getMessage(NoteListTopComponent.class, "CTL_NoteListTopComponent"));
         setToolTipText(NbBundle.getMessage(NoteListTopComponent.class, "HINT_NoteListTopComponent"));
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
-
+        associateLookup(new AbstractLookup(ic));
+        jTable1.getSelectionModel().addListSelectionListener(this);
     }
 
     public void refresh()
@@ -184,6 +199,17 @@ public final class NoteListTopComponent extends TopComponent {
         properties.put("openjpa.ConnectionURL","jdbc:hsqldb:file:"+System.getProperty("netbeans.user")+"/db");
         System.out.println(properties.toString());
         return java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU",properties).createEntityManager();
+    }
+
+    public void valueChanged(ListSelectionEvent arg0) {
+        if (!arg0.getValueIsAdjusting()) {
+            int sr = jTable1.getSelectedRow();
+            Property p = BeanProperty.create("selectedElement");
+            ic.set(Collections.singleton(p.getValue(jTable1)), null);
+            Logger.getLogger(getName()).log(Level.WARNING, "selection changed: "+p.getValue(jTable1).toString());
+         
+
+        }
     }
 
 }
