@@ -2,7 +2,6 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.rubenlaguna.en4j.mainmodule;
 
 import com.rubenlaguna.en4j.jpaentities.Notes;
@@ -29,23 +28,21 @@ import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.util.Lookup;
 import org.openide.util.lookup.AbstractLookup;
 import org.openide.util.lookup.InstanceContent;
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
+import com.rubenlaguna.en4j.interfaces.NoteRepository;
+import java.util.Collection;
 
 /**
  * Top component which displays something.
  */
-@ConvertAsProperties(
-    dtd="-//com.rubenlaguna.en4j.mainmodule//NoteList//EN",
-    autostore=false
-)
+@ConvertAsProperties(dtd = "-//com.rubenlaguna.en4j.mainmodule//NoteList//EN",
+autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener {
 
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
-
     private static final String PREFERRED_ID = "NoteListTopComponent";
-
-
     private final InstanceContent ic = new InstanceContent();
 
     public NoteListTopComponent() {
@@ -57,10 +54,10 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jTable1.getSelectionModel().addListSelectionListener(this);
     }
 
-    public void refresh()
-    {
+    public void refresh() {
         list1.clear();
-        list1.addAll(query1.getResultList());
+        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+        list1.addAll(rep.getAllNotes());
     }
 
     /** This method is called from within the constructor to
@@ -72,11 +69,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private void initComponents() {
         bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
-        entityManager = getEntityManagerFactory();
-        query1 = java.beans.Beans.isDesignTime() ? null : entityManager.createQuery(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.query1.query")); // NOI18N
         list1 = getList();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
+        searchTextField = new javax.swing.JTextField();
+        jButton1 = new javax.swing.JButton();
 
         jTable1.setColumnSelectionAllowed(true);
 
@@ -91,34 +88,63 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
 
+        searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(jButton1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jButton1.text")); // NOI18N
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 297, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton1))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 288, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton1))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 256, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
         bindingGroup.bind();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        // TODO add your handling code here:
+        NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
+
+        Collection<Notes> list = finder.find(searchTextField.getText());
+        list1.clear();
+        list1.addAll(list);
+
+
+    }//GEN-LAST:event_jButton1ActionPerformed
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.persistence.EntityManager entityManager;
+    private javax.swing.JButton jButton1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
     private java.util.List<Notes> list1;
-    private javax.persistence.Query query1;
+    private javax.swing.JTextField searchTextField;
     private org.jdesktop.beansbinding.BindingGroup bindingGroup;
     // End of variables declaration//GEN-END:variables
+
     /**
      * Gets default instance. Do not use directly: reserved for *.settings files only,
      * i.e. deserialization routines; otherwise you could get a non-deserialized instance.
@@ -145,8 +171,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             return (NoteListTopComponent) win;
         }
         Logger.getLogger(NoteListTopComponent.class.getName()).warning(
-                "There seem to be multiple components with the '" + PREFERRED_ID +
-                "' ID. That is a potential source of errors and unexpected behavior.");
+                "There seem to be multiple components with the '" + PREFERRED_ID
+                + "' ID. That is a potential source of errors and unexpected behavior.");
         return getDefault();
     }
 
@@ -190,26 +216,33 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     private List<Notes> getList() {
         List<Notes> toReturn = ObservableCollections.observableList(new ArrayList<Notes>());
-        toReturn.addAll(query1.getResultList());
+        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+        toReturn.addAll(rep.getAllNotes());
+        Logger logger = Logger.getLogger(NoteListTopComponent.class.getName());
+        logger.log(Level.INFO, "number of entries in db:" + toReturn.size());
         return toReturn;
     }
 
-    public EntityManager getEntityManagerFactory() {
-        Map properties = new HashMap();
-        properties.put("openjpa.ConnectionURL","jdbc:hsqldb:file:"+System.getProperty("netbeans.user")+"/db");
-        System.out.println(properties.toString());
-        return java.beans.Beans.isDesignTime() ? null : javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU",properties).createEntityManager();
-    }
 
     public void valueChanged(ListSelectionEvent arg0) {
         if (!arg0.getValueIsAdjusting()) {
             int sr = jTable1.getSelectedRow();
             Property p = BeanProperty.create("selectedElement");
-            ic.set(Collections.singleton(p.getValue(jTable1)), null);
-            Logger.getLogger(getName()).log(Level.WARNING, "selection changed: "+p.getValue(jTable1).toString());
-         
+            Object value = p.getValue(jTable1);
+
+            //TODO clear this, move ic.set outside the if else block 
+            if (value != null) {
+                ic.set(Collections.singleton(value), null);
+                Logger.getLogger(getName()).log(Level.WARNING, "selection changed: " + p.getValue(jTable1).toString());
+
+            } else {
+                ic.set(Collections.EMPTY_SET, null);
+                Logger.getLogger(getName()).log(Level.WARNING, "selection changed: nothing selected");
+            }
+
+
+
 
         }
     }
-
 }

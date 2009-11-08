@@ -51,12 +51,13 @@ public final class ImportEvernoteFile implements ActionListener {
             Runnable task = new Runnable() {
 
                 public void run() {
+                    //TODO: Move all this to Database
                     try {
 
                         final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                         ph.start();
                         Map properties = new HashMap();
-                        properties.put("openjpa.ConnectionURL", "jdbc:hsqldb:file:" + System.getProperty("netbeans.user")+"/db");
+                        properties.put("openjpa.ConnectionURL", "jdbc:hsqldb:file:" + System.getProperty("netbeans.user")+"/en4j/db");
 
                         EntityManager entityManager1 = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties).createEntityManager();
                         int available = (int) toAdd.length();

@@ -1,0 +1,8 @@
+Manifest-Version: 1.0
+OpenIDE-Module: com.rubenlaguna.en4j.searchlucene
+OpenIDE-Module-Layer: com/rubenlaguna/en4j/searchlucene/layer.xml
+OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/searchlucene/Bundle.properties
+OpenIDE-Module-Specification-Version: 1.0
+OpenIDE-Module-Provides: com.rubenlaguna.en4j.interfaces.NoteFinder
+OpenIDE-Module-Requires: com.rubenlaguna.en4j.interfaces.NoteRepository
+

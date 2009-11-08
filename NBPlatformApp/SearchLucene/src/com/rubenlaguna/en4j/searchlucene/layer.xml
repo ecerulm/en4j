@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.2//EN" "http://www.netbeans.org/dtds/filesystem-1_2.dtd">
+<filesystem>
+    <folder name="Actions">
+        <folder name="Tools">
+            <file name="com-rubenlaguna-en4j-searchlucene-RebuildIndex.instance">
+                <attr name="delegate" newvalue="com.rubenlaguna.en4j.searchlucene.RebuildIndex"/>
+                <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.searchlucene.Bundle#CTL_RebuildIndex"/>
+                <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
+                <attr name="noIconInMenu" boolvalue="false"/>
+            </file>
+        </folder>
+    </folder>
+    <folder name="Menu">
+        <folder name="Tools">
+            <file name="com-rubenlaguna-en4j-searchlucene-RebuildIndex.shadow">
+                <attr name="originalFile" stringvalue="Actions/Tools/com-rubenlaguna-en4j-searchlucene-RebuildIndex.instance"/>
+                <attr name="position" intvalue="0"/>
+            </file>
+        </folder>
+    </folder>
+</filesystem>
