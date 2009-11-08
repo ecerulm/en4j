@@ -4,8 +4,9 @@
  */
 package com.rubenlaguna.en4j.mainmodule;
 
+import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.jaxb.generated.Note;
-import com.rubenlaguna.en4j.jpaentities.Notes;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedInputStream;
@@ -16,7 +17,7 @@ import java.io.InputStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import javax.persistence.EntityManager;
+
 import javax.swing.SwingWorker;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -30,6 +31,7 @@ import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
 import org.openide.filesystems.FileChooserBuilder;
 import org.openide.util.Exceptions;
+import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
 
 public final class ImportEvernoteFile implements ActionListener {
@@ -52,14 +54,19 @@ public final class ImportEvernoteFile implements ActionListener {
 
                 public void run() {
                     //TODO: Move all this to Database
+
+                    NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+                    //
+
                     try {
 
                         final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                         ph.start();
-                        Map properties = new HashMap();
-                        properties.put("openjpa.ConnectionURL", "jdbc:hsqldb:file:" + System.getProperty("netbeans.user")+"/en4j/db");
+//                        Map properties = new HashMap();
+//                        properties.put("openjpa.ConnectionURL", "jdbc:hsqldb:file:" + System.getProperty("netbeans.user")+"/en4j/db");
+//
+//                        EntityManager entityManager1 = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties).createEntityManager();
 
-                        EntityManager entityManager1 = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties).createEntityManager();
                         int available = (int) toAdd.length();
                         ph.switchToDeterminate(available);
                         InputStream in = null;
@@ -70,41 +77,8 @@ public final class ImportEvernoteFile implements ActionListener {
                             }
                         }));
 
-                        XMLInputFactory factory = XMLInputFactory.newInstance();
-                        System.out.println("factory:" + factory);
-                        factory.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
-                        XMLStreamReader xmlStreamReader = factory.createXMLStreamReader(in);
-                        JAXBContext jc = JAXBContext.newInstance("com.rubenlaguna.en4j.jaxb.generated");
-                        Unmarshaller u = jc.createUnmarshaller();
-                        int inHeader = 0;
-                        int notes = 0;
-                        for (int event = xmlStreamReader.next(); event != XMLStreamConstants.END_DOCUMENT; event = xmlStreamReader.next()) {
-                            switch (event) {
-                                case XMLStreamConstants.START_ELEMENT:
-                                    if ("note".equals(xmlStreamReader.getLocalName())) {
+                        rep.importEntries(in,ph);
 
-                                        entityManager1.getTransaction().begin();
-
-                                        Note n = (Note) u.unmarshal(xmlStreamReader);
-                                        ph.progress(n.getTitle());
-                                        notes++;
-                                        Notes entityNode = new Notes();
-                                        entityNode.setContent(n.getContent());
-                                        entityNode.setCreated(new Date());
-                                        entityNode.setUpdated(new Date());
-                                        entityNode.setTitle(n.getTitle());
-                                        entityManager1.persist(entityNode);
-                                        entityManager1.getTransaction().commit();
-
-                                        //System.out.println("persisted: " + n.getTitle());
-                                        //ph.progress(entityNode.getTitle());
-                                        //ph.progress("xxx");
-                                    } //end if
-                                    break;
-
-                            } // end switch
-                        } // end for
-                        xmlStreamReader.close();
                         ph.finish();
 
                         new SwingWorker() {
@@ -123,13 +97,9 @@ public final class ImportEvernoteFile implements ActionListener {
                         }.execute();
 
                         //NoteListTopComponent.findInstance().invalidate();
-                    } catch (JAXBException ex) {
-                        Exceptions.printStackTrace(ex);
                     } catch (FileNotFoundException ex) {
                         Exceptions.printStackTrace(ex);
-                    } catch (XMLStreamException ex) {
-                        Exceptions.printStackTrace(ex);
-                    }
+                    } 
                 }
             };
             RequestProcessor.getDefault().post(task);

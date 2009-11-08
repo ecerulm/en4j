@@ -6,7 +6,8 @@ package com.rubenlaguna.en4j.searchlucene;
 
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
-import com.rubenlaguna.en4j.jpaentities.Notes;
+
+import com.rubenlaguna.en4j.noteinterface.Note;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,12 +19,10 @@ import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
-import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.openide.util.Exceptions;
@@ -35,8 +34,8 @@ import org.openide.util.Lookup;
  */
 public class NoteFinderLuceneImpl implements NoteFinder {
 
-    public Collection<Notes> find(String searchText) {
-        Collection<Notes> toReturn = new ArrayList<Notes>();
+    public Collection<Note> find(String searchText) {
+        Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");

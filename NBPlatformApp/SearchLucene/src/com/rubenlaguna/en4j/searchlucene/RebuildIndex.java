@@ -5,13 +5,13 @@
 package com.rubenlaguna.en4j.searchlucene;
 
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
-import com.rubenlaguna.en4j.jpaentities.Notes;
+
+import com.rubenlaguna.en4j.noteinterface.Note;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -41,9 +41,9 @@ public final class RebuildIndex implements ActionListener {
             writer.setUseCompoundFile(true);
             writer.deleteAll();
             writer.commit();
-            Collection<Notes> notes = getAllNotes();
+            Collection<Note> notes = getAllNotes();
 
-            for (Notes note : notes) {
+            for (Note note : notes) {
                 //Lucene document http://www.darksleep.com/lucene/
                 Document document = new Document();
 
@@ -84,10 +84,10 @@ public final class RebuildIndex implements ActionListener {
 
     }
 
-    private Collection<Notes> getAllNotes() {
+    private Collection<Note> getAllNotes() {
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
 
-        Collection<Notes> toReturn = rep.getAllNotes();
+        Collection<Note> toReturn = rep.getAllNotes();
 
         return toReturn;
         //throw new UnsupportedOperationException("Not yet implemented");

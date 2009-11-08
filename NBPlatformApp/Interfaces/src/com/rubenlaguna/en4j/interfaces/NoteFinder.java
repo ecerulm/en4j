@@ -4,7 +4,7 @@
  */
 package com.rubenlaguna.en4j.interfaces;
 
-import com.rubenlaguna.en4j.jpaentities.Notes;
+import com.rubenlaguna.en4j.noteinterface.Note;
 import java.util.Collection;
 
 /**
@@ -13,6 +13,6 @@ import java.util.Collection;
  */
 public interface NoteFinder {
 
-    public Collection<Notes> find(String search);
+    public Collection<Note> find(String search);
    
 }
