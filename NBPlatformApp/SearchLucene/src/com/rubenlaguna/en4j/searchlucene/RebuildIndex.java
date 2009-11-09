@@ -4,6 +4,7 @@
  */
 package com.rubenlaguna.en4j.searchlucene;
 
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
@@ -29,67 +30,12 @@ public final class RebuildIndex implements ActionListener {
     public void actionPerformed(ActionEvent e) {
 
         //TODO use an Executor/ RequestProcessor here
-
-        IndexWriter writer = null;
-        try {
-            // TODO implement action body
-            File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-            writer = new IndexWriter(FSDirectory.open(file),
-                    analyzer, true,
-                    IndexWriter.MaxFieldLength.LIMITED);
-            writer.setUseCompoundFile(true);
-            writer.deleteAll();
-            writer.commit();
-            Collection<Note> notes = getAllNotes();
-
-            for (Note note : notes) {
-                //Lucene document http://www.darksleep.com/lucene/
-                Document document = new Document();
-
-                Field idField = new Field("id",
-                        note.getId().toString(),
-                        Field.Store.YES,
-                        Field.Index.NOT_ANALYZED);
-                document.add(idField);
-
-                Field titleField = new Field("title",
-                        note.getTitle(),
-                        Field.Store.YES,
-                        Field.Index.ANALYZED);
-                document.add(titleField);
-                writer.addDocument(document);
-            }
-            writer.commit();
-            writer.optimize();
-            writer.close();
+        Lookup.getDefault().lookup(NoteFinder.class).rebuildIndex();
 
 
-        } catch (CorruptIndexException ex) {
-            Exceptions.printStackTrace(ex);
-        } catch (LockObtainFailedException ex) {
-            Exceptions.printStackTrace(ex);
-        } catch (IOException ex) {
-            Exceptions.printStackTrace(ex);
-        } finally {
-            try {
-                if (writer != null) {
-                    writer.close();
-                }
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            }
-        }
 
 
     }
 
-    private Collection<Note> getAllNotes() {
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-
-        Collection<Note> toReturn = rep.getAllNotes();
-
-        return toReturn;
-        //throw new UnsupportedOperationException("Not yet implemented");
-    }
+   
 }

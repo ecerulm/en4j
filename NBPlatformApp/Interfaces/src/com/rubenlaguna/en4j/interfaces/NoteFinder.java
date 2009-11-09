@@ -13,6 +13,7 @@ import java.util.Collection;
  */
 public interface NoteFinder {
 
-    public Collection<Note> find(String search);
+    Collection<Note> find(String search);
+    void rebuildIndex();
    
 }

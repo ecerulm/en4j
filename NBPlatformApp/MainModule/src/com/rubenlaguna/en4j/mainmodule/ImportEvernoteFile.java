@@ -4,6 +4,7 @@
  */
 package com.rubenlaguna.en4j.mainmodule;
 
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.jaxb.generated.Note;
 
@@ -78,6 +79,8 @@ public final class ImportEvernoteFile implements ActionListener {
                         }));
 
                         rep.importEntries(in,ph);
+                        ph.progress("Rebuilding indexes");
+                        Lookup.getDefault().lookup(NoteFinder.class).rebuildIndex();
 
                         ph.finish();
 
