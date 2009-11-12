@@ -4,7 +4,8 @@
  */
 package com.rubenlaguna.en4j.NoteContentViewModule;
 
-import com.rubenlaguna.en4j.jpaentities.Notes;
+
+import com.rubenlaguna.en4j.noteinterface.Note;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -102,9 +103,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
     public void resultChanged(LookupEvent ev) {
         try {
-            Collection<? extends Notes> notes = result.allInstances();
+            Collection<? extends Note> notes = result.allInstances();
             if (!notes.isEmpty()) {
-                Notes n = notes.iterator().next();
+                Note n = notes.iterator().next();
                 //jLabel1.setText(n.getContent());
                 //jTextArea1.setText(n.getContent());
 
@@ -191,7 +192,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
-        Lookup.Template tpl = new Lookup.Template(Notes.class);
+        Lookup.Template tpl = new Lookup.Template(Note.class);
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);
         resultChanged(null);
