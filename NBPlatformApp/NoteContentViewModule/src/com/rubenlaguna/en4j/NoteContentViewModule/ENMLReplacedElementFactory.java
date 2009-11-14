@@ -29,6 +29,7 @@ import org.xhtmlrenderer.util.ImageUtil;
 class ENMLReplacedElementFactory implements ReplacedElementFactory {
 
     private final SwingReplacedElementFactory delegate;
+    private final Logger LOG = Logger.getLogger(ENMLReplacedElementFactory.class.getName());
 
     public ENMLReplacedElementFactory(SwingReplacedElementFactory delegate) {
         this.delegate = delegate;
@@ -54,7 +55,7 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         Logger.getLogger(ENMLReplacedElementFactory.class.getName()).log(Level.INFO, "Element content:"+box.getElement().getNodeValue());
 
         if ("en-media".equals(box.getElement().getNodeName())) {
-            toReturn = brokenImage(cssWidth,cssHeight);
+            toReturn = brokenImage(100,100);
         }
 
         if (null == toReturn) {
@@ -78,6 +79,7 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
             g.dispose();
             mre = new ImageReplacedElement(missingImage, cssWidth, cssHeight);
         } catch (Exception e) {
+            LOG.log(Level.SEVERE,"couldn't create a <missing> image",e);
             mre = new EmptyReplacedElement(
                     cssWidth < 0 ? 0 : cssWidth,
                     cssHeight < 0 ? 0 : cssHeight);
