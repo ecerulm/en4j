@@ -30,7 +30,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xhtmlrenderer.extend.ReplacedElementFactory;
 import org.xhtmlrenderer.simple.XHTMLPanel;
+import org.xhtmlrenderer.simple.extend.XhtmlCssOnlyNamespaceHandler;
+import org.xhtmlrenderer.simple.extend.XhtmlNamespaceHandler;
+import org.xhtmlrenderer.swing.NoNamespaceHandler;
+import org.xhtmlrenderer.swing.SwingReplacedElementFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -53,7 +58,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         setName(NbBundle.getMessage(NoteContentViewTopComponent.class, "CTL_NoteContentViewTopComponent"));
         setToolTipText(NbBundle.getMessage(NoteContentViewTopComponent.class, "HINT_NoteContentViewTopComponent"));
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
+        ReplacedElementFactory cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
         panel = new XHTMLPanel();
+        panel.getSharedContext().setReplacedElementFactory(cef);
         jScrollPane2.setViewportView(panel);
 
     }
@@ -128,7 +135,8 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
                 //doc2.getElementsByTagName("body").item(0).appendChild(dup);
 
-                panel.setDocument(doc);
+                //panel.setDocument(doc,"",new ENMLNamespaceHandler());
+                panel.setDocument(doc,"",new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
 
 
 
