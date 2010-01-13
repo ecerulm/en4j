@@ -20,14 +20,21 @@
  */
 package com.rubenlaguna.en4j.jpaentities;
 
+import java.io.Serializable;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.MapKey;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -38,7 +45,7 @@ import javax.persistence.TemporalType;
  */
 @Entity
 @Table(name = "NOTES")
-public class Notes {
+public class Notes implements Serializable {
 
     @Id
     @Column(name = "ID")
@@ -60,6 +67,10 @@ public class Notes {
     private Date updated;
     @Column(name = "SOURCEURL")
     private String sourceurl;
+
+    @OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,mappedBy="owner")
+    @MapKey(name="hashValue")
+    private Map<String, Resource> resources = new HashMap<String,Resource>();
 
     public Notes() {
     }
@@ -120,6 +131,23 @@ public class Notes {
         this.updated = updated;
     }
 
+    public Resource getResource(String hash)
+    {
+        return resources.get(hash);
+    }
+
+    public void addResource(Resource resource) {
+        if(null==resource) {
+            throw new IllegalArgumentException("resource cannot be null");
+        }
+        if(null==resources) {
+            resources = new HashMap<String, Resource>();
+        }
+        resource.setOwner(this);
+        resources.put(resource.getHash(), resource);
+    }
+    
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -143,4 +171,6 @@ public class Notes {
     public String toString() {
         return "com.rubenlaguna.noteentitieslibrary.Notes[id=" + id + "]";
     }
+
+
 }

@@ -52,13 +52,14 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     private static final String PREFERRED_ID = "NoteContentViewTopComponent";
     private Lookup.Result result = null;
     private XHTMLPanel panel = null;
+    private final ENMLReplacedElementFactory cef;
 
     public NoteContentViewTopComponent() {
         initComponents();
         setName(NbBundle.getMessage(NoteContentViewTopComponent.class, "CTL_NoteContentViewTopComponent"));
         setToolTipText(NbBundle.getMessage(NoteContentViewTopComponent.class, "HINT_NoteContentViewTopComponent"));
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
-        ReplacedElementFactory cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
+        cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
         panel = new XHTMLPanel();
         panel.getSharedContext().setReplacedElementFactory(cef);
         jScrollPane2.setViewportView(panel);
@@ -113,6 +114,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             Collection<? extends Note> notes = result.allInstances();
             if (!notes.isEmpty()) {
                 Note n = notes.iterator().next();
+                cef.setNote(n);
                 //jLabel1.setText(n.getContent());
                 //jTextArea1.setText(n.getContent());
 

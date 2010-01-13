@@ -35,4 +35,6 @@ public interface Note {
     public Date getUpdated();
 
     public void setUpdated(Date updated);
+
+    public Resource getResource(String hash);
 }
