@@ -27,18 +27,9 @@ public class Installer extends ModuleInstall {
     private static EntityManager EM = null;
     private static String connectionURL = null;
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
-//    static {
-//        try {
-//            EMF = Persistence.createEntityManagerFactory("HibernateJPA");
-//            EM = EMF.createEntityManager();
-//        } catch (Throwable ex) {
-//            throw new ExceptionInInitializerError(ex);
-//        }
-//    }
+
     @Override
     public void close() {
-
-
         if (null != EM) {
 
             LOG.info("JPA Native Query shutdown");
@@ -53,19 +44,6 @@ public class Installer extends ModuleInstall {
             LOG.info("closing EntityManagerFactory "+EMF);
             EMF.close();
         }
-//        try {
-//            LOG.info("shutting down hsqldb");
-//
-//            Class.forName("org.hsqldb.jdbcDriver");
-//
-//            Connection connection = DriverManager.getConnection(connectionURL);
-//            Statement stmt = connection.createStatement();
-//            stmt.execute("SHUTDOWN");
-//        } catch (ClassNotFoundException ex) {
-//            Exceptions.printStackTrace(ex);
-//        } catch (SQLException ex) {
-//            Exceptions.printStackTrace(ex);
-//        }
 
     }
 
