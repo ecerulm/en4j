@@ -31,17 +31,18 @@ public class Installer extends ModuleInstall {
     @Override
     public void close() {
         if (null != EM) {
+            synchronized (EM) {
+                LOG.info("JPA Native Query shutdown");
+                EM.getTransaction().begin();
+                EM.createNativeQuery("SHUTDOWN").executeUpdate();
+                EM.getTransaction().commit();
 
-            LOG.info("JPA Native Query shutdown");
-            EM.getTransaction().begin();
-            EM.createNativeQuery("SHUTDOWN").executeUpdate();
-            EM.getTransaction().commit();
-
-            LOG.info("closing EntityManager "+EM);
-            EM.close();
+                LOG.info("closing EntityManager " + EM);
+                EM.close();
+            }
         }
         if (null != EMF) {
-            LOG.info("closing EntityManagerFactory "+EMF);
+            LOG.info("closing EntityManagerFactory " + EMF);
             EMF.close();
         }
 

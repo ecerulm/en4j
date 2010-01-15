@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -37,6 +38,7 @@ import org.netbeans.api.progress.ProgressHandle;
  */
 public class NoteRepositoryImpl implements NoteRepository {
 
+    private final Logger LOG = Logger.getLogger(NoteRepositoryImpl.class.getName());
     private EntityManager entityManager;
     private Query query1;
     private Query queryById;
@@ -50,47 +52,39 @@ public class NoteRepositoryImpl implements NoteRepository {
     }
 
     public Collection<Note> getAllNotes() {
-        Collection<Notes> listNotes = query1.getResultList();
         Collection<Note> toReturn = new ArrayList<Note>();
 
+
+        Collection<Notes> listNotes = new ArrayList<Notes>();
+        //the module could be closing and then the entityManager
+        //would be also closed
+        synchronized (entityManager) {
+            if (entityManager.isOpen()) {
+                listNotes.addAll(query1.getResultList());
+            }
+        }
 
         for (Notes n : listNotes) {
             toReturn.add(fromNotes(n));
         }
 
-        Logger logger = Logger.getLogger(NoteRepositoryImpl.class.getName());
-        logger.log(Level.INFO, "db size :" + toReturn.size());
+        LOG.log(Level.INFO, "db size :" + toReturn.size());
         return toReturn;
     }
 
     private Note fromNotes(final Notes origNotes) {
-
-//            InvocationHandler handler = new InvocationHandler() {
-//
-//                public Object invoke(Object proxy, Method method,
-//                        Object[] args) throws Throwable {
-//
-//                    Method method2 = origNotes.getClass().getDeclaredMethod(method.getName(), method.getParameterTypes());
-//
-//                    Object toReturn = method2.invoke(origNotes,args);
-//
-//                    //method.invoke(thisNote, args);
-//                    return toReturn;
-//                }
-//            };
-//            Note f = (Note) Proxy.newProxyInstance(this.getClass().getClassLoader(),
-//                    new Class[]{Note.class},
-//                    handler);
-
         Note f = new NoteAdapter(origNotes);
         return f;
     }
 
     public Note get(int id) {
         queryById.setParameter("id", id);
-
-        return fromNotes((Notes) queryById.getSingleResult());
-        //throw new UnsupportedOperationException("Not supported yet.");
+        synchronized (entityManager) {
+            if (!entityManager.isOpen()) {
+                return null;
+            }
+            return fromNotes((Notes) queryById.getSingleResult());
+        }
     }
 
     public void importEntries(InputStream in, ProgressHandle ph) {
@@ -113,41 +107,44 @@ public class NoteRepositoryImpl implements NoteRepository {
                     case XMLStreamConstants.START_ELEMENT:
                         if ("note".equals(xmlStreamReader.getLocalName())) {
 
-                            entityManager.getTransaction().begin();
-
-                            com.rubenlaguna.en4j.jaxb.generated.Note n = (com.rubenlaguna.en4j.jaxb.generated.Note) u.unmarshal(xmlStreamReader);
-                            ph.progress(n.getTitle());
-                            notes++;
-                            Notes entityNode = new Notes();
-                            entityNode.setContent(n.getContent());
-                            entityNode.setCreated(new Date());
-                            entityNode.setUpdated(new Date());
-                            entityNode.setTitle(n.getTitle());
-                            //TODO: add resources to the database
-                            List<Resource> resources = n.getResource();
-
-                            entityManager.persist(entityNode);
-
-                            entityManager.getTransaction().commit();
-
-                            for (Resource r : resources) {
+                            synchronized (entityManager) {
+                                if (!entityManager.isOpen()) {
+                                    return;
+                                }
                                 entityManager.getTransaction().begin();
 
-                                com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
-                                byte[] data = r.getData().getValue();
+                                com.rubenlaguna.en4j.jaxb.generated.Note n = (com.rubenlaguna.en4j.jaxb.generated.Note) u.unmarshal(xmlStreamReader);
+                                ph.progress(n.getTitle());
+                                notes++;
+                                Notes entityNode = new Notes();
+                                entityNode.setContent(n.getContent());
+                                entityNode.setCreated(new Date());
+                                entityNode.setUpdated(new Date());
+                                entityNode.setTitle(n.getTitle());
+                                //TODO: add resources to the database
+                                List<Resource> resources = n.getResource();
 
-                                MessageDigest md5 = MessageDigest.getInstance("MD5");
-                                BigInteger hash = new BigInteger(1, md5.digest(data));
-                                String hashword = hash.toString(16);
-                                resourceEntity.setHash(hashword);
+                                entityManager.persist(entityNode);
 
-                                resourceEntity.setData(data);
-                                resourceEntity.setOwner(entityNode);
-                                entityNode.addResource(resourceEntity);
                                 entityManager.getTransaction().commit();
 
-                            }
+                                for (Resource r : resources) {
+                                    entityManager.getTransaction().begin();
 
+                                    com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
+
+                                    byte[] data = r.getData().getValue();
+                                    String hashword = getHash(data);
+
+                                    resourceEntity.setHash(hashword);
+                                    resourceEntity.setData(data);
+                                    resourceEntity.setOwner(entityNode);
+                                    entityNode.addResource(resourceEntity);
+
+                                    entityManager.persist(resourceEntity);
+                                    entityManager.getTransaction().commit();
+                                } //for
+                            } //synchronized
                         } //end if
                         break;
 
@@ -156,7 +153,7 @@ public class NoteRepositoryImpl implements NoteRepository {
             xmlStreamReader.close();
 
         } catch (Exception ex) {
-            Logger.getLogger(NoteRepositoryImpl.class.getName()).log(Level.SEVERE, null, ex);
+            LOG.log(Level.SEVERE, null, ex);
         }
 
 
@@ -164,5 +161,12 @@ public class NoteRepositoryImpl implements NoteRepository {
 
 
 
+    }
+
+    private String getHash(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        BigInteger hash = new BigInteger(1, md5.digest(data));
+        String hashword = hash.toString(16);
+        return hashword;
     }
 }
