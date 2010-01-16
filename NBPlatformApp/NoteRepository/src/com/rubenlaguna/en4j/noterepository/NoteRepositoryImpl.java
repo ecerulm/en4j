@@ -90,6 +90,7 @@ public class NoteRepositoryImpl implements NoteRepository {
     public void importEntries(InputStream in, ProgressHandle ph) {
         try {
 
+            long start = System.currentTimeMillis();
             XMLInputFactory factory = XMLInputFactory.newInstance();
             System.out.println("factory:" + factory);
             factory.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
@@ -124,12 +125,9 @@ public class NoteRepositoryImpl implements NoteRepository {
                                 //TODO: add resources to the database
                                 List<Resource> resources = n.getResource();
 
-                                entityManager.persist(entityNode);
 
-                                entityManager.getTransaction().commit();
 
                                 for (Resource r : resources) {
-                                    entityManager.getTransaction().begin();
 
                                     com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
 
@@ -142,8 +140,9 @@ public class NoteRepositoryImpl implements NoteRepository {
                                     entityNode.addResource(resourceEntity);
 
                                     entityManager.persist(resourceEntity);
-                                    entityManager.getTransaction().commit();
                                 } //for
+                                entityManager.persist(entityNode);
+                                entityManager.getTransaction().commit();
                             } //synchronized
                         } //end if
                         break;
@@ -152,6 +151,8 @@ public class NoteRepositoryImpl implements NoteRepository {
             } // end for
             xmlStreamReader.close();
 
+            long delta = System.currentTimeMillis() - start;
+            LOG.info("Import took " + delta + " ms");
         } catch (Exception ex) {
             LOG.log(Level.SEVERE, null, ex);
         }
