@@ -9,18 +9,13 @@ import com.rubenlaguna.en4j.jaxb.generated.Resource;
 import com.rubenlaguna.en4j.jpaentities.Notes;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.io.InputStream;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
@@ -87,7 +82,7 @@ public class NoteRepositoryImpl implements NoteRepository {
         }
     }
 
-    public void importEntries(InputStream in, ProgressHandle ph) {
+    public void importEntries(InputStream in, ProgressHandle ph) throws InterruptedException {
         try {
 
             long start = System.currentTimeMillis();
@@ -104,6 +99,12 @@ public class NoteRepositoryImpl implements NoteRepository {
             int notes = 0;
 
             for (int event = xmlStreamReader.next(); event != XMLStreamConstants.END_DOCUMENT; event = xmlStreamReader.next()) {
+
+                if(Thread.interrupted()) {
+                    LOG.info("file import was CANCELLED");
+                    xmlStreamReader.close();
+                    throw new java.lang.InterruptedException();
+                } 
                 switch (event) {
                     case XMLStreamConstants.START_ELEMENT:
                         if ("note".equals(xmlStreamReader.getLocalName())) {
@@ -153,9 +154,12 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             long delta = System.currentTimeMillis() - start;
             LOG.info("Import took " + delta + " ms");
+        } catch (InterruptedException ex) {
+            throw ex;
         } catch (Exception ex) {
             LOG.log(Level.SEVERE, null, ex);
         }
+
 
 
 

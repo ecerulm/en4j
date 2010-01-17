@@ -6,7 +6,6 @@ package com.rubenlaguna.en4j.mainmodule;
 
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
-import com.rubenlaguna.en4j.jaxb.generated.Note;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,27 +14,23 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.logging.Logger;
 
 import javax.swing.SwingWorker;
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamConstants;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
 import org.openide.filesystems.FileChooserBuilder;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
+import org.openide.util.Task;
+import org.openide.util.TaskListener;
 
 public final class ImportEvernoteFile implements ActionListener {
+
+    private final static RequestProcessor RP = new RequestProcessor("import", 1, true);
+    private final static Logger LOG = Logger.getLogger(ImportEvernoteFile.class.getName());
 
     public void actionPerformed(ActionEvent e) {
         // TODO implement action body
@@ -59,9 +54,9 @@ public final class ImportEvernoteFile implements ActionListener {
                     NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
                     //
 
+                    final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                     try {
 
-                        final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                         ph.start();
 
                         int available = (int) toAdd.length();
@@ -74,34 +69,47 @@ public final class ImportEvernoteFile implements ActionListener {
                             }
                         }));
 
-                        rep.importEntries(in,ph);
+                        rep.importEntries(in, ph);
                         ph.progress("Rebuilding indexes");
                         Lookup.getDefault().lookup(NoteFinder.class).rebuildIndex();
 
+
+
+                        //NoteListTopComponent.findInstance().invalidate();
+                    } catch (FileNotFoundException ex) {
+                        Exceptions.printStackTrace(ex);
+                    } catch (InterruptedException ex) {
+                        LOG.info("import file was cancelled");
+                    } finally {
                         ph.finish();
-
                         new SwingWorker() {
-
                             @Override
                             protected Object doInBackground() throws Exception {
                                 return null;
 
                             }
-
                             @Override
                             protected void done() {
                                 NoteListTopComponent.findInstance().refresh();
 
                             }
                         }.execute();
+                    }
 
-                        //NoteListTopComponent.findInstance().invalidate();
-                    } catch (FileNotFoundException ex) {
-                        Exceptions.printStackTrace(ex);
-                    } 
                 }
             };
-            RequestProcessor.getDefault().post(task);
+            RequestProcessor.Task importTask = RP.create(task);
+
+            final ProgressHandle ph = ProgressHandleFactory.createHandle("importing file", importTask);
+            ph.start();
+            importTask.addTaskListener(new TaskListener() {
+
+                public void taskFinished(Task task) {
+                    ph.finish();
+                }
+            });
+
+            importTask.schedule(500);
 
         }
 

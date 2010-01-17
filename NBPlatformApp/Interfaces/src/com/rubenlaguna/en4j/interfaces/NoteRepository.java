@@ -18,7 +18,7 @@ public interface NoteRepository {
     Collection<Note> getAllNotes();
     //TODO add a rebuildIndex method
 
-    void importEntries(InputStream in,ProgressHandle ph);
+    void importEntries(InputStream in,ProgressHandle ph) throws InterruptedException;
     Note get(int id);
 
 
