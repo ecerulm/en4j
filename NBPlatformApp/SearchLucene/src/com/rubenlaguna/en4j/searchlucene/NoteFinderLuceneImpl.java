@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.html.dom.HTMLDocumentImpl;
@@ -49,6 +50,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
 
     public Collection<Note> find(String searchText) {
+        if ("".equals(searchText)){
+            return Collections.EMPTY_LIST;
+        }
         Collection<Note> toReturn = new ArrayList<Note>();
 
         try {

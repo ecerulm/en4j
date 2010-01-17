@@ -7,6 +7,7 @@ package com.rubenlaguna.en4j.mainmodule;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.ListSelectionEvent;
@@ -14,7 +15,9 @@ import javax.swing.event.ListSelectionListener;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Property;
 import org.jdesktop.observablecollections.ObservableCollections;
+import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
+import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ImageUtilities;
@@ -26,6 +29,8 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.util.Collection;
+import javax.swing.SwingWorker;
+import org.openide.util.RequestProcessor;
 
 /**
  * Top component which displays something.
@@ -34,11 +39,13 @@ import java.util.Collection;
 autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener {
 
+    private static final RequestProcessor RP = RequestProcessor.getDefault();
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
     private static final String PREFERRED_ID = "NoteListTopComponent";
     private final InstanceContent ic = new InstanceContent();
+    private RequestProcessor.Task currentSearchTask = null;
 
     public NoteListTopComponent() {
         initComponents();
@@ -84,6 +91,19 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
 
         searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text")); // NOI18N
+        searchTextField.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                searchTextFieldFocusGained(evt);
+            }
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                searchTextFieldFocusLost(evt);
+            }
+        });
+        searchTextField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                searchTextFieldKeyTyped(evt);
+            }
+        });
 
         org.openide.awt.Mnemonics.setLocalizedText(jButton1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jButton1.text")); // NOI18N
         jButton1.addActionListener(new java.awt.event.ActionListener() {
@@ -99,7 +119,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 391, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 297, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -122,15 +142,58 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }// </editor-fold>//GEN-END:initComponents
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        // TODO add your handling code here:
-        NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
-
-        Collection<Note> list = finder.find(searchTextField.getText());
-        list1.clear();
-        list1.addAll(list);
-
-
+        performSearch();
     }//GEN-LAST:event_jButton1ActionPerformed
+
+    private void performSearch() {
+        SwingWorker<Collection<Note>, Object> sw = new SwingWorker<Collection<Note>, Object>() {
+
+            @Override
+            protected Collection<Note> doInBackground() throws Exception {
+                NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
+
+                Collection<Note> list = finder.find(searchTextField.getText());
+                return list;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Collection<Note> list = get();
+                    list1.clear();
+                    list1.addAll(list);
+                } catch (InterruptedException ex) {
+                    Exceptions.printStackTrace(ex);
+                } catch (ExecutionException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+            }
+        };
+        currentSearchTask = RP.post(sw, 500);
+    }
+
+    private void searchTextFieldFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_searchTextFieldFocusGained
+        // TODO add your handling code here:
+        String initialText = org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text");
+        if (initialText.equals(searchTextField.getText())) {
+            searchTextField.setText("");
+        }
+    }//GEN-LAST:event_searchTextFieldFocusGained
+
+    private void searchTextFieldFocusLost(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_searchTextFieldFocusLost
+        // TODO add your handling code here:
+        if ("".equals(searchTextField.getText())) {
+            searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"));
+        }
+    }//GEN-LAST:event_searchTextFieldFocusLost
+
+    private void searchTextFieldKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_searchTextFieldKeyTyped
+        // TODO add your handling code here:
+        if (null != currentSearchTask) {
+            currentSearchTask.cancel();
+        }
+        performSearch();
+    }//GEN-LAST:event_searchTextFieldKeyTyped
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JScrollPane jScrollPane1;
@@ -217,7 +280,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         logger.log(Level.INFO, "number of entries in db:" + toReturn.size());
         return toReturn;
     }
-
 
     public void valueChanged(ListSelectionEvent arg0) {
         if (!arg0.getValueIsAdjusting()) {
