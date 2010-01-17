@@ -58,7 +58,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
             IndexSearcher searcher = new IndexSearcher(reader);
 
-            QueryParser parser = new QueryParser("title", analyzer);
+            QueryParser parser = new QueryParser("all", analyzer);
             Query query = parser.parse(searchText);
             //search the query
 
@@ -83,11 +83,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    public  void  rebuildIndex() {
+    public void rebuildIndex() {
         IndexWriter writer = null;
         LOG.info("about to start indexing");
         try {
-            // TODO implement action body
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
             Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
             writer = new IndexWriter(FSDirectory.open(file),
@@ -98,9 +97,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             writer.commit();
             Collection<Note> notes = getAllNotes();
 
-            LOG.info("number of notes "+notes.size());
+            LOG.info("number of notes " + notes.size());
             for (Note note : notes) {
-                if(Thread.interrupted()) {
+                if (Thread.interrupted()) {
                     //if the task has been cancelled we skip the rest of the
                     //notes but we still do the writer.commit()
                     writer.close();
@@ -108,8 +107,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     return;
                 }
 
-                LOG.info("indexing note "+note);
-                //Thread.sleep(5);
+                LOG.info("indexing note " + note);
 
 
                 //Lucene document http://www.darksleep.com/lucene/
@@ -129,8 +127,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 //according to Lucene in Action 7.4 we should use
                 //JTidy or NekoHTML to parse the thlm
-
-
                 DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
                 domParser.parse(new InputSource(new StringReader(note.getContent())), node);
                 StringBuffer sb = new StringBuffer();
@@ -147,6 +143,12 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     document.add(titleField);
                 }
 
+
+                StringBuffer allText = new StringBuffer();
+                allText.append(note.getTitle()).append(" ").append(text);
+                Field allField = new Field("all", allText.toString(),
+                                           Field.Store.NO, Field.Index.ANALYZED);
+                document.add(allField);
 
                 writer.addDocument(document);
             }
