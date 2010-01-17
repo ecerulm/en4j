@@ -1,0 +1,12 @@
+<!DOCTYPE mode PUBLIC "-//NetBeans//DTD Mode Properties 2.3//EN" "http://www.netbeans.org/dtds/mode-properties2 3.dtd">
+<mode version="2.3"> 
+ <module name="com.rubenlaguna.en4j.NoteContentViewModule" spec="1.0"/>
+ <name	unique="NoteContentViewMode"/>
+ <kind	type="view"/>
+ <state type="joined"/>
+ <constraints>
+  <path orientation="vertical" number="1" weight="0.5"/>
+  <!--<path orientation="horizontal" number="0" weight="1.0"/>-->
+ </constraints>
+ <empty-behavior permanent="true"/>
+</mode>

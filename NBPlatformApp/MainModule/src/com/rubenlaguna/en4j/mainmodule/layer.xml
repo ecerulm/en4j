@@ -38,9 +38,11 @@
             <file name="NoteListTopComponent.settings" url="NoteListTopComponentSettings.xml"/>
         </folder>
         <folder name="Modes">
-            <folder name="output">
+            <file name="NoteListMode.wsmode" url="NoteListMode.wsmode"/>
+            <folder name="NoteListMode">
                 <file name="NoteListTopComponent.wstcref" url="NoteListTopComponentWstcref.xml"/>
             </folder>
+
         </folder>
     </folder>
 </filesystem>

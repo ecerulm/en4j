@@ -23,7 +23,8 @@
             <file name="NoteContentViewTopComponent.settings" url="NoteContentViewTopComponentSettings.xml"/>
         </folder>
         <folder name="Modes">
-            <folder name="output">
+              <file name="NoteContentViewMode.wsmode" url="NoteContentViewMode.wsmode"/>
+            <folder name="NoteContentViewMode">
                 <file name="NoteContentViewTopComponent.wstcref" url="NoteContentViewTopComponentWstcref.xml"/>
             </folder>
         </folder>
