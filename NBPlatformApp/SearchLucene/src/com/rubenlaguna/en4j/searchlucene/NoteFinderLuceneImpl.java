@@ -83,7 +83,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    public synchronized void  rebuildIndex() {
+    public  void  rebuildIndex() {
         IndexWriter writer = null;
         LOG.info("about to start indexing");
         try {
@@ -104,9 +104,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     //if the task has been cancelled we skip the rest of the
                     //notes but we still do the writer.commit()
                     writer.close();
+                    LOG.warning("Rebuild index operation was CANCELLED");
                     return;
                 }
+
                 LOG.info("indexing note "+note);
+                //Thread.sleep(5);
+
+
                 //Lucene document http://www.darksleep.com/lucene/
                 Document document = new Document();
 

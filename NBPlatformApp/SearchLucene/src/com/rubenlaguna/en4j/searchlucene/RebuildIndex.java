@@ -9,9 +9,7 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
@@ -33,14 +31,20 @@ public final class RebuildIndex implements ActionListener {
         final NoteFinder noteFinder = Lookup.getDefault().lookup(NoteFinder.class);
 
         final List<Cancellable> link = new ArrayList<Cancellable>();
+
         final ProgressHandle myProgressHandle =
-                ProgressHandleFactory.createHandle("Cooking noodles, please wait...", new Cancellable() {
+                ProgressHandleFactory.createHandle("Rebuilding index", new Cancellable() {
+
             public boolean cancel() {
-                return link.get(0).cancel();
+                if (link.isEmpty()) {
+                    return false;
+                }
+                final boolean cancel = link.get(0).cancel();
+                return cancel;
             }
         });
 
-        RequestProcessor.Task theTask = RP.create(new Runnable() {
+        RequestProcessor.Task theTask = RP.post(new Runnable() {
 
             public void run() {
                 myProgressHandle.start();
@@ -50,12 +54,5 @@ public final class RebuildIndex implements ActionListener {
             }
         });
         link.add(theTask);
-
-        RP.post(theTask);
-
-
-
-
-
     }
 }
