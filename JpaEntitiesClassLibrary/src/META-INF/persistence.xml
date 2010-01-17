@@ -5,7 +5,7 @@
     <class>com.rubenlaguna.en4j.jpaentities.Notes</class>
     <class>com.rubenlaguna.en4j.jpaentities.Resource</class>
     <properties>
-      <property name="openjpa.Log" value="SQL=TRACE"/>
+      <!--<property name="openjpa.Log" value="SQL=TRACE"/>-->
       <property name="openjpa.ConnectionPassword" value=""/>
       <property name="openjpa.ConnectionDriverName" value="org.hsqldb.jdbc.JDBCDriver"/>
       <property name="openjpa.ConnectionUserName" value="sa"/>
