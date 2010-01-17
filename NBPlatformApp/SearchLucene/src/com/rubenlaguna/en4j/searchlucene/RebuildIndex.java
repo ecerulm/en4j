@@ -32,11 +32,9 @@ public final class RebuildIndex implements ActionListener {
 
         final NoteFinder noteFinder = Lookup.getDefault().lookup(NoteFinder.class);
 
-        RequestProcessor.Task theTask = RP.post(new Runnable() {
-
+        RequestProcessor.Task theTask = RP.create(new Runnable() {
             public void run() {
                 noteFinder.rebuildIndex();
-
             }
         });
 
@@ -45,10 +43,11 @@ public final class RebuildIndex implements ActionListener {
         myProgressHandle.start();
         theTask.addTaskListener(new TaskListener() {
 
-            public void taskFinished(Task task) {
+            public void taskFinished(Task taßsk) {
                 myProgressHandle.finish();
             }
         });
+        theTask.schedule(100);
 
 
     }
