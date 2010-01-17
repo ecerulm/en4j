@@ -16,6 +16,8 @@ import org.netbeans.api.progress.ProgressHandleFactory;
 import org.openide.util.Cancellable;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
+import org.openide.util.Task;
+import org.openide.util.TaskListener;
 
 public final class RebuildIndex implements ActionListener {
 
@@ -30,29 +32,24 @@ public final class RebuildIndex implements ActionListener {
 
         final NoteFinder noteFinder = Lookup.getDefault().lookup(NoteFinder.class);
 
-        final List<Cancellable> link = new ArrayList<Cancellable>();
-
-        final ProgressHandle myProgressHandle =
-                ProgressHandleFactory.createHandle("Rebuilding index", new Cancellable() {
-
-            public boolean cancel() {
-                if (link.isEmpty()) {
-                    return false;
-                }
-                final boolean cancel = link.get(0).cancel();
-                return cancel;
-            }
-        });
-
         RequestProcessor.Task theTask = RP.post(new Runnable() {
 
             public void run() {
-                myProgressHandle.start();
                 noteFinder.rebuildIndex();
-                myProgressHandle.finish();
 
             }
         });
-        link.add(theTask);
+
+        final ProgressHandle myProgressHandle =
+                ProgressHandleFactory.createHandle("Rebuilding index", theTask);
+        myProgressHandle.start();
+        theTask.addTaskListener(new TaskListener() {
+
+            public void taskFinished(Task task) {
+                myProgressHandle.finish();
+            }
+        });
+
+
     }
 }
