@@ -50,7 +50,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
 
     public Collection<Note> find(String searchText) {
-        if ("".equals(searchText)){
+        if ("".equals(searchText.trim())){
             return Collections.EMPTY_LIST;
         }
         Collection<Note> toReturn = new ArrayList<Note>();

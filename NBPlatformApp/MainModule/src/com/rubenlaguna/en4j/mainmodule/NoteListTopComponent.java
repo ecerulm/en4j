@@ -74,7 +74,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         list1 = getList();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
-        searchTextField = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
 
         jTable1.setColumnSelectionAllowed(true);
@@ -150,6 +149,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             protected Collection<Note> doInBackground() throws Exception {
+                if (searchTextField.getText().trim().isEmpty()) {
+                    return getList();
+                }
                 NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
 
                 Collection<Note> list = finder.find(searchTextField.getText());
@@ -199,7 +201,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
     private java.util.List<Note> list1;
-    private javax.swing.JTextField searchTextField;
+    public final javax.swing.JTextField searchTextField = new javax.swing.JTextField();
     private org.jdesktop.beansbinding.BindingGroup bindingGroup;
     // End of variables declaration//GEN-END:variables
 
@@ -247,6 +249,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     @Override
     public void componentClosed() {
         // TODO add custom code on component closing
+    }
+
+    @Override
+    protected void componentActivated() {
+        searchTextField.requestFocusInWindow();
     }
 
     void writeProperties(java.util.Properties p) {

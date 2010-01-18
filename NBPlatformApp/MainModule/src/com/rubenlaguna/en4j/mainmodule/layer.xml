@@ -11,6 +11,14 @@
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
         </folder>
+        <folder name="View">
+            <file name="com-rubenlaguna-en4j-mainmodule-GoToSearchBoxAction.instance">
+                <attr name="delegate" newvalue="com.rubenlaguna.en4j.mainmodule.GoToSearchBoxAction"/>
+                <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.mainmodule.Bundle#CTL_GoToSearchBoxAction"/>
+                <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
+                <attr name="noIconInMenu" boolvalue="false"/>
+            </file>
+        </folder>
         <folder name="Window">
             <file name="com-rubenlaguna-en4j-mainmodule-NoteListAction.instance">
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
@@ -32,6 +40,11 @@
                 <attr name="originalFile" stringvalue="Actions/Window/com-rubenlaguna-en4j-mainmodule-NoteListAction.instance"/>
             </file>
         </folder>
+    </folder>
+    <folder name="Shortcuts">
+        <file name="OM-G.shadow">
+            <attr name="originalFile" stringvalue="Actions/View/com-rubenlaguna-en4j-mainmodule-GoToSearchBoxAction.instance"/>
+        </file>
     </folder>
     <folder name="Windows2">
         <folder name="Components">
