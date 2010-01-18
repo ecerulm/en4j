@@ -21,6 +21,7 @@ import javax.swing.SwingWorker;
 import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
 import org.openide.filesystems.FileChooserBuilder;
+import org.openide.util.Cancellable;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
@@ -31,9 +32,9 @@ public final class ImportEvernoteFile implements ActionListener {
 
     private final static RequestProcessor RP = new RequestProcessor("import", 1, true);
     private final static Logger LOG = Logger.getLogger(ImportEvernoteFile.class.getName());
+    private RequestProcessor.Task importTask=null;
 
     public void actionPerformed(ActionEvent e) {
-        // TODO implement action body
         //The default dir to use if no value is stored
         File home = new File(System.getProperty("user.home") + File.separator + "lib");
         //Now build a file chooser and invoke the dialog in one line of code
@@ -46,6 +47,13 @@ public final class ImportEvernoteFile implements ActionListener {
 
         if (toAdd != null) {
 
+            final ProgressHandle ph = ProgressHandleFactory.createHandle("importing file", new Cancellable() {
+
+                public boolean cancel() {
+                    return handleCancel();
+                }
+            });
+
             Runnable task = new Runnable() {
 
                 public void run() {
@@ -54,7 +62,6 @@ public final class ImportEvernoteFile implements ActionListener {
                     NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
                     //
 
-                    final ProgressHandle ph = ProgressHandleFactory.createHandle("import");
                     try {
 
                         ph.start();
@@ -83,11 +90,13 @@ public final class ImportEvernoteFile implements ActionListener {
                     } finally {
                         ph.finish();
                         new SwingWorker() {
+
                             @Override
                             protected Object doInBackground() throws Exception {
                                 return null;
 
                             }
+
                             @Override
                             protected void done() {
                                 NoteListTopComponent.findInstance().refresh();
@@ -98,10 +107,9 @@ public final class ImportEvernoteFile implements ActionListener {
 
                 }
             };
-            RequestProcessor.Task importTask = RP.create(task);
+            importTask = RP.create(task);
 
-            final ProgressHandle ph = ProgressHandleFactory.createHandle("importing file", importTask);
-            ph.start();
+            
             importTask.addTaskListener(new TaskListener() {
 
                 public void taskFinished(Task task) {
@@ -113,6 +121,13 @@ public final class ImportEvernoteFile implements ActionListener {
 
         }
 
+    }
+
+    private boolean handleCancel() {
+        if (null==importTask) {
+            return false;
+        }
+        return importTask.cancel();
     }
 }
 
