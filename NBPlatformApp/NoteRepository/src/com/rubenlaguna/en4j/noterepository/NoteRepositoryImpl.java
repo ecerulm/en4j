@@ -100,11 +100,11 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             for (int event = xmlStreamReader.next(); event != XMLStreamConstants.END_DOCUMENT; event = xmlStreamReader.next()) {
 
-                if(Thread.interrupted()) {
+                if (Thread.interrupted()) {
                     LOG.info("file import was CANCELLED");
                     xmlStreamReader.close();
                     throw new java.lang.InterruptedException();
-                } 
+                }
                 switch (event) {
                     case XMLStreamConstants.START_ELEMENT:
                         if ("note".equals(xmlStreamReader.getLocalName())) {
@@ -127,20 +127,25 @@ public class NoteRepositoryImpl implements NoteRepository {
                                 List<Resource> resources = n.getResource();
 
 
-
+                                int i = 1;
                                 for (Resource r : resources) {
 
-                                    com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
+                                    if (null != r.getData()) {
+                                        com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
 
-                                    byte[] data = r.getData().getValue();
-                                    String hashword = getHash(data);
+                                        byte[] data = r.getData().getValue();
+                                        String hashword = getHash(data);
 
-                                    resourceEntity.setHash(hashword);
-                                    resourceEntity.setData(data);
-                                    resourceEntity.setOwner(entityNode);
-                                    entityNode.addResource(resourceEntity);
+                                        resourceEntity.setHash(hashword);
+                                        resourceEntity.setData(data);
+                                        resourceEntity.setOwner(entityNode);
+                                        entityNode.addResource(resourceEntity);
+                                        entityManager.persist(resourceEntity);
+                                    } else {
+                                        LOG.info("resource "+i+"/"+resources.size()+" has no data?. note title is " + n.getTitle());
+                                    }
+                                    i++;
 
-                                    entityManager.persist(resourceEntity);
                                 } //for
                                 entityManager.persist(entityNode);
                                 entityManager.getTransaction().commit();
