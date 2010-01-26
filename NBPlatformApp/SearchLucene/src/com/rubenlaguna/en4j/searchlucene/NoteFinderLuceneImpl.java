@@ -53,6 +53,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         if ("".equals(searchText.trim())){
             return Collections.EMPTY_LIST;
         }
+        searchText=searchText.trim().toLowerCase();
         Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
@@ -144,7 +145,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                             text,
                             Field.Store.NO,
                             Field.Index.ANALYZED);
-                    document.add(titleField);
+                    document.add(contentField);
                 }
 
 
@@ -153,7 +154,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 Field allField = new Field("all", allText.toString(),
                                            Field.Store.NO, Field.Index.ANALYZED);
                 document.add(allField);
-
+                LOG.info("Indxing " + allText.toString());
+                AnalyzerUtils.displayTokens(analyzer, allText.toString());
                 writer.addDocument(document);
             }
             writer.commit();
@@ -186,7 +188,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private void getText(StringBuffer sb, Node node) {
         if (node.getNodeType() == Node.TEXT_NODE) {
-            sb.append(node.getNodeValue());
+            final String nodeValue = node.getNodeValue();
+            LOG.info("textnode "+nodeValue);
+            sb.append(nodeValue);
         }
         NodeList children = node.getChildNodes();
         if (children != null) {
