@@ -135,6 +135,35 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
         assertEquals(1, result.size());
         // TODO review the generated test code and remove the default call to fail.
     }
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind3() {
+        System.out.println("find");
+        String searchText = "thread";
+        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
+        instance.rebuildIndex();
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind4() {
+        System.out.println("find");
+        String searchText = "thread interna";
+        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
+        instance.rebuildIndex();
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
 
     public Lookup getLookup() {
         System.out.println("getLokup");
