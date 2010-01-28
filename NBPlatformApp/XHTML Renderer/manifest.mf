@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
 OpenIDE-Module: com.rubenlaguna.xhtmlrenderer
 OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/xhtmlrenderer/Bundle.properties
-OpenIDE-Module-Specification-Version: 1.0
+OpenIDE-Module-Specification-Version: 8
 
