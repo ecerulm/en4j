@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
  * @author ecerulm
  */
 public class NoteFinderLuceneImplTest implements Lookup.Provider {
+    private static NoteFinderLuceneImpl instance;
 
 //    private final TestNoteRepository testNoteRepository = new TestNoteRepository();
     private Lookup lookup;
@@ -33,6 +34,68 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
     @BeforeClass
     public static void setUpClass() throws Exception {
         //System.setProperty("org.openide.util.Lookup", "com.rubenlaguna.en4j.searchlucene.NoteFinderLuceneImplTest");
+   
+         System.out.println(Lookup.getDefault());
+        TestNoteRepository testNoteRepository = Lookup.getDefault().lookup(TestNoteRepository.class);
+        testNoteRepository.add(new AbstractNote() {
+
+            public String getContent() {
+
+                return "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>"
+                        + "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml.dtd\">"
+                        + "        <en-note>Parece ser que internamente Searcher.search() y los"
+                        + " demas en apache lucene java hacen caso del thread.isInterrupted()"
+                        + " asi que si hace un FutureTask.cancel o un RequestProcesor.Task.cancel()"
+                        + " deberia pararse la busqueda en el IndexSearcher o el que se este"
+                        + " utilizando.  <div><br /></div><div><br /></div><div>el RequestProcessor"
+                        + " tiene que haberse creado con el constructor especial para interrupt."
+                        + " Si no el .cancel no llama a Thread.interrupt(). </div></en-note>";
+            }
+
+            public Integer getId() {
+                return 1;
+            }
+
+            public String getTitle() {
+                return "lucene honors thread.interrupt";
+            }
+        });
+        testNoteRepository.add(new AbstractNote() {
+
+            public String getContent() {
+
+                return "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>"
+                        + "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml.dtd\">"
+                        + "        <en-note>Sweet Potato Pie</en-note>";
+            }
+
+            public Integer getId() {
+                return 2;
+            }
+
+            public String getTitle() {
+                return "example1";
+            }
+        });
+        testNoteRepository.add(new AbstractNote() {
+
+            public String getContent() {
+
+                return "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>"
+                        + "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml.dtd\">"
+                        + "        <en-note>Mash four potatoes together</en-note>";
+            }
+
+            public Integer getId() {
+                return 3;
+            }
+
+            public String getTitle() {
+                return "example1";
+            }
+        });
+         instance = new NoteFinderLuceneImpl();
+        instance.rebuildIndex();
     }
 
     @AfterClass
@@ -41,65 +104,7 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
 
     @Before
     public void setUp() {
-        System.out.println(Lookup.getDefault());
-        TestNoteRepository testNoteRepository = Lookup.getDefault().lookup(TestNoteRepository.class);
-        testNoteRepository.add(new Note() {
-
-            public String getContent() {
-
-                return "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>"
-                        + "<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml.dtd\">"
-                        + "        <en-note>Parece ser que internamente Searcher.search() y los demas en apache lucene java hacen caso del thread.isInterrupted() asi que si hace un FutureTask.cancel o un RequestProcesor.Task.cancel() deberia pararse la busqueda en el IndexSearcher o el que se este utilizando.  <div><br /></div><div><br /></div><div>el RequestProcessor tiene que haberse creado con el constructor especial para interrupt. Si no el .cancel no llama a Thread.interrupt(). </div></en-note>";
-            }
-
-            public void setContent(String content) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public Date getCreated() {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public void setCreated(Date created) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public Integer getId() {
-                return 1;
-            }
-
-            public void setId(Integer id) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public String getSourceurl() {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public void setSourceurl(String sourceurl) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public String getTitle() {
-                return "lucene honors thread.interrupt";
-            }
-
-            public void setTitle(String title) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public Date getUpdated() {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public void setUpdated(Date updated) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-
-            public Resource getResource(String hash) {
-                throw new UnsupportedOperationException("Not supported yet.");
-            }
-        });
+       
     }
 
     @After
@@ -113,8 +118,6 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
     public void testFind() {
         System.out.println("find");
         String searchText = "thread*";
-        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
-        instance.rebuildIndex();
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());
@@ -126,10 +129,21 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
      */
     @Test
     public void testFind2() {
-        System.out.println("find");
+        System.out.println("find2");
+        String searchText = "\"thread.isinterrupted\"";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFindPeriod() {
+        System.out.println("testFindPeriod");
         String searchText = "thread.isinterrupted";
-        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
-        instance.rebuildIndex();
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());
@@ -139,11 +153,47 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
      * Test of find method, of class NoteFinderLuceneImpl.
      */
     @Test
+    public void testFindPeriod2() {
+        System.out.println("testFindPeriod");
+        String searchText = "thread. isinterrupted";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFindPeriodQuotes() {
+        System.out.println("testFindPeriod");
+        String searchText = "\"thread.isinterrupted\"";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind2Terms() {
+        System.out.println("testFindPeriod");
+        String searchText = "thread isinterrupted";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
     public void testFind3() {
         System.out.println("find");
         String searchText = "thread";
-        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
-        instance.rebuildIndex();
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());
@@ -156,9 +206,59 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
     @Test
     public void testFind4() {
         System.out.println("find");
-        String searchText = "thread interna";
-        NoteFinderLuceneImpl instance = new NoteFinderLuceneImpl();
-        instance.rebuildIndex();
+        String searchText = "threa interna";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind5() {
+        System.out.println("find");
+        String searchText = "threa interna";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind6() {
+        System.out.println("find");
+        String searchText = "isinterrupted";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind7() {
+        System.out.println("find");
+        String searchText = "potato";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(2, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFind8() {
+        System.out.println("find");
+        String searchText = "\"potato\"";
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());

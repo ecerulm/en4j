@@ -20,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.html.dom.HTMLDocumentImpl;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -52,33 +53,38 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
+    //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
         if ("".equals(searchText.trim())) {
             return Collections.EMPTY_LIST;
         }
         searchText = searchText.trim().toLowerCase();
-        String patternStr = "\\s+";
+        String patternStr = "(?:\\w)\\s+";
         String replaceStr = "* ";
         Pattern pattern = Pattern.compile(patternStr);
         Matcher matcher = pattern.matcher(searchText);
         searchText = matcher.replaceAll(replaceStr);
-        searchText = searchText + "*";
+        if (Pattern.matches(".*\\w$", searchText)) {
+            searchText = searchText + "*";
+        }
+
         LOG.info("search text:" + searchText);
         final Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
             IndexReader reader = IndexReader.open(FSDirectory.open(file), true);
 
             final IndexSearcher searcher = new IndexSearcher(reader);
 
-
-            QueryParser parser = new QueryParser("all", analyzer);
+            final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
+            AnalyzerUtils.displayTokens(analyzer, searchText);
+            QueryParser parser = new CustomQueryParser("all", analyzer);
             parser.setDefaultOperator(QueryParser.Operator.AND);
 
             Query query = parser.parse(searchText);
+            LOG.info("query ="+query.toString());
             //search the query
             Collector collector = new Collector() {
 
@@ -126,9 +132,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         LOG.info("about to start indexing");
         try {
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-            writer = new IndexWriter(FSDirectory.open(file),
-                    analyzer, true,
+            final CustomAnalyzer analyzer = new CustomAnalyzer();
+            writer = new IndexWriter(FSDirectory.open(file), analyzer, true,
                     IndexWriter.MaxFieldLength.LIMITED);
             writer.setUseCompoundFile(true);
             writer.deleteAll();
@@ -188,7 +193,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                         Field.Store.NO, Field.Index.ANALYZED);
                 document.add(allField);
                 //LOG.info("Indxing " + allText.toString());
-                //AnalyzerUtils.displayTokens(analyzer, allText.toString());
+                AnalyzerUtils.displayTokens(analyzer, allText.toString());
                 writer.addDocument(document);
             }
             writer.commit();
