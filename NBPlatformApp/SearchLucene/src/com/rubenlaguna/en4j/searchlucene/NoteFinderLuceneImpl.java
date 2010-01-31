@@ -59,7 +59,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         if ("".equals(searchText.trim())) {
             return Collections.EMPTY_LIST;
         }
-        searchText = searchText.trim().toLowerCase();
+        searchText = searchText.trim();
         String patternStr = "(?:\\w)\\s+";
         String replaceStr = "* ";
         Pattern pattern = Pattern.compile(patternStr);
