@@ -4,6 +4,7 @@
  */
 package com.rubenlaguna.en4j.noteinterface;
 
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -37,4 +38,5 @@ public interface Note {
     public void setUpdated(Date updated);
 
     public Resource getResource(String hash);
+    public Collection<Resource> getResources();
 }

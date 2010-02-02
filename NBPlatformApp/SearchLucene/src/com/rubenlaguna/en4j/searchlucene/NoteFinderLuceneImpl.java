@@ -8,6 +8,7 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -16,8 +17,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.html.dom.HTMLDocumentImpl;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -26,9 +30,11 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
@@ -36,6 +42,7 @@ import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -48,33 +55,68 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
+    //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
-        if ("".equals(searchText.trim())){
+        if ("".equals(searchText.trim())) {
             return Collections.EMPTY_LIST;
         }
-        Collection<Note> toReturn = new ArrayList<Note>();
+        searchText = searchText.trim();
+        String patternStr = "(?:\\w)\\s+";
+        String replaceStr = "* ";
+        Pattern pattern = Pattern.compile(patternStr);
+        Matcher matcher = pattern.matcher(searchText);
+        searchText = matcher.replaceAll(replaceStr);
+        if (Pattern.matches(".*\\w$", searchText)) {
+            searchText = searchText + "*";
+        }
+
+        LOG.info("search text:" + searchText);
+        final Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
             IndexReader reader = IndexReader.open(FSDirectory.open(file), true);
 
-            IndexSearcher searcher = new IndexSearcher(reader);
+            final IndexSearcher searcher = new IndexSearcher(reader);
 
-            QueryParser parser = new QueryParser("all", analyzer);
+            final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
+            AnalyzerUtils.displayTokensWithFullDetails(analyzer, searchText);
+            QueryParser parser = new CustomQueryParser("all", analyzer);
+            parser.setDefaultOperator(QueryParser.Operator.AND);
+
             Query query = parser.parse(searchText);
+            LOG.info("query =" + query.toString());
             //search the query
+            Collector collector = new Collector() {
 
-            TopDocs topdocs = searcher.search(query, null, 5);
-            for (ScoreDoc sd : topdocs.scoreDocs) {
-                int scoreId = sd.doc;
-                Document document = searcher.doc(scoreId);
-                int docId = Integer.parseInt(document.getField("id").stringValue());
+                @Override
+                public void setScorer(Scorer scorer) throws IOException {
+                    //throw new UnsupportedOperationException("Not supported yet.");
+                }
 
-                NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-                toReturn.add(rep.get(docId));
-            }
+                @Override
+                public void collect(int doc) throws IOException {
+                    int scoreId = doc;
+                    Document document = searcher.doc(scoreId);
+                    int docId = Integer.parseInt(document.getField("id").stringValue());
+
+                    NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+                    toReturn.add(rep.get(docId));
+                }
+
+                @Override
+                public void setNextReader(IndexReader reader, int docBase) throws IOException {
+                    //throw new UnsupportedOperationException("Not supported yet.");
+                }
+
+                @Override
+                public boolean acceptsDocsOutOfOrder() {
+                    //throw new UnsupportedOperationException("Not supported yet.");
+                    return true;
+                }
+            };
+            searcher.search(query, collector);
 
 
         } catch (ParseException ex) {
@@ -92,9 +134,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         LOG.info("about to start indexing");
         try {
             File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-            writer = new IndexWriter(FSDirectory.open(file),
-                    analyzer, true,
+            final CustomAnalyzer analyzer = new CustomAnalyzer();
+            writer = new IndexWriter(FSDirectory.open(file), analyzer, true,
                     IndexWriter.MaxFieldLength.LIMITED);
             writer.setUseCompoundFile(true);
             writer.deleteAll();
@@ -144,16 +185,33 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                             text,
                             Field.Store.NO,
                             Field.Index.ANALYZED);
-                    document.add(titleField);
+                    document.add(contentField);
                 }
+
+                //SourceURL
+                String sourceUrl = note.getSourceurl();
+                if (null != sourceUrl && !"".equals(sourceUrl));
+                {
+                    Field sourceField = new Field("source",
+                            sourceUrl,
+                            Field.Store.NO,
+                            Field.Index.ANALYZED);
+                    document.add(sourceField);
+                }
+                
+
 
 
                 StringBuffer allText = new StringBuffer();
-                allText.append(note.getTitle()).append(" ").append(text);
-                Field allField = new Field("all", allText.toString(),
-                                           Field.Store.NO, Field.Index.ANALYZED);
-                document.add(allField);
+                allText.append(note.getTitle());
+                allText.append(" ").append(text);
+                allText.append(" ").append(sourceUrl);
 
+                Field allField = new Field("all", allText.toString().trim(),
+                        Field.Store.NO, Field.Index.ANALYZED);
+                document.add(allField);
+                //LOG.info("Indxing " + allText.toString());
+                AnalyzerUtils.displayTokensWithFullDetails(analyzer, allText.toString());
                 writer.addDocument(document);
             }
             writer.commit();
@@ -185,8 +243,17 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private void getText(StringBuffer sb, Node node) {
+        final String localName = node.getNodeName();
+        if("en-media".equalsIgnoreCase(localName)){
+            final String fname = ((Element)node).getAttribute("alt");
+            if (null!=fname){
+                sb.append(fname).append(" ");
+            }
+        }
         if (node.getNodeType() == Node.TEXT_NODE) {
-            sb.append(node.getNodeValue());
+            final String nodeValue = node.getNodeValue();
+            //LOG.info("textnode " + nodeValue);
+            sb.append(nodeValue);
         }
         NodeList children = node.getChildNodes();
         if (children != null) {
