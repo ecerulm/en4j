@@ -2,11 +2,12 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.rubenlaguna.en4j.searchlucene;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 
 /**
@@ -15,7 +16,7 @@ import java.util.Date;
  */
 class AbstractNote implements Note {
 
-    public AbstractNote()  {
+    public AbstractNote() {
     }
 
     public String getContent() {
@@ -43,7 +44,7 @@ class AbstractNote implements Note {
     }
 
     public String getSourceurl() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return "";
     }
 
     public void setSourceurl(String sourceurl) {
@@ -67,7 +68,10 @@ class AbstractNote implements Note {
     }
 
     public Resource getResource(String hash) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        throw new UnsupportedOperationException("Not supported yet."+hash);
     }
 
+    public Collection<Resource> getResources() {
+        return Collections.EMPTY_LIST;
+    }
 }

@@ -2,20 +2,23 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.jpaentities.Notes;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.rmi.UnexpectedException;
+import java.util.Collection;
 import java.util.Date;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Transformer;
 
 /**
  *
  * @author ecerulm
  */
 class NoteAdapter implements Note {
+
     private final Notes adaptee;
 
     public String toString() {
@@ -89,9 +92,17 @@ class NoteAdapter implements Note {
         //adaptee.addResource(resource);
     }
 
-
     public NoteAdapter(Notes origNotes) {
         this.adaptee = origNotes;
     }
 
+    public Collection<Resource> getResources() {
+        final Collection<Resource> toReturn = CollectionUtils.collect(this.adaptee.getResources(), new Transformer() {
+
+            public Object transform(Object o) {
+                return new ResourceAdapter((com.rubenlaguna.en4j.jpaentities.Resource) o);
+            }
+        });
+        return toReturn ;
+    }
 }

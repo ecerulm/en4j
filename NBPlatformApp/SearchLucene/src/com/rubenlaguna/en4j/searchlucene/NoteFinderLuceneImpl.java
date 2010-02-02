@@ -8,6 +8,7 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -41,6 +42,7 @@ import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.w3c.dom.DocumentFragment;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -79,12 +81,12 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             final IndexSearcher searcher = new IndexSearcher(reader);
 
             final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-            AnalyzerUtils.displayTokens(analyzer, searchText);
+            AnalyzerUtils.displayTokensWithFullDetails(analyzer, searchText);
             QueryParser parser = new CustomQueryParser("all", analyzer);
             parser.setDefaultOperator(QueryParser.Operator.AND);
 
             Query query = parser.parse(searchText);
-            LOG.info("query ="+query.toString());
+            LOG.info("query =" + query.toString());
             //search the query
             Collector collector = new Collector() {
 
@@ -186,14 +188,30 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     document.add(contentField);
                 }
 
+                //SourceURL
+                String sourceUrl = note.getSourceurl();
+                if (null != sourceUrl && !"".equals(sourceUrl));
+                {
+                    Field sourceField = new Field("source",
+                            sourceUrl,
+                            Field.Store.NO,
+                            Field.Index.ANALYZED);
+                    document.add(sourceField);
+                }
+                
+
+
 
                 StringBuffer allText = new StringBuffer();
-                allText.append(note.getTitle()).append(" ").append(text);
-                Field allField = new Field("all", allText.toString(),
+                allText.append(note.getTitle());
+                allText.append(" ").append(text);
+                allText.append(" ").append(sourceUrl);
+
+                Field allField = new Field("all", allText.toString().trim(),
                         Field.Store.NO, Field.Index.ANALYZED);
                 document.add(allField);
                 //LOG.info("Indxing " + allText.toString());
-                AnalyzerUtils.displayTokens(analyzer, allText.toString());
+                AnalyzerUtils.displayTokensWithFullDetails(analyzer, allText.toString());
                 writer.addDocument(document);
             }
             writer.commit();
@@ -225,6 +243,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private void getText(StringBuffer sb, Node node) {
+        final String localName = node.getNodeName();
+        if("en-media".equalsIgnoreCase(localName)){
+            final String fname = ((Element)node).getAttribute("alt");
+            if (null!=fname){
+                sb.append(fname).append(" ");
+            }
+        }
         if (node.getNodeType() == Node.TEXT_NODE) {
             final String nodeValue = node.getNodeValue();
             //LOG.info("textnode " + nodeValue);

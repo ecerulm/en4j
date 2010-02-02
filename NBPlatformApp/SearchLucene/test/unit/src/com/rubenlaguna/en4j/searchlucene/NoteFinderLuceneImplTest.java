@@ -49,7 +49,9 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
                         + " deberia pararse la busqueda en el IndexSearcher o el que se este"
                         + " utilizando.  <div><br /></div><div><br /></div><div>el RequestProcessor"
                         + " tiene que haberse creado con el constructor especial para interrupt."
-                        + " Si no el .cancel no llama a Thread.interrupt(). </div></en-note>";
+                        + " Si no el .cancel no llama a Thread.interrupt(). <en-media width=\"125\""
+                        + "height=\"125\" hash=\"cfc297f6c812543e366da3a070fba4ea\" type=\"image/jpeg\" alt=\"thmb_small_img_6932.jpg\"/>"
+                        + "</div></en-note>";
             }
 
             public Integer getId() {
@@ -259,6 +261,18 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
     public void testFind8() {
         System.out.println("find");
         String searchText = "\"potato\"";
+        Collection expResult = null;
+        Collection result = instance.find(searchText);
+        assertEquals(1, result.size());
+        // TODO review the generated test code and remove the default call to fail.
+    }
+    /**
+     * Test of find method, of class NoteFinderLuceneImpl.
+     */
+    @Test
+    public void testFindFilename() {
+        System.out.println("findfilename");
+        String searchText = "thmb_small";
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());

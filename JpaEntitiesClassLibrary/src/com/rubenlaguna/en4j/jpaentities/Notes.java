@@ -21,6 +21,7 @@
 package com.rubenlaguna.en4j.jpaentities;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,10 +68,9 @@ public class Notes implements Serializable {
     private Date updated;
     @Column(name = "SOURCEURL")
     private String sourceurl;
-
-    @OneToMany(fetch=FetchType.LAZY,cascade=CascadeType.ALL,mappedBy="owner")
-    @MapKey(name="hashValue")
-    private Map<String, Resource> resources = new HashMap<String,Resource>();
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "owner")
+    @MapKey(name = "hashValue")
+    private Map<String, Resource> resources = new HashMap<String, Resource>();
 
     public Notes() {
     }
@@ -131,22 +131,24 @@ public class Notes implements Serializable {
         this.updated = updated;
     }
 
-    public Resource getResource(String hash)
-    {
+    public Resource getResource(String hash) {
         return resources.get(hash);
     }
 
+    public Collection<Resource> getResources() {
+        return resources.values();
+    }
+
     public void addResource(Resource resource) {
-        if(null==resource) {
+        if (null == resource) {
             throw new IllegalArgumentException("resource cannot be null");
         }
-        if(null==resources) {
+        if (null == resources) {
             resources = new HashMap<String, Resource>();
         }
         resource.setOwner(this);
         resources.put(resource.getHash(), resource);
     }
-    
 
     @Override
     public int hashCode() {
@@ -171,6 +173,4 @@ public class Notes implements Serializable {
     public String toString() {
         return "com.rubenlaguna.noteentitieslibrary.Notes[id=" + id + "]";
     }
-
-
 }
