@@ -272,7 +272,7 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
     @Test
     public void testFindFilename() {
         System.out.println("findfilename");
-        String searchText = "thmb_small";
+        String searchText = "thmb";
         Collection expResult = null;
         Collection result = instance.find(searchText);
         assertEquals(1, result.size());
