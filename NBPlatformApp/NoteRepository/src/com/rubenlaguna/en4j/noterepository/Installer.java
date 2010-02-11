@@ -24,41 +24,44 @@ import org.openide.util.Exceptions;
 public class Installer extends ModuleInstall {
 
     private static EntityManagerFactory EMF = null;
-    private static EntityManager EM = null;
     private static String connectionURL = null;
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
 
     @Override
-    public void close() {
-        if (null != EM) {
-            synchronized (EM) {
-                LOG.info("JPA Native Query shutdown");
-                EM.getTransaction().begin();
-                EM.createNativeQuery("SHUTDOWN").executeUpdate();
-                EM.getTransaction().commit();
+    public void installed() {
+        EntityManager entityManager = getEntityManagerFactory().createEntityManager();
+        LOG.info("setting properties in HSQLDB");
+        entityManager.getTransaction().begin();
+        entityManager.createNativeQuery("SET FILES LOG SIZE 40").executeUpdate();
+        //entityManager.createNativeQuery("SET FILES CACHE SIZE 5000").executeUpdate();
+        entityManager.getTransaction().commit();
+        entityManager.close();
 
-                LOG.info("closing EntityManager " + EM);
-                EM.close();
-            }
-        }
+    }
+
+    @Override
+    public void close() {
         if (null != EMF) {
+            LOG.info("JPA Native Query shutdown");
+            EntityManager entityManager = EMF.createEntityManager();
+            entityManager.getTransaction().begin();
+            entityManager.createNativeQuery("SHUTDOWN").executeUpdate();
+            entityManager.getTransaction().commit();
+            entityManager.close();
             LOG.info("closing EntityManagerFactory " + EMF);
             EMF.close();
         }
 
     }
 
-    public static EntityManager getEntityManager() {
+    public static EntityManagerFactory getEntityManagerFactory() {
         if (EMF == null) {
             Map properties = new HashMap();
             connectionURL = "jdbc:hsqldb:file:" + System.getProperty("netbeans.user") + "/en4j/db";
             properties.put("openjpa.ConnectionURL", connectionURL);
             EMF = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties);
         }
+        return EMF;
 
-        if (null == EM) {
-            EM = EMF.createEntityManager();
-        }
-        return java.beans.Beans.isDesignTime() ? null : EM;
     }
 }

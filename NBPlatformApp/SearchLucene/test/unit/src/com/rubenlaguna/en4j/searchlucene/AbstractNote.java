@@ -74,4 +74,8 @@ class AbstractNote implements Note {
     public Collection<Resource> getResources() {
         return Collections.EMPTY_LIST;
     }
+
+    public int getUpdateSequenceNumber() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

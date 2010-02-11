@@ -37,6 +37,9 @@ public interface Note {
 
     public void setUpdated(Date updated);
 
+    public int getUpdateSequenceNumber();
+
     public Resource getResource(String hash);
+
     public Collection<Resource> getResources();
 }

@@ -66,11 +66,14 @@ public class Notes implements Serializable {
     @Column(name = "UPDATED")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updated;
-    @Column(name = "SOURCEURL")
+    @Column(name = "SOURCEURL",length=4096)
     private String sourceurl;
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "owner")
     @MapKey(name = "hashValue")
     private Map<String, Resource> resources = new HashMap<String, Resource>();
+    @Basic(optional = false)
+    @Column(name = "USN", unique = true, nullable = false)
+    private int updateSequenceNumber = 0;
 
     public Notes() {
     }
@@ -81,6 +84,14 @@ public class Notes implements Serializable {
         this.content = content;
         this.created = created;
         this.updated = updated;
+    }
+
+    public int getUpdateSequenceNumber() {
+        return updateSequenceNumber;
+    }
+
+    public void setUpdateSequenceNumber(int updateSequenceNumber) {
+        this.updateSequenceNumber = updateSequenceNumber;
     }
 
     public String getContent() {

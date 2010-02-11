@@ -4,6 +4,8 @@
  */
 package com.rubenlaguna.en4j.mainmodule;
 
+import java.beans.PropertyChangeEvent;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,7 +30,11 @@ import org.openide.util.lookup.InstanceContent;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import java.beans.PropertyChangeListener;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import org.openide.util.RequestProcessor;
 
@@ -37,15 +43,17 @@ import org.openide.util.RequestProcessor;
  */
 @ConvertAsProperties(dtd = "-//com.rubenlaguna.en4j.mainmodule//NoteList//EN",
 autostore = false)
-public final class NoteListTopComponent extends TopComponent implements ListSelectionListener {
+public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
 
-    private static final RequestProcessor RP = RequestProcessor.getDefault();
+    private Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
+    private static final RequestProcessor RP = new RequestProcessor("refresh tasks", 1);
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
     private static final String PREFERRED_ID = "NoteListTopComponent";
     private final InstanceContent ic = new InstanceContent();
     private RequestProcessor.Task currentSearchTask = null;
+    private RequestProcessor.Task currentRefreshTask = null;
 
     public NoteListTopComponent() {
         initComponents();
@@ -54,12 +62,29 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         associateLookup(new AbstractLookup(ic));
         jTable1.getSelectionModel().addListSelectionListener(this);
+        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+        rep.addPropertyChangeListener(this);
     }
 
     public void refresh() {
-        list1.clear();
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-        list1.addAll(rep.getAllNotes());
+        LOG.info("refresh notelist "+new SimpleDateFormat("h:mm:ss a").format(new Date()));
+        try {
+            final NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+            final Collection<Note> allNotes = rep.getAllNotes();
+            SwingUtilities.invokeAndWait(new Runnable() {
+
+                @Override
+                public void run() {
+                    list1.clear();
+                    list1.addAll(allNotes);
+                }
+            });
+        } catch (InterruptedException ex) {
+            //do nothing
+        } catch (InvocationTargetException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+
     }
 
     /** This method is called from within the constructor to
@@ -308,5 +333,26 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
 
         }
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent evt) {
+        if (null != currentRefreshTask) {
+            currentRefreshTask.cancel();//cancel the last refresh so we only
+            //two refresh task at a given moment
+        }
+        Runnable runnable = new Runnable() {
+
+            @Override
+            public void run() {
+                NoteListTopComponent.this.refresh();
+                try {
+                    Thread.sleep(5000); //no more than 1 refresh every two seconds
+                } catch (InterruptedException ex) {
+                    //do nothing
+                }
+            }
+        };
+        currentRefreshTask = RP.post(runnable);
     }
 }

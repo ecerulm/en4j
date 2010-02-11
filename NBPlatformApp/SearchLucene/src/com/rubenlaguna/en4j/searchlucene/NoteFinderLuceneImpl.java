@@ -190,8 +190,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 //SourceURL
                 String sourceUrl = note.getSourceurl();
-                if (null != sourceUrl && !"".equals(sourceUrl));
+                if ((null != sourceUrl) && (!"".equals(sourceUrl)))
                 {
+                    LOG.info("sourceUrl: \""+sourceUrl+"\"");
                     Field sourceField = new Field("source",
                             sourceUrl,
                             Field.Store.NO,

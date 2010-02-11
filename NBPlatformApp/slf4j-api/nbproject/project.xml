@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://www.netbeans.org/ns/project/1">
+    <type>org.netbeans.modules.apisupport.project</type>
+    <configuration>
+        <data xmlns="http://www.netbeans.org/ns/nb-module-project/3">
+            <code-name-base>com.rubenlaguna.en4j.slf4j</code-name-base>
+            <suite-component/>
+            <module-dependencies/>
+            <public-packages>
+                <package>org.slf4j</package>
+                <package>org.slf4j.helpers</package>
+                <package>org.slf4j.impl</package>
+                <package>org.slf4j.spi</package>
+            </public-packages>
+            <class-path-extension>
+                <runtime-relative-path>ext/slf4j-simple-1.5.10.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/slf4j-simple-1.5.10.jar</binary-origin>
+            </class-path-extension>
+            <class-path-extension>
+                <runtime-relative-path>ext/slf4j-api-1.5.10.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/slf4j-api-1.5.10.jar</binary-origin>
+            </class-path-extension>
+        </data>
+    </configuration>
+</project>

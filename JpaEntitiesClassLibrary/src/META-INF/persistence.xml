@@ -12,6 +12,9 @@
       <property name="openjpa.ConnectionURL" value="jdbc:hsqldb:file:/Users/ecerulm/everjavatest"/>
       <property name="openjpa.jdbc.DBDictionary"  value="org.apache.openjpa.jdbc.sql.HSQLDictionary(cacheTables=true)"/>
       <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
+      <!--<property name="openjpa.Multithreaded" value="true"/>-->
+      <property name="openjpa.RuntimeUnenhancedClasses" value="unsupported"/>
+
     </properties>
   </persistence-unit>
 </persistence>

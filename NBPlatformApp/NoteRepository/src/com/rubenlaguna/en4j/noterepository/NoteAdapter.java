@@ -103,6 +103,10 @@ class NoteAdapter implements Note {
                 return new ResourceAdapter((com.rubenlaguna.en4j.jpaentities.Resource) o);
             }
         });
-        return toReturn ;
+        return toReturn;
+    }
+
+    public int getUpdateSequenceNumber() {
+        return adaptee.getUpdateSequenceNumber();
     }
 }

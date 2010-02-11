@@ -6,6 +6,7 @@ package com.rubenlaguna.en4j.searchlucene;
 
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import java.beans.PropertyChangeListener;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashMap;
@@ -43,5 +44,17 @@ class TestNoteRepository implements NoteRepository {
         System.out.println("size " + theMap.size());
 
         System.out.println("this=" + this);
+    }
+
+    public int getHighestUSN() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

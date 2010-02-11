@@ -16,6 +16,7 @@ import org.xhtmlrenderer.extend.NamespaceHandler;
  * @author ecerulm
  */
 class ENMLNamespaceHandler implements NamespaceHandler {
+    private final Logger LOG = Logger.getLogger(ENMLNamespaceHandler.class.getName());
     private final NamespaceHandler delegate;
 
     public ENMLNamespaceHandler(NamespaceHandler h) {
@@ -39,7 +40,7 @@ class ENMLNamespaceHandler implements NamespaceHandler {
         if ("en-media".equalsIgnoreCase(e.getNodeName())) {
             toReturn = "display: block;";
         }
-        Logger.getLogger(ENMLNamespaceHandler.class.getName()).info("style for ("+e.getNodeName()+") is ("+toReturn+")");
+        //LOG.info("style for ("+e.getNodeName()+") is ("+toReturn+")");
         return toReturn;
     }
 

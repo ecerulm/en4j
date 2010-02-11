@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE filesystem PUBLIC "-//NetBeans//DTD Filesystem 1.2//EN" "http://www.netbeans.org/dtds/filesystem-1_2.dtd">
+<filesystem>
+    <folder name="Actions">
+        <folder name="File">
+            <file name="com-rubenlaguna-en4j-sync-SyncAction.instance">
+                <attr name="delegate" newvalue="com.rubenlaguna.en4j.sync.SyncAction"/>
+                <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.sync.Bundle#CTL_SyncAction"/>
+                <attr name="iconBase" stringvalue="com/rubenlaguna/en4j/sync/Sync-Update-derp-Im-sleepy-icon-1.png"/>
+                <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
+                <attr name="noIconInMenu" boolvalue="false"/>
+            </file>
+        </folder>
+    </folder>
+    <folder name="Menu">
+        <folder name="File">
+            <file name="com-rubenlaguna-en4j-sync-SyncAction.shadow">
+                <attr name="originalFile" stringvalue="Actions/File/com-rubenlaguna-en4j-sync-SyncAction.instance"/>
+                <attr name="position" intvalue="-100"/>
+            </file>
+        </folder>
+    </folder>
+    <folder name="Shortcuts">
+        <file name="DM-S.shadow">
+            <attr name="originalFile" stringvalue="Actions/File/com-rubenlaguna-en4j-sync-SyncAction.instance"/>
+        </file>
+    </folder>
+    <folder name="Toolbars">
+        <folder name="Build">
+            <file name="com-rubenlaguna-en4j-sync-SyncAction.shadow">
+                <attr name="originalFile" stringvalue="Actions/File/com-rubenlaguna-en4j-sync-SyncAction.instance"/>
+                <attr name="position" intvalue="300"/>
+            </file>
+        </folder>
+        <!--
+        <folder name="SynchronizationToolbar">
+            <file name="SyncMenuAction.shadow">
+                <attr name="originalFile" stringvalue="Actions/Edit/com-rubenlaguna-en4j-sync-SyncMenuAction.instance"/>
+            </file>
+        </folder>
+        -->
+    </folder>
+</filesystem>
