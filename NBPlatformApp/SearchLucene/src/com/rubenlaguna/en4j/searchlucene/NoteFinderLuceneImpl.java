@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.searchlucene;
 
@@ -8,7 +20,6 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
-import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -21,7 +32,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.html.dom.HTMLDocumentImpl;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -33,9 +43,7 @@ import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Scorer;
-import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.cyberneko.html.parsers.DOMFragmentParser;
@@ -190,16 +198,15 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 //SourceURL
                 String sourceUrl = note.getSourceurl();
-                if ((null != sourceUrl) && (!"".equals(sourceUrl)))
-                {
-                    LOG.info("sourceUrl: \""+sourceUrl+"\"");
+                if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
+                    LOG.info("sourceUrl: \"" + sourceUrl + "\"");
                     Field sourceField = new Field("source",
                             sourceUrl,
                             Field.Store.NO,
                             Field.Index.ANALYZED);
                     document.add(sourceField);
                 }
-                
+
 
 
 
@@ -245,9 +252,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private void getText(StringBuffer sb, Node node) {
         final String localName = node.getNodeName();
-        if("en-media".equalsIgnoreCase(localName)){
-            final String fname = ((Element)node).getAttribute("alt");
-            if (null!=fname){
+        if ("en-media".equalsIgnoreCase(localName)) {
+            final String fname = ((Element) node).getAttribute("alt");
+            if (null != fname) {
                 sb.append(fname).append(" ");
             }
         }
