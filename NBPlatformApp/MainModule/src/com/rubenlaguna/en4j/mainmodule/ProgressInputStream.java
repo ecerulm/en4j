@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.mainmodule;
 
@@ -18,9 +30,9 @@ class ProgressInputStream extends FilterInputStream {
     private final ProgressListener pl;
     private int read = 0;
     private int last = 0;
-    private  int stepsize = 0;
+    private int stepsize = 0;
 
-    public ProgressInputStream(InputStream fileInputStream,int stepsize, ProgressListener progressListener) {
+    public ProgressInputStream(InputStream fileInputStream, int stepsize, ProgressListener progressListener) {
         super(fileInputStream);
         this.stepsize = stepsize;
         this.pl = progressListener;
@@ -53,7 +65,7 @@ class ProgressInputStream extends FilterInputStream {
         }
         if (read - last > stepsize) {
             pl.progress(read);
-            System.out.println(""+read);
+            System.out.println("" + read);
             last = read;
         }
     }
