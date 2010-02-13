@@ -47,6 +47,7 @@ import org.apache.lucene.search.Scorer;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.cyberneko.html.parsers.DOMFragmentParser;
+import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.w3c.dom.DocumentFragment;
@@ -54,6 +55,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -61,8 +63,20 @@ import org.xml.sax.InputSource;
  */
 public class NoteFinderLuceneImpl implements NoteFinder {
 
+    private final int REPORTEVERY = 100;
     private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
+    private IndexReader reader = null;
+
+    public NoteFinderLuceneImpl() {
+        try {
+            getIndexWriter().close();
+            File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
+            reader = IndexReader.open(FSDirectory.open(file), true);
+        } catch (Exception ex) {
+            Exceptions.printStackTrace(ex);
+        }
+    }
     //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
@@ -83,9 +97,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
-            File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            IndexReader reader = IndexReader.open(FSDirectory.open(file), true);
+            IndexReader newReader = reader.reopen();
+            if (newReader != reader) {
+                LOG.info("reader reopened");
+                reader.close();
+            }
+            reader = newReader;
 
+            reader.reopen();
             final IndexSearcher searcher = new IndexSearcher(reader);
 
             final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
@@ -110,7 +129,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     int docId = Integer.parseInt(document.getField("id").stringValue());
 
                     NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-                    toReturn.add(rep.get(docId));
+                    toReturn.add(rep.get(docId,false));
                 }
 
                 @Override
@@ -137,21 +156,22 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    public void rebuildIndex() {
-        IndexWriter writer = null;
+    public void rebuildIndex(ProgressHandle ph) {
         LOG.info("about to start indexing");
+        long start = System.currentTimeMillis();
+        long start2 = start;
+        IndexWriter writer = null;
         try {
-            File file = new File(System.getProperty("netbeans.user") + "en4j/luceneindex");
-            final CustomAnalyzer analyzer = new CustomAnalyzer();
-            writer = new IndexWriter(FSDirectory.open(file), analyzer, true,
-                    IndexWriter.MaxFieldLength.LIMITED);
-            writer.setUseCompoundFile(true);
+            writer = getIndexWriter();
             writer.deleteAll();
             writer.commit();
             Collection<Note> notes = getAllNotes();
 
             LOG.info("number of notes " + notes.size());
-            for (Note note : notes) {
+            ph.switchToDeterminate(notes.size());
+
+            int i = 0;
+            for (Note noteWithoutContents : notes) {
                 if (Thread.interrupted()) {
                     //if the task has been cancelled we skip the rest of the
                     //notes but we still do the writer.commit()
@@ -159,74 +179,39 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     LOG.warning("Rebuild index operation was CANCELLED");
                     return;
                 }
+                Note note = getProperNote(noteWithoutContents);
 
-                LOG.info("indexing note " + note);
+//                LOG.info("indexing note " + note);
 
+                if (null != note) {
+                    Document document = getLuceneDocument(note);
+                    writer.addDocument(document);
+                    ++i;
+                    if ((i % REPORTEVERY) == 0) {
+//                    if ((System.currentTimeMillis() - start2) > 2000) { //every 5 secs
+                        //to process 12000 notes
+                        //without commiting/optimizing every 100th   137 secs
+                        //with    commiting only       every 100th   144 secs
+                        //with    committin only each 5s             201 sec
+                        //with    committin only each 2s             332 sec
+                        //with    commiting/optimizing each          502 secs
+                        //with    comminting 5s and progress outside 410 sec
 
-                //Lucene document http://www.darksleep.com/lucene/
-                Document document = new Document();
-
-                Field idField = new Field("id",
-                        note.getId().toString(),
-                        Field.Store.YES,
-                        Field.Index.NOT_ANALYZED);
-                document.add(idField);
-
-                Field titleField = new Field("title",
-                        note.getTitle(),
-                        Field.Store.YES,
-                        Field.Index.ANALYZED);
-                document.add(titleField);
-
-                //according to Lucene in Action 7.4 we should use
-                //JTidy or NekoHTML to parse the thlm
-                DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-                domParser.parse(new InputSource(new StringReader(note.getContent())), node);
-                StringBuffer sb = new StringBuffer();
-                sb.setLength(0);
-                getText(sb, node);
-                String text = sb.toString();
-
-                if ((text != null) && (!text.equals(""))) {
-                    //LOG.info("indexing "+text);
-                    Field contentField = new Field("content",
-                            text,
-                            Field.Store.NO,
-                            Field.Index.ANALYZED);
-                    document.add(contentField);
+                        ph.progress("Note: " + note.getTitle(), i);
+                        writer.commit();
+                        long delta = System.currentTimeMillis() - start2;
+                        start2 = System.currentTimeMillis();
+                        LOG.info(i + " notes indexed so far. This batch took " + (delta / 1000.0) + " secs");
+                    }
+                } else {
+                    break;//for loop
                 }
-
-                //SourceURL
-                String sourceUrl = note.getSourceurl();
-                if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
-                    LOG.info("sourceUrl: \"" + sourceUrl + "\"");
-                    Field sourceField = new Field("source",
-                            sourceUrl,
-                            Field.Store.NO,
-                            Field.Index.ANALYZED);
-                    document.add(sourceField);
-                }
-
-
-
-
-                StringBuffer allText = new StringBuffer();
-                allText.append(note.getTitle());
-                allText.append(" ").append(text);
-                allText.append(" ").append(sourceUrl);
-
-                Field allField = new Field("all", allText.toString().trim(),
-                        Field.Store.NO, Field.Index.ANALYZED);
-                document.add(allField);
-                //LOG.info("Indxing " + allText.toString());
-                AnalyzerUtils.displayTokensWithFullDetails(analyzer, allText.toString());
-                writer.addDocument(document);
             }
             writer.commit();
+            LOG.info(i + " notes indexed so far.");
+            LOG.info("Optimize and close the index.");
             writer.optimize();
             writer.close();
-
-
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
@@ -239,7 +224,51 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 Exceptions.printStackTrace(ex);
             }
         }
-        LOG.info("Rebuild index finished");
+        long delta = System.currentTimeMillis() - start;
+        LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
+    }
+
+    private IndexWriter getIndexWriter() throws IOException {
+        File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
+        final CustomAnalyzer analyzer = new CustomAnalyzer();
+        IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, true, IndexWriter.MaxFieldLength.LIMITED);
+        writer.setUseCompoundFile(true);
+        return writer;
+    }
+
+    private Document getLuceneDocument(Note note) throws SAXException, IOException {
+        //Lucene document http://www.darksleep.com/lucene/
+        Document document = new Document();
+        Field idField = new Field("id", note.getId().toString(), Field.Store.YES, Field.Index.NOT_ANALYZED);
+        document.add(idField);
+        Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
+        document.add(titleField);
+        //according to Lucene in Action 7.4 we should use
+        //JTidy or NekoHTML to parse the thlm
+        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
+        StringBuffer sb = new StringBuffer();
+        sb.setLength(0);
+        getText(sb, node);
+        String text = sb.toString();
+        if ((text != null) && (!text.equals(""))) {
+            //LOG.info("indexing "+text);
+            Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
+            document.add(contentField);
+        }
+        String sourceUrl = note.getSourceurl();
+        if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
+            //                    LOG.info("sourceUrl: \"" + sourceUrl + "\"");
+            Field sourceField = new Field("source", sourceUrl, Field.Store.NO, Field.Index.ANALYZED);
+            document.add(sourceField);
+        }
+        StringBuffer allText = new StringBuffer();
+        allText.append(note.getTitle());
+        allText.append(" ").append(text);
+        allText.append(" ").append(sourceUrl);
+        Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
+        document.add(allField);
+        return document;
     }
 
     private Collection<Note> getAllNotes() {
@@ -270,5 +299,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 getText(sb, children.item(i));
             }
         }
+    }
+
+    private Note getProperNote(Note noteWithoutContents) {
+        return Lookup.getDefault().lookup(NoteRepository.class).get(noteWithoutContents.getId());
+
     }
 }

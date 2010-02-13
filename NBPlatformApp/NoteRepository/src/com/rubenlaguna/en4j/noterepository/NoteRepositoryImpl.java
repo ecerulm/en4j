@@ -77,7 +77,8 @@ public class NoteRepositoryImpl implements NoteRepository {
             Query query1 = entityManager.createQuery(queryText);
             listNotes.addAll(query1.getResultList());
         } catch (PersistenceException ex) {
-            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
+            LOG.warning("could not load the notes from the db. Is the module closing?");
+//            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -97,6 +98,10 @@ public class NoteRepositoryImpl implements NoteRepository {
     }
 
     public Note get(int id) {
+        return get(id, true);
+    }
+
+    public Note get(int id, boolean withContents) {
         EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
         Note toReturn = null;
         try {
@@ -109,14 +114,20 @@ public class NoteRepositoryImpl implements NoteRepository {
             queryById.setParameter("id", id);
             final Notes result = (Notes) queryById.getSingleResult();
             //entityManager.
-            result.getContent();
-            result.getResources();
+            if (withContents) {
+                result.getContent();
+                result.getResources();
+            }
+
             toReturn = fromNotes(result);
+        } catch (PersistenceException ex) {
+            LOG.warning("could not load the note from the db. Is the module closing?");
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
             entityManager.close();
         }
+        //the entity now is detached 
         return toReturn;
     }
 
@@ -293,7 +304,8 @@ public class NoteRepositoryImpl implements NoteRepository {
                 entityManager.persist(entityToPersist);
                 entityManager.getTransaction().commit();
             } catch (PersistenceException ex) {
-                LOG.log(Level.WARNING, "Could add note due to ...", ex);
+//                LOG.log(Level.WARNING, "Could add note due to ...", ex);
+                LOG.warning("could not load the note from the db. Is the module closing?");
                 toReturn = false;
             } finally {
                 //we need to rollback the transaction if it

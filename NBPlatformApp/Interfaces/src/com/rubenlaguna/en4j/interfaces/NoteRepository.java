@@ -35,6 +35,8 @@ public interface NoteRepository {
 
     Note get(int id);
 
+    Note get(int id, boolean withContents);
+
     boolean add(Note n);
 
     int getHighestUSN();

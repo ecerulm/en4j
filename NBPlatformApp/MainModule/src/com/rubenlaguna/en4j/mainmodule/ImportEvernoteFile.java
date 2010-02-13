@@ -90,7 +90,7 @@ public final class ImportEvernoteFile implements ActionListener {
 
                         rep.importEntries(in, ph);
                         ph.progress("Rebuilding indexes");
-                        Lookup.getDefault().lookup(NoteFinder.class).rebuildIndex();
+                        Lookup.getDefault().lookup(NoteFinder.class).rebuildIndex(ph);
 
 
 
