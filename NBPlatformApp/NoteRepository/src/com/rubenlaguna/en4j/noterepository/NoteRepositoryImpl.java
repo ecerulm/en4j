@@ -35,12 +35,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
+import org.apache.openjpa.persistence.OpenJPAPersistence;
+import org.apache.openjpa.persistence.OpenJPAQuery;
+import org.apache.openjpa.persistence.jdbc.FetchMode;
+import org.apache.openjpa.persistence.jdbc.JDBCFetchPlan;
 import org.netbeans.api.progress.ProgressHandle;
 
 /**
@@ -60,11 +65,19 @@ public class NoteRepositoryImpl implements NoteRepository {
 
 
         Collection<Notes> listNotes = new ArrayList<Notes>();
-        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        EntityManager entityManager = null;
+        try {
+            entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        } catch (RuntimeException ex) {
+            LOG.log(Level.WARNING, "cannot even create an entitymanager", ex);
+            return toReturn;
+        }
         try {
             String queryText = "SELECT n FROM Notes n";
             Query query1 = entityManager.createQuery(queryText);
             listNotes.addAll(query1.getResultList());
+        } catch (PersistenceException ex) {
+            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -89,8 +102,16 @@ public class NoteRepositoryImpl implements NoteRepository {
         try {
             String queryText2 = "SELECT n FROM Notes n WHERE n.id = :id ";
             Query queryById = entityManager.createQuery(queryText2);
+//            OpenJPAQuery kq = OpenJPAPersistence.cast(queryById);
+//            JDBCFetchPlan fetch = (JDBCFetchPlan) kq.getFetchPlan();
+//            fetch.setEagerFetchMode(FetchMode.PARALLEL);
+//            fetch.setSubclassFetchMode(FetchMode.JOIN);
             queryById.setParameter("id", id);
-            toReturn = fromNotes((Notes) queryById.getSingleResult());
+            final Notes result = (Notes) queryById.getSingleResult();
+            //entityManager.
+            result.getContent();
+            result.getResources();
+            toReturn = fromNotes(result);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -230,10 +251,16 @@ public class NoteRepositoryImpl implements NoteRepository {
         return toReturn;
     }
 
-    public void add(Note n) {
+    public boolean add(Note n) {
         LOG.info("add note: " + n);
-        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
-
+        EntityManager entityManager = null;
+        try {
+            entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        } catch (IllegalStateException ex) {
+            LOG.warning("Couldn't add the note. Probably the module is closing.");
+            return false;
+        }
+        boolean toReturn = true;//assume that it will work
         try {
             final EntityTransaction t = entityManager.getTransaction();
 
@@ -242,7 +269,9 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 Notes entityToPersist = new Notes();
 
+                entityToPersist.setGuid(n.getGuid());
                 entityToPersist.setTitle(n.getTitle());
+//                LOG.info("content: "+n.getContent().substring(0, 50));
                 entityToPersist.setContent(n.getContent());
                 entityToPersist.setCreated(n.getCreated());
                 entityToPersist.setSourceurl(n.getSourceurl());
@@ -263,6 +292,9 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 entityManager.persist(entityToPersist);
                 entityManager.getTransaction().commit();
+            } catch (PersistenceException ex) {
+                LOG.log(Level.WARNING, "Could add note due to ...", ex);
+                toReturn = false;
             } finally {
                 //we need to rollback the transaction if it
                 //isn't commited otherwise the entityManager
@@ -270,6 +302,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                 // open see http://bit.ly/b0p3Wj
 
                 if (t.isActive()) {
+                    LOG.info("rollbacking transaction");
                     t.rollback();
                 }
             }
@@ -277,6 +310,7 @@ public class NoteRepositoryImpl implements NoteRepository {
             entityManager.close();
         }
         this.pcs.firePropertyChange("notes", null, null);
+        return toReturn;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener listener) {

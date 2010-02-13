@@ -14,6 +14,7 @@
       <property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
       <!--<property name="openjpa.Multithreaded" value="true"/>-->
       <property name="openjpa.RuntimeUnenhancedClasses" value="unsupported"/>
+      <property name="openjpa.DetachState" value="loaded(DetachedStateField=true,DetachedStateManager=true,AccessUnloaded=false)"/>
 
     </properties>
   </persistence-unit>

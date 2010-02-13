@@ -114,7 +114,7 @@ final class EN4JPanel extends javax.swing.JPanel implements DocumentListener {
         // or:
         // SomeSystemOption.getDefault().setSomeStringProperty(someTextField.getText());
         NbPreferences.forModule(EN4JPanel.class).put("username", usernameJTextField.getText());
-        NbPreferences.forModule(EN4JPanel.class).put("password", passwordJTextField.getText());
+        NbPreferences.forModule(EN4JPanel.class).put("password", new String(passwordJTextField.getPassword()));
     }
 
     boolean valid() {

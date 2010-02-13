@@ -38,12 +38,12 @@ class TestNoteRepository implements NoteRepository {
         return theMap.get(id);
     }
 
-    public void add( Note note) {
-
+    public boolean add(Note note) {
         theMap.put(note.getId(), note);
         System.out.println("size " + theMap.size());
 
         System.out.println("this=" + this);
+        return true;
     }
 
     public int getHighestUSN() {

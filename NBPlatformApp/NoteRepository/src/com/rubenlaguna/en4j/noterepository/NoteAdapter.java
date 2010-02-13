@@ -121,4 +121,8 @@ class NoteAdapter implements Note {
     public int getUpdateSequenceNumber() {
         return adaptee.getUpdateSequenceNumber();
     }
+
+    public String getGuid() {
+        return adaptee.getGuid();
+    }
 }

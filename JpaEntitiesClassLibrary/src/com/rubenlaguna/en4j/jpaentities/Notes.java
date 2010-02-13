@@ -31,28 +31,42 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.MapKey;
+import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.UniqueConstraint;
 
 /**
  *
  * @author Ruben Laguna <ruben.laguna at gmail.com>
  */
+//@NamedQuery(
+//  name="Notes.findEager",
+//  query="'SELECT DISTINCT n FROM Notes n LEFT JOIN FETCH n.resources c WHERE n.id = :id'"
+//  //SELECT n FROM Notes n WHERE n.id = :id
+//)
 @Entity
-@Table(name = "NOTES")
+@Table(name = "NOTES", uniqueConstraints = {
+         @UniqueConstraint(columnNames = "GUID"),
+         @UniqueConstraint(columnNames = "USN")
+       }
+)
 public class Notes implements Serializable {
 
     @Id
     @Column(name = "ID")
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+    @Basic(optional = true)
+    @Column(name = "GUID", length = 36, nullable = true)
+    private String guid;
     @Basic(optional = false)
     @Column(name = "TITLE", length = 255)
     private String title;
     @Basic(optional = false, fetch = FetchType.LAZY)
-    @Column(name = "CONTENT", length = 5242880)
+    @Column(name = "CONTENT", length = 5242880, nullable = false)
     private String content;
     @Basic(optional = false)
     @Column(name = "CREATED")
@@ -68,7 +82,7 @@ public class Notes implements Serializable {
     @MapKey(name = "hashValue")
     private Map<String, Resource> resources = new HashMap<String, Resource>();
     @Basic(optional = false)
-    @Column(name = "USN", unique = true, nullable = false)
+    @Column(name = "USN",  nullable = false)
     private int updateSequenceNumber = 0;
 
     public Notes() {
@@ -112,6 +126,14 @@ public class Notes implements Serializable {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getGuid() {
+        return guid;
+    }
+
+    public void setGuid(String guid) {
+        this.guid = guid;
     }
 
     public String getSourceurl() {

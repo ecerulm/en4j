@@ -25,33 +25,35 @@ import java.util.Date;
  */
 public interface Note {
 
-    public String getContent();
+    String getContent();
 
-    public void setContent(String content);
+    void setContent(String content);
 
-    public Date getCreated();
+    Date getCreated();
 
-    public void setCreated(Date created);
+    void setCreated(Date created);
 
-    public Integer getId();
+    Integer getId();
 
-    public void setId(Integer id);
+    void setId(Integer id);
 
-    public String getSourceurl();
+    String getSourceurl();
 
-    public void setSourceurl(String sourceurl);
+    void setSourceurl(String sourceurl);
 
-    public String getTitle();
+    String getTitle();
 
-    public void setTitle(String title);
+    void setTitle(String title);
 
-    public Date getUpdated();
+    Date getUpdated();
 
-    public void setUpdated(Date updated);
+    void setUpdated(Date updated);
 
-    public int getUpdateSequenceNumber();
+    int getUpdateSequenceNumber();
 
-    public Resource getResource(String hash);
+    Resource getResource(String hash);
 
-    public Collection<Resource> getResources();
+    Collection<Resource> getResources();
+
+    String getGuid();
 }
