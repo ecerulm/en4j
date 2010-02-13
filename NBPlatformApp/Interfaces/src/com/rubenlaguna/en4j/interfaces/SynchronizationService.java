@@ -22,5 +22,5 @@ package com.rubenlaguna.en4j.interfaces;
  */
 public interface SynchronizationService {
 
-    void sync();
+    boolean sync();
 }

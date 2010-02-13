@@ -232,7 +232,13 @@ public class NoteRepositoryImpl implements NoteRepository {
 
     public void add(Note n) {
         LOG.info("add note: " + n);
-        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        EntityManager entityManager = null;
+        try {
+            entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        } catch (IllegalStateException ex) {
+            LOG.warning("Couldn't add the note. Probably the module is closing.");
+            return;
+        }
 
         try {
             final EntityTransaction t = entityManager.getTransaction();
@@ -270,6 +276,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                 // open see http://bit.ly/b0p3Wj
 
                 if (t.isActive()) {
+                    LOG.info("rollbacking transaction");
                     t.rollback();
                 }
             }

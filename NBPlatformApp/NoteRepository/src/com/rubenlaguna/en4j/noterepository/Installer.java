@@ -60,12 +60,15 @@ public class Installer extends ModuleInstall {
 
     }
 
-    public static EntityManagerFactory getEntityManagerFactory() {
+    public static EntityManagerFactory getEntityManagerFactory() throws IllegalStateException{
         if (EMF == null) {
             Map properties = new HashMap();
             connectionURL = "jdbc:hsqldb:file:" + System.getProperty("netbeans.user") + "/en4j/db";
             properties.put("openjpa.ConnectionURL", connectionURL);
             EMF = javax.persistence.Persistence.createEntityManagerFactory("JpaEntitiesClassLibraryPU", properties);
+        }
+        if (!EMF.isOpen()) {
+            throw new IllegalStateException("EMF is closed.Probably the whole NoteRepository module is closing");
         }
         return EMF;
 
