@@ -168,7 +168,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             currentAuthToken = authResult.getAuthenticationToken();
             LOG.info("new authtoken: \"" + currentAuthToken + "\"");
         }
-        LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
+        //LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
         return currentAuthToken;
     }
 
