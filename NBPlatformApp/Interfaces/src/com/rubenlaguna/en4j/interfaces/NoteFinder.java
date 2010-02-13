@@ -28,5 +28,6 @@ public interface NoteFinder {
 
     Collection<Note> find(String search);
 
+    void index(Note n);
     void rebuildIndex(ProgressHandle ph);
 }

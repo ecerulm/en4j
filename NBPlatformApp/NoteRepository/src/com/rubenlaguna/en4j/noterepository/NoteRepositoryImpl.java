@@ -130,6 +130,35 @@ public class NoteRepositoryImpl implements NoteRepository {
         //the entity now is detached 
         return toReturn;
     }
+    public Note getByGuid(String id, boolean withContents) {
+        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        Note toReturn = null;
+        try {
+            String queryText2 = "SELECT n FROM Notes n WHERE n.guid = :id ";
+            Query queryById = entityManager.createQuery(queryText2);
+//            OpenJPAQuery kq = OpenJPAPersistence.cast(queryById);
+//            JDBCFetchPlan fetch = (JDBCFetchPlan) kq.getFetchPlan();
+//            fetch.setEagerFetchMode(FetchMode.PARALLEL);
+//            fetch.setSubclassFetchMode(FetchMode.JOIN);
+            queryById.setParameter("id", id);
+            final Notes result = (Notes) queryById.getSingleResult();
+            //entityManager.
+            if (withContents) {
+                result.getContent();
+                result.getResources();
+            }
+
+            toReturn = fromNotes(result);
+        } catch (PersistenceException ex) {
+            LOG.warning("could not load the note from the db. Is the module closing?");
+        } finally {
+            //enough since there is no transaction in the try-block
+            //see http://bit.ly/b0p3Wj
+            entityManager.close();
+        }
+        //the entity now is detached
+        return toReturn;
+    }
 
     public void importEntries(InputStream in, ProgressHandle ph) throws InterruptedException {
         try {

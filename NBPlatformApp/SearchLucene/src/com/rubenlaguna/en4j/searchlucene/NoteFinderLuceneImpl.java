@@ -129,7 +129,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     int docId = Integer.parseInt(document.getField("id").stringValue());
 
                     NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-                    toReturn.add(rep.get(docId,false));
+                    toReturn.add(rep.get(docId, false));
                 }
 
                 @Override
@@ -154,6 +154,32 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         }
         return toReturn;
+    }
+
+    public void index(Note n) {
+        IndexWriter writer = null;
+        try {
+            writer = getIndexWriter();
+            Note note = getProperNote(n);
+
+            if (null != note) {
+                Document document = getLuceneDocument(note);
+                writer.addDocument(document);
+                LOG.info("Indexed note "+note.getGuid());
+                writer.commit();
+                writer.close();
+            }
+        } catch (Exception ex) {
+            Exceptions.printStackTrace(ex);
+        } finally {
+            try {
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (Exception ex) {
+                Exceptions.printStackTrace(ex);
+            }
+        }
     }
 
     public void rebuildIndex(ProgressHandle ph) {
