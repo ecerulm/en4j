@@ -172,6 +172,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         if (isExpired()) {
             LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
             currentAuthResult = getUserStore().refreshAuthentication(currentAuthToken);
+            setExpirationTime(currentAuthResult);
         }
         currentAuthToken = currentAuthResult.getAuthenticationToken();
         LOG.info("authToken: " + currentAuthResult.getAuthenticationToken());
@@ -210,7 +211,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private boolean isExpired() {
         final long msToExpiration = expirationTime - System.currentTimeMillis();
         LOG.info("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
-        boolean isExpired = msToExpiration < (10 * 60 * 1000L);
+        boolean isExpired = msToExpiration < (5 * 60 * 1000L);
         return isExpired;
     }
 
