@@ -74,6 +74,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private NoteStore.Client currentNoteStore = null;
     private AuthenticationResult currentAuthResult = null;
     private UserStore.Client currentUserStore;
+    private String noteStoreUrl;
 
     public SynchronizationServiceImpl() {
         try {
@@ -128,8 +129,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                         long delta = System.currentTimeMillis() - start;
                         LOG.info("retrieving " + note.getGuid() + " took " + delta + " ms");
                         LOG.info("adding to local database note =" + note.getTitle());
-                        nr.add(new NoteAdapter(note));
-
+                        boolean suceeded = nr.add(new NoteAdapter(note));
+                        if (!suceeded) {
+                            finished = true;
+                        }
                     }
                 } else {
                     LOG.info("No notes to download");
@@ -191,8 +194,12 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         if (isExpired()) {
             // Set up the NoteStore
             AuthenticationResult authResult = getValidAuthenticationResult();
-            User user = authResult.getUser();
-            String noteStoreUrl = noteStoreUrlBase + user.getShardId();
+            if (null == noteStoreUrl) {
+                //noteStoreUrl must be cached because we don't get a User in
+                //from refreshAuthentication
+                User user = authResult.getUser();
+                noteStoreUrl = noteStoreUrlBase + user.getShardId();
+            }
             THttpClient noteStoreTrans = new THttpClient(noteStoreUrl);
             TBinaryProtocol noteStoreProt = new TBinaryProtocol(noteStoreTrans);
             currentNoteStore = new NoteStore.Client(noteStoreProt, noteStoreProt);
