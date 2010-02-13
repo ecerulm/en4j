@@ -23,6 +23,7 @@ import java.awt.event.ActionListener;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
 import org.netbeans.api.progress.ProgressHandleFactory;
+import org.openide.util.Cancellable;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
 import org.openide.util.Task;
@@ -32,33 +33,43 @@ public final class RebuildIndex implements ActionListener {
 
     private static final RequestProcessor RP = new RequestProcessor("Rebuild index tasks", 1, true);
     private static final Logger LOG = Logger.getLogger(RebuildIndex.class.getName());
+    private RequestProcessor.Task theTask = null;
 
     public void actionPerformed(ActionEvent e) {
-
-
-        //TODO use an Executor/ RequestProcessor here
         LOG.info("Rebuild index");
+
+        final ProgressHandle ph = ProgressHandleFactory.createHandle("Rebuilding index", new Cancellable() {
+
+            public boolean cancel() {
+                return handleCancel();
+            }
+        });
 
         final NoteFinder noteFinder = Lookup.getDefault().lookup(NoteFinder.class);
 
-        RequestProcessor.Task theTask = RP.create(new Runnable() {
+        theTask = RP.create(new Runnable() {
 
             public void run() {
-                noteFinder.rebuildIndex();
+                noteFinder.rebuildIndex(ph);
             }
         });
 
-        final ProgressHandle myProgressHandle =
-                ProgressHandleFactory.createHandle("Rebuilding index", theTask);
-        myProgressHandle.start();
         theTask.addTaskListener(new TaskListener() {
 
-            public void taskFinished(Task taßsk) {
-                myProgressHandle.finish();
+            public void taskFinished(Task task) {
+                ph.finish();
             }
         });
-        theTask.schedule(100);
+        ph.start();
+        theTask.schedule(500);
 
 
+    }
+
+    private boolean handleCancel() {
+        if (null == theTask) {
+            return false;
+        }
+        return theTask.cancel();
     }
 }

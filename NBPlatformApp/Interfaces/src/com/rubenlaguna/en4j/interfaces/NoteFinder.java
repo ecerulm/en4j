@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.interfaces;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.util.Collection;
+import org.netbeans.api.progress.ProgressHandle;
 
 /**
  *
@@ -27,5 +28,5 @@ public interface NoteFinder {
 
     Collection<Note> find(String search);
 
-    void rebuildIndex();
+    void rebuildIndex(ProgressHandle ph);
 }
