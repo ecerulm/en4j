@@ -336,8 +336,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             //TODO clear this, move ic.set outside the if else block 
             if (value != null) {
-                ic.set(Collections.singleton(value), null);
                 Logger.getLogger(getName()).log(Level.WARNING, "selection changed: " + p.getValue(jTable1).toString());
+                ic.set(Collections.singleton(value), null);
 
             } else {
                 ic.set(Collections.emptySet(), null);
@@ -352,6 +352,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
+        LOG.info("change in notes");
         if (null != currentRefreshTask) {
             currentRefreshTask.cancel();//cancel the last refresh so we only
             //two refresh task at a given moment

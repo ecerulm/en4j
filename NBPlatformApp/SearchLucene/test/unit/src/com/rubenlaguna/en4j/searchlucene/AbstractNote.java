@@ -78,4 +78,8 @@ class AbstractNote implements Note {
     public int getUpdateSequenceNumber() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public String getGuid() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

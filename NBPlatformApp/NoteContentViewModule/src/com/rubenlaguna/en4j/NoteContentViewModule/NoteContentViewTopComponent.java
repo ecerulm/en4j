@@ -16,6 +16,7 @@
  */
 package com.rubenlaguna.en4j.NoteContentViewModule;
 
+import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,7 @@ import org.xml.sax.SAXException;
 @ConvertAsProperties(dtd = "-//com.rubenlaguna.en4j.NoteContentViewModule//NoteContentView//EN",
 autostore = false)
 public final class NoteContentViewTopComponent extends TopComponent implements LookupListener {
+    private static final Logger LOG = Logger.getLogger(NoteContentViewTopComponent.class.getName());
 
     private static NoteContentViewTopComponent instance;
     /** path to the icon used by the component and its open action */
@@ -124,7 +126,12 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         try {
             Collection<? extends Note> notes = result.allInstances();
             if (!notes.isEmpty()) {
-                Note n = notes.iterator().next();
+                //get the id only because the contents are lazy loaded and
+                //the entity is already detached.
+                int id = notes.iterator().next().getId();
+
+                //get(id) will gives us a fully loaded entity
+                Note n = Lookup.getDefault().lookup(NoteRepository.class).get(id);
                 cef.setNote(n);
                 //jLabel1.setText(n.getContent());
                 //jTextArea1.setText(n.getContent());
@@ -138,20 +145,22 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
                 // Create the builder and parse the file
                 String content = n.getContent();
-                Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(content)));
+                if (null!=content) {
+                    Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(content)));
 
-                //Document doc2 = factory.newDocumentBuilder().parse(getClass().getResourceAsStream("/com/rubenlaguna/en4j/NoteContentViewModule/xhtmlstricttemplate.xhtml"));
+                    //Document doc2 = factory.newDocumentBuilder().parse(getClass().getResourceAsStream("/com/rubenlaguna/en4j/NoteContentViewModule/xhtmlstricttemplate.xhtml"));
 
-                //NodeList list = doc.getElementsByTagName("en-note");
-                //Element element = (Element) list.item(0);
-                //Node dup = doc2.importNode(element, true);
+                    //NodeList list = doc.getElementsByTagName("en-note");
+                    //Element element = (Element) list.item(0);
+                    //Node dup = doc2.importNode(element, true);
 
-                //doc2.getElementsByTagName("body").item(0).appendChild(dup);
+                    //doc2.getElementsByTagName("body").item(0).appendChild(dup);
 
-                //panel.setDocument(doc,"",new ENMLNamespaceHandler());
-                panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
-
-
+                    //panel.setDocument(doc,"",new ENMLNamespaceHandler());
+                    panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                } else {
+                    LOG.warning("empty contents for note "+n.getGuid());
+                }
 
             }
         } catch (SAXException e) {

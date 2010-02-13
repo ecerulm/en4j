@@ -22,7 +22,6 @@ import com.rubenlaguna.en4j.jpaentities.Notes;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -43,6 +42,10 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
+import org.apache.openjpa.persistence.OpenJPAPersistence;
+import org.apache.openjpa.persistence.OpenJPAQuery;
+import org.apache.openjpa.persistence.jdbc.FetchMode;
+import org.apache.openjpa.persistence.jdbc.JDBCFetchPlan;
 import org.netbeans.api.progress.ProgressHandle;
 
 /**
@@ -99,8 +102,16 @@ public class NoteRepositoryImpl implements NoteRepository {
         try {
             String queryText2 = "SELECT n FROM Notes n WHERE n.id = :id ";
             Query queryById = entityManager.createQuery(queryText2);
+//            OpenJPAQuery kq = OpenJPAPersistence.cast(queryById);
+//            JDBCFetchPlan fetch = (JDBCFetchPlan) kq.getFetchPlan();
+//            fetch.setEagerFetchMode(FetchMode.PARALLEL);
+//            fetch.setSubclassFetchMode(FetchMode.JOIN);
             queryById.setParameter("id", id);
-            toReturn = fromNotes((Notes) queryById.getSingleResult());
+            final Notes result = (Notes) queryById.getSingleResult();
+            //entityManager.
+            result.getContent();
+            result.getResources();
+            toReturn = fromNotes(result);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -258,7 +269,9 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 Notes entityToPersist = new Notes();
 
+                entityToPersist.setGuid(n.getGuid());
                 entityToPersist.setTitle(n.getTitle());
+//                LOG.info("content: "+n.getContent().substring(0, 50));
                 entityToPersist.setContent(n.getContent());
                 entityToPersist.setCreated(n.getCreated());
                 entityToPersist.setSourceurl(n.getSourceurl());

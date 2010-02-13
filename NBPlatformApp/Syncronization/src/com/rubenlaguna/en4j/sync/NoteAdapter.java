@@ -115,4 +115,8 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
         }
         return toReturn;
     }
+
+    public String getGuid() {
+        return adaptee.getGuid();
+    }
 }
