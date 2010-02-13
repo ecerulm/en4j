@@ -16,6 +16,7 @@
  */
 package com.rubenlaguna.en4j.sync;
 
+import com.evernote.edam.error.EDAMNotFoundException;
 import com.evernote.edam.error.EDAMSystemException;
 import com.evernote.edam.error.EDAMUserException;
 import com.evernote.edam.notestore.NoteStore;
@@ -137,26 +138,40 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             } while (!finished);
 
             return true;
-        } catch (Exception ex) {
+        } catch (EDAMNotFoundException ex) {
+            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+            return false;
+        } catch (EDAMSystemException ex) {
+            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+            return false;
+        } catch (TException ex) {
+            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+            return false;
+        } catch (EDAMUserException ex) {
+            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+            return false;
+        } catch (IllegalStateException ex) {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
         }
     }
 
     private AuthenticationResult getValidAuthenticationResult() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (isExpired()) {
-            LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
+        if (null == currentAuthResult) {
+            LOG.info("First authentication.");
             final String c = a;
             final String d = b;
             final String password = NbPreferences.forModule(SynchronizationServiceImpl.class).get("password", "");
             final String username = NbPreferences.forModule(SynchronizationServiceImpl.class).get("username", "");
-            long authStartTime = System.currentTimeMillis();
             currentAuthResult = getUserStore().authenticate(username, password, c, d);
-            long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
-            LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
-            LOG.info("authToken: " + currentAuthResult.getAuthenticationToken());
-            expirationTime = authStartTime + authValidityPeriod;
+            setExpirationTime(currentAuthResult);
         }
+        if (isExpired()) {
+            LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
+            currentAuthResult = getUserStore().refreshAuthentication(currentAuthToken);
+        }
+        currentAuthToken = currentAuthResult.getAuthenticationToken();
+        LOG.info("authToken: " + currentAuthResult.getAuthenticationToken());
         return currentAuthResult;
     }
 
@@ -186,7 +201,9 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     }
 
     private boolean isExpired() {
-        boolean isExpired = (expirationTime - System.currentTimeMillis()) < 10000;
+        final long msToExpiration = expirationTime - System.currentTimeMillis();
+        LOG.info("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
+        boolean isExpired = msToExpiration < (10 * 60 * 1000L);
         return isExpired;
     }
 
@@ -197,6 +214,13 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             currentUserStore = new UserStore.Client(userStoreProt, userStoreProt);
         }
         return currentUserStore;
+    }
+
+    private void setExpirationTime(AuthenticationResult currentAuthResult) {
+        long authStartTime = System.currentTimeMillis();
+        long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
+        LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
+        expirationTime = authStartTime + authValidityPeriod;
     }
 }
 
