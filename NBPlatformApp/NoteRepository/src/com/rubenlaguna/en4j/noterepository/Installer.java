@@ -34,12 +34,14 @@ public class Installer extends ModuleInstall {
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
 
     @Override
-    public void installed() {
+    public void restored() {
         EntityManager entityManager = getEntityManagerFactory().createEntityManager();
         LOG.info("setting properties in HSQLDB");
         entityManager.getTransaction().begin();
         entityManager.createNativeQuery("SET FILES LOG SIZE 40").executeUpdate();
         //entityManager.createNativeQuery("SET FILES CACHE SIZE 5000").executeUpdate();
+        entityManager.createNativeQuery("CHECKPOINT").executeUpdate();
+
         entityManager.getTransaction().commit();
         entityManager.close();
 
@@ -54,6 +56,10 @@ public class Installer extends ModuleInstall {
             entityManager.createNativeQuery("SHUTDOWN").executeUpdate();
             entityManager.getTransaction().commit();
             entityManager.close();
+//            try {
+//                Thread.sleep(10000); //test trying to force RollbackException
+//            } catch (InterruptedException ex) {
+//            }
             LOG.info("closing EntityManagerFactory " + EMF);
             EMF.close();
         }
