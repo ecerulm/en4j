@@ -22,6 +22,7 @@ import com.rubenlaguna.en4j.jpaentities.Notes;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -35,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
@@ -60,11 +62,19 @@ public class NoteRepositoryImpl implements NoteRepository {
 
 
         Collection<Notes> listNotes = new ArrayList<Notes>();
-        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        EntityManager entityManager = null;
+        try {
+            entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        } catch (RuntimeException ex) {
+            LOG.log(Level.WARNING, "cannot even create an entitymanager", ex);
+            return toReturn;
+        }
         try {
             String queryText = "SELECT n FROM Notes n";
             Query query1 = entityManager.createQuery(queryText);
             listNotes.addAll(query1.getResultList());
+        } catch (PersistenceException ex) {
+            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -230,16 +240,16 @@ public class NoteRepositoryImpl implements NoteRepository {
         return toReturn;
     }
 
-    public void add(Note n) {
+    public boolean add(Note n) {
         LOG.info("add note: " + n);
         EntityManager entityManager = null;
         try {
             entityManager = Installer.getEntityManagerFactory().createEntityManager();
         } catch (IllegalStateException ex) {
             LOG.warning("Couldn't add the note. Probably the module is closing.");
-            return;
+            return false;
         }
-
+        boolean toReturn = true;//assume that it will work
         try {
             final EntityTransaction t = entityManager.getTransaction();
 
@@ -269,6 +279,9 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 entityManager.persist(entityToPersist);
                 entityManager.getTransaction().commit();
+            } catch (PersistenceException ex) {
+                LOG.log(Level.WARNING, "Could add note due to ...", ex);
+                toReturn = false;
             } finally {
                 //we need to rollback the transaction if it
                 //isn't commited otherwise the entityManager
@@ -284,6 +297,7 @@ public class NoteRepositoryImpl implements NoteRepository {
             entityManager.close();
         }
         this.pcs.firePropertyChange("notes", null, null);
+        return toReturn;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener listener) {
