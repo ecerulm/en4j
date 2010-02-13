@@ -8,9 +8,8 @@
             <module-dependencies/>
             <public-packages>
                 <package>org.hsqldb</package>
-                <package>org.hsqldb.cmdline</package>
-                <package>org.hsqldb.cmdline.sqltool</package>
                 <package>org.hsqldb.dbinfo</package>
+                <package>org.hsqldb.error</package>
                 <package>org.hsqldb.index</package>
                 <package>org.hsqldb.jdbc</package>
                 <package>org.hsqldb.jdbc.pool</package>
