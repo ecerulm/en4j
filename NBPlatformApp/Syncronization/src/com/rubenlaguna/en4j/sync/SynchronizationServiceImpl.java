@@ -25,6 +25,7 @@ import com.evernote.edam.type.Note;
 import com.evernote.edam.type.User;
 import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.UserStore;
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.security.spec.AlgorithmParameterSpec;
@@ -111,6 +112,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             }
 
             NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+            NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
             boolean finished = false;
             do {
                 int highestUSN = nr.getHighestUSN();
@@ -129,7 +131,9 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                         long delta = System.currentTimeMillis() - start;
                         LOG.info("retrieving " + note.getGuid() + " took " + delta + " ms");
                         LOG.info("adding to local database note =" + note.getTitle());
-                        boolean suceeded = nr.add(new NoteAdapter(note));
+                        final NoteAdapter noteAdapter = new NoteAdapter(note);
+                        boolean suceeded = nr.add(noteAdapter);
+                        nf.index(nr.getByGuid(note.getGuid(),false));
                         if (!suceeded) {
                             finished = true;
                         }
