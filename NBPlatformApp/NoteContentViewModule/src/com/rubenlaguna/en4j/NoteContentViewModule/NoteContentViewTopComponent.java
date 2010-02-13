@@ -61,7 +61,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
     private static final String PREFERRED_ID = "NoteContentViewTopComponent";
-    private Lookup.Result result = null;
+    private Lookup.Result<Note> result = null;
     private XHTMLPanel panel = null;
     private final ENMLReplacedElementFactory cef;
 
@@ -213,7 +213,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
-        Lookup.Template tpl = new Lookup.Template(Note.class);
+        Lookup.Template<Note> tpl = new Lookup.Template<Note>(Note.class);
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);
         resultChanged(null);
