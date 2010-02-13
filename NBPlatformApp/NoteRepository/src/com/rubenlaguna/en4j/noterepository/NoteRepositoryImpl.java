@@ -98,6 +98,10 @@ public class NoteRepositoryImpl implements NoteRepository {
     }
 
     public Note get(int id) {
+        return get(id, true);
+    }
+
+    public Note get(int id, boolean withContents) {
         EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
         Note toReturn = null;
         try {
@@ -110,8 +114,11 @@ public class NoteRepositoryImpl implements NoteRepository {
             queryById.setParameter("id", id);
             final Notes result = (Notes) queryById.getSingleResult();
             //entityManager.
-            result.getContent();
-            result.getResources();
+            if (withContents) {
+                result.getContent();
+                result.getResources();
+            }
+
             toReturn = fromNotes(result);
         } catch (PersistenceException ex) {
             LOG.warning("could not load the note from the db. Is the module closing?");
@@ -120,6 +127,7 @@ public class NoteRepositoryImpl implements NoteRepository {
             //see http://bit.ly/b0p3Wj
             entityManager.close();
         }
+        //the entity now is detached 
         return toReturn;
     }
 

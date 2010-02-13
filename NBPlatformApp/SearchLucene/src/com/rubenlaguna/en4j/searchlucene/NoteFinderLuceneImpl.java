@@ -66,6 +66,17 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private final int REPORTEVERY = 100;
     private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
+    private IndexReader reader = null;
+
+    public NoteFinderLuceneImpl() {
+        try {
+            getIndexWriter().close();
+            File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
+            reader = IndexReader.open(FSDirectory.open(file), true);
+        } catch (Exception ex) {
+            Exceptions.printStackTrace(ex);
+        }
+    }
     //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
@@ -86,9 +97,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Collection<Note> toReturn = new ArrayList<Note>();
 
         try {
-            File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
-            IndexReader reader = IndexReader.open(FSDirectory.open(file), true);
+            IndexReader newReader = reader.reopen();
+            if (newReader != reader) {
+                LOG.info("reader reopened");
+                reader.close();
+            }
+            reader = newReader;
 
+            reader.reopen();
             final IndexSearcher searcher = new IndexSearcher(reader);
 
             final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
@@ -113,7 +129,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     int docId = Integer.parseInt(document.getField("id").stringValue());
 
                     NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-                    toReturn.add(rep.get(docId));
+                    toReturn.add(rep.get(docId,false));
                 }
 
                 @Override
@@ -146,11 +162,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         long start2 = start;
         IndexWriter writer = null;
         try {
-            File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
-            final CustomAnalyzer analyzer = new CustomAnalyzer();
-            writer = new IndexWriter(FSDirectory.open(file), analyzer, true,
-                    IndexWriter.MaxFieldLength.LIMITED);
-            writer.setUseCompoundFile(true);
+            writer = getIndexWriter();
             writer.deleteAll();
             writer.commit();
             Collection<Note> notes = getAllNotes();
@@ -179,10 +191,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 //                    if ((System.currentTimeMillis() - start2) > 2000) { //every 5 secs
                         //to process 12000 notes
                         //without commiting/optimizing every 100th   137 secs
-                        //with    commiting only       every 100th    144 secs
+                        //with    commiting only       every 100th   144 secs
                         //with    committin only each 5s             201 sec
                         //with    committin only each 2s             332 sec
-                        //with    commiting/optimizing               502 secs
+                        //with    commiting/optimizing each          502 secs
                         //with    comminting 5s and progress outside 410 sec
 
                         ph.progress("Note: " + note.getTitle(), i);
@@ -214,6 +226,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
+    }
+
+    private IndexWriter getIndexWriter() throws IOException {
+        File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
+        final CustomAnalyzer analyzer = new CustomAnalyzer();
+        IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, true, IndexWriter.MaxFieldLength.LIMITED);
+        writer.setUseCompoundFile(true);
+        return writer;
     }
 
     private Document getLuceneDocument(Note note) throws SAXException, IOException {
