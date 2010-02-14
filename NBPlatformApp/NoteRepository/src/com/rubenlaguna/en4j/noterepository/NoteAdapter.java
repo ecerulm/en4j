@@ -78,7 +78,11 @@ class NoteAdapter implements Note {
     }
 
     public Resource getResource(String hash) {
-        Resource toReturn = new ResourceAdapter(adaptee.getResource(hash));
+        final com.rubenlaguna.en4j.jpaentities.Resource resource = adaptee.getResource(hash);
+        if (null==resource) {
+            return null;
+        }
+        Resource toReturn = new ResourceAdapter(resource);
         return toReturn;
     }
 

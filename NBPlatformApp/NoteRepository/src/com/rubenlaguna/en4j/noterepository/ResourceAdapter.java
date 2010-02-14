@@ -52,6 +52,9 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
     }
 
     public ResourceAdapter(Resource resource) {
+        if (null==resource){
+            throw  new IllegalArgumentException("resource can't be null");
+        }
         this.adaptee = resource;
     }
 }

@@ -74,6 +74,9 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
                 LOG.log(Level.INFO, "en-media hash: " + hash);
 
                 toReturn = loadImage(context, hash);
+                if (null == toReturn) {
+                    toReturn = brokenImage(context, 100, 100);
+                }
                 //
                 //    toReturn = loadImage()
                 //            return toReturn;
@@ -84,6 +87,7 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         }
 
         if (null == toReturn) {
+            LOG.log(Level.INFO, "Element:" + box.getElement().getNodeName());
             toReturn = delegate.createReplacedElement(context, box, uac, cssWidth, cssHeight);
         }
 
@@ -120,6 +124,9 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //JTextArea cc = new JTextArea();
         //NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         byte[] imageData = getImage(hash);
+        if (null == imageData) {
+            return null;
+        }
         ImageIcon icon = new ImageIcon(imageData);
         JLabel cc = new JLabel(icon);
         //cc.setText("Missing implementation for en-media");
@@ -140,15 +147,18 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
     }
 
     private byte[] getImage(String hash) {
-        assert(null!=this.note);
+        assert (null != this.note);
         final Resource resource = this.note.getResource(hash);
+        if (null == resource) {
+            return null;
+        }
         return resource.getData();
     }
 
     void setNote(Note n) {
-        if (null == n){
+        if (null == n) {
             throw new IllegalArgumentException("Note cannot be null");
         }
-        this.note=n;
+        this.note = n;
     }
 }
