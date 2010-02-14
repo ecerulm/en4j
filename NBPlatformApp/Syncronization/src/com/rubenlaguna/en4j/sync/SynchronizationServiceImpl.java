@@ -28,6 +28,8 @@ import com.evernote.edam.userstore.UserStore;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 import java.util.Iterator;
@@ -76,6 +78,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private AuthenticationResult currentAuthResult = null;
     private UserStore.Client currentUserStore;
     private String noteStoreUrl;
+    private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
     public SynchronizationServiceImpl() {
         try {
@@ -121,6 +124,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 LOG.info("retrieving SyncChunk");
                 SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, 25, true);
                 LOG.info("SyncChunk retrieved");
+                int pendingUpdates = sc.getUpdateCount() - highestUSN;
+                setPendingRemoteUpdateNotes(pendingUpdates);
+
+
                 final Iterator<Note> notesIterator = sc.getNotesIterator();
                 if (null != notesIterator) {
                     while (notesIterator.hasNext()) {
@@ -133,7 +140,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                         LOG.info("adding to local database note =" + note.getTitle());
                         final NoteAdapter noteAdapter = new NoteAdapter(note);
                         boolean suceeded = nr.add(noteAdapter);
-                        nf.index(nr.getByGuid(note.getGuid(),false));
+                        nf.index(nr.getByGuid(note.getGuid(), false));
                         if (!suceeded) {
                             finished = true;
                         }
@@ -233,6 +240,40 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
         LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
         expirationTime = authStartTime + authValidityPeriod;
+    }
+    private int PendingRemoteUpdateNotes = 0;
+    
+    /**
+     * Get the value of PendingRemoteUpdateNotes
+     *
+     * @return the value of PendingRemoteUpdateNotes
+     */
+    public int getPendingRemoteUpdateNotes() {
+        return PendingRemoteUpdateNotes;
+    }
+
+    private void setPendingRemoteUpdateNotes(int PendingRemoteUpdateNotes) {
+        int oldValue = this.PendingRemoteUpdateNotes;
+        this.PendingRemoteUpdateNotes = PendingRemoteUpdateNotes;
+        propertyChangeSupport.firePropertyChange(PROP_PENDINGREMOTEUPDATENOTES, oldValue, this.PendingRemoteUpdateNotes);
+    }
+
+    /**
+     * Add PropertyChangeListener.
+     *i
+     * @param listener
+     */
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        propertyChangeSupport.addPropertyChangeListener(listener);
+    }
+
+    /**
+     * Remove PropertyChangeListener.
+     *
+     * @param listener
+     */
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        propertyChangeSupport.removePropertyChangeListener(listener);
     }
 }
 

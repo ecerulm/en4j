@@ -7,7 +7,7 @@
                 <attr name="delegate" newvalue="com.rubenlaguna.en4j.sync.SyncAction"/>
                 <attr name="displayName" bundlevalue="com.rubenlaguna.en4j.sync.Bundle#CTL_SyncAction"/>
                 <attr name="iconBase" stringvalue="com/rubenlaguna/en4j/sync/Sync-Update-derp-Im-sleepy-icon-1.png"/>
-                <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
+                <!--<attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>-->
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
         </folder>
