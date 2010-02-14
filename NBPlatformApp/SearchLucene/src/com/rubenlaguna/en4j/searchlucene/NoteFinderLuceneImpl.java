@@ -83,8 +83,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         if ("".equals(searchText.trim())) {
             return Collections.EMPTY_LIST;
         }
+        long start=System.currentTimeMillis();
         searchText = searchText.trim();
-        String patternStr = "(?:\\w)\\s+";
+//        String patternStr = "(?:\\w)\\s+";
+        String patternStr = "\\s+";
         String replaceStr = "* ";
         Pattern pattern = Pattern.compile(patternStr);
         Matcher matcher = pattern.matcher(searchText);
@@ -153,6 +155,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+        long delta=System.currentTimeMillis()-start;
+        LOG.info("find took "+delta/1000.0+" secs. "+toReturn.size()+" results found");
         return toReturn;
     }
 
@@ -227,7 +231,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                         writer.commit();
                         long delta = System.currentTimeMillis() - start2;
                         start2 = System.currentTimeMillis();
-                        LOG.info(i + " notes indexed so far. This batch took " + (delta / 1000.0) + " secs");
+                        LOG.fine(i + " notes indexed so far. This batch took " + (delta / 1000.0) + " secs");
                     }
                 } else {
                     break;//for loop
@@ -236,8 +240,12 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             writer.commit();
             LOG.info(i + " notes indexed so far.");
             LOG.info("Optimize and close the index.");
+            start2=System.currentTimeMillis();
             writer.optimize();
             writer.close();
+            long delta=System.currentTimeMillis()-start2;
+            LOG.info("Index optimized and closed.It took "+delta/1000.0+ " secs.");
+
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
@@ -257,7 +265,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private IndexWriter getIndexWriter() throws IOException {
         File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
         final CustomAnalyzer analyzer = new CustomAnalyzer();
-        IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, true, IndexWriter.MaxFieldLength.LIMITED);
+        IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, IndexWriter.MaxFieldLength.LIMITED);
         writer.setUseCompoundFile(true);
         return writer;
     }
