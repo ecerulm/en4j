@@ -10,7 +10,7 @@
      <target name="-pre-compile">
         <path id="xjc.classpath">
 
-            <fileset dir="${jaxb21.dir}" includes="*.jar"/>
+            <fileset dir="${basedir}/libs/jaxbri" includes="*.jar"/>
 
             <!--
             pathelement path="${libs.JAXB21.classpath}"/>
