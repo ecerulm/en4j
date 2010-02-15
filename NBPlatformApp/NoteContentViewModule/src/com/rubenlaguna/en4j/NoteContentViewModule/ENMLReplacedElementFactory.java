@@ -21,6 +21,7 @@ import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import org.w3c.dom.Element;
@@ -67,8 +68,9 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
 
         if ("en-media".equals(box.getElement().getNodeName())) {
             LOG.log(Level.INFO, "en-media detected");
+            final String type = box.getElement().getAttribute("type");
 
-            if ("image/jpeg".equalsIgnoreCase(box.getElement().getAttribute("type"))) {
+            if ("image/jpeg".equalsIgnoreCase(type)) {
                 LOG.log(Level.INFO, "en-media type: image/jpeg");
                 String hash = box.getElement().getAttribute("hash");
                 LOG.log(Level.INFO, "en-media hash: " + hash);
@@ -80,14 +82,16 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
                 //
                 //    toReturn = loadImage()
                 //            return toReturn;
+            //} else if("im") {
+
             } else {
 
-                toReturn = brokenImage(context, 100, 100);
+                toReturn = unrecognizedResource(context);
             }
         }
 
         if (null == toReturn) {
-            LOG.log(Level.INFO, "Element:" + box.getElement().getNodeName());
+//            LOG.log(Level.INFO, "delegating to next factory:" + box.getElement().getNodeName());
             toReturn = delegate.createReplacedElement(context, box, uac, cssWidth, cssHeight);
         }
 
@@ -160,5 +164,25 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
             throw new IllegalArgumentException("Note cannot be null");
         }
         this.note = n;
+    }
+
+    private ReplacedElement unrecognizedResource(LayoutContext context) {
+        ReplacedElement toReturn = null;
+
+        JComponent cc = new UnrecognizedResourceJPanel();
+        //cc.setText("Missing implementation for en-media");
+        //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
+        cc.setSize(cc.getPreferredSize());
+
+        context.getCanvas().add(cc);
+
+        toReturn = new SwingReplacedElement(cc) {
+
+            public boolean isRequiresInteractivePaint() {
+                return false;
+            }
+        };
+
+        return toReturn;
     }
 }
