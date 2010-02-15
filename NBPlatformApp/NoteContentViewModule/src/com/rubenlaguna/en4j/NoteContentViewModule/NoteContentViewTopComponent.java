@@ -146,18 +146,13 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 // Create the builder and parse the file
                 String content = n.getContent();
                 if (null!=content) {
+                    try {
                     Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(content)));
-
-                    //Document doc2 = factory.newDocumentBuilder().parse(getClass().getResourceAsStream("/com/rubenlaguna/en4j/NoteContentViewModule/xhtmlstricttemplate.xhtml"));
-
-                    //NodeList list = doc.getElementsByTagName("en-note");
-                    //Element element = (Element) list.item(0);
-                    //Node dup = doc2.importNode(element, true);
-
-                    //doc2.getElementsByTagName("body").item(0).appendChild(dup);
-
-                    //panel.setDocument(doc,"",new ENMLNamespaceHandler());
                     panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                    } catch (NullPointerException ex) {
+                        LOG.warning("NPE when trying to process: "+content);
+                        Exceptions.printStackTrace(ex);
+                    }
                 } else {
                     LOG.warning("empty contents for note "+n.getGuid());
                 }
