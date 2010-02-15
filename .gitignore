@@ -3,3 +3,4 @@ private.xml
 private
 *.patch
 NBPlatformApp/jaxbgeneratedclasses/src/com/rubenlaguna/en4j/jaxb/generated
+build
