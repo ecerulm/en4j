@@ -57,6 +57,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
+import org.omg.CosNaming.NamingContextPackage.NotEmpty;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
@@ -96,54 +97,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
-        RP.post(new Runnable() {
 
-            public void run() {
-                int i = 0;
-                IndexWriter writer = null;
-                boolean noerrors = true;
-                writer = iwm.getIndexWriter();
-                while (noerrors && (!Thread.currentThread().isInterrupted())) {
-                    i++;
-                    LOG.info("before acquiring lock in indexer thread");
-                    try {
-                        while (theQueue.isEmpty()) {
-                            LOG.info("indexing queue is empty. waiting...");
-                            iwm.release();
-                            writer = null;
-                            lock.lock();
-                            try {
-                                notEmpty.await();
-                            } catch (InterruptedException interruptedException) {
-                            } finally {
-                                lock.unlock();
-                            }
-                            LOG.info("indexing queue notEmpty condition fulfilled");
-                            writer = iwm.getIndexWriter();
-                        }
-                        LOG.info("indexing queue size: " + theQueue.size());
-                        Document document = theQueue.poll();
-                        if (null != document) {
-                            writer.addDocument(document);
-                            LOG.info("Indexed note " + document.getField("title").stringValue());
-                            writer.commit();
-                        }
-                    } catch (Exception ex) {
-                        noerrors = false;
-                        Exceptions.printStackTrace(ex);
-                    }
-                    LOG.info("continue while loop");
-                } //while
-                try {
-                    if (writer != null) {
-                        iwm.release();
-                    }
-                } catch (Exception ex) {
-                    Exceptions.printStackTrace(ex);
-                }
-                LOG.warning("indexer thread terminated!!");
-            }
-        });
+        RP.post(new IndexerTask(iwm, theQueue,lock,notEmpty));
     }
     //private Analyzer analyzer = new SimpleAnalyzer();
 
@@ -439,5 +394,68 @@ class IndexWriterMonitor {
             }
         }
         sem.release();
+    }
+}
+
+class IndexerTask implements Runnable {
+
+    private static final Logger LOG = Logger.getLogger(IndexerTask.class.getName());
+    private final IndexWriterMonitor iwm;
+    private final BlockingQueue<Document> theQueue;
+    private final Lock lock;
+    private final Condition notEmpty;
+
+    IndexerTask(IndexWriterMonitor iwm,BlockingQueue<Document> theQueue,Lock lock,Condition notEmpty) {
+        this.iwm = iwm;
+        this.theQueue = theQueue;
+        this.lock = lock;
+        this.notEmpty = notEmpty;
+    }
+
+    public void run() {
+        int i = 0;
+        IndexWriter writer = null;
+        boolean noerrors = true;
+        writer = iwm.getIndexWriter();
+        while (noerrors && (!Thread.currentThread().isInterrupted())) {
+            i++;
+            LOG.info("before acquiring lock in indexer thread");
+            try {
+                while (theQueue.isEmpty()) {
+                    LOG.info("indexing queue is empty. waiting...");
+                    iwm.release();
+                    writer = null;
+                    lock.lock();
+
+                    try {
+                        notEmpty.await();
+                    } catch (InterruptedException interruptedException) {
+                    } finally {
+                        lock.unlock();
+                    }
+                    LOG.info("indexing queue notEmpty condition fulfilled");
+                    writer = iwm.getIndexWriter();
+                }
+                LOG.info("indexing queue size: " + theQueue.size());
+                Document document = theQueue.poll();
+                if (null != document) {
+                    writer.addDocument(document);
+                    LOG.info("Indexed note " + document.getField("title").stringValue());
+                    writer.commit();
+                }
+            } catch (Exception ex) {
+                noerrors = false;
+                Exceptions.printStackTrace(ex);
+            }
+            LOG.info("continue while loop");
+        } //while
+        try {
+            if (writer != null) {
+                iwm.release();
+            }
+        } catch (Exception ex) {
+            Exceptions.printStackTrace(ex);
+        }
+        LOG.warning("indexer thread terminated!!");
     }
 }
