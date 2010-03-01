@@ -106,13 +106,18 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 while (noerrors && (!Thread.currentThread().isInterrupted())) {
                     i++;
                     LOG.info("before acquiring lock in indexer thread");
-                    lock.lock();
                     try {
                         while (theQueue.isEmpty()) {
                             LOG.info("indexing queue is empty. waiting...");
                             iwm.release();
-                            writer=null;
-                            notEmpty.await();
+                            writer = null;
+                            lock.lock();
+                            try {
+                                notEmpty.await();
+                            } catch (InterruptedException interruptedException) {
+                            } finally {
+                                lock.unlock();
+                            }
                             LOG.info("indexing queue notEmpty condition fulfilled");
                             writer = iwm.getIndexWriter();
                         }
@@ -126,9 +131,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     } catch (Exception ex) {
                         noerrors = false;
                         Exceptions.printStackTrace(ex);
-                    } finally {
-                        LOG.info("release lock indexer thread");
-                        lock.unlock();
                     }
                     LOG.info("continue while loop");
                 } //while
@@ -241,19 +243,16 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
 
         LOG.info("Trying to add note " + note + " to the indexing queue");
-        lock.lock();
         try {
             //we have a document
-            LOG.info("Trying put note " + note + " in the indexing queue");
             theQueue.put(document);
-            LOG.info("Note " + note + "was added in the indexing queue");
-            notEmpty.signalAll();
         } catch (InterruptedException ex) {
             Exceptions.printStackTrace(ex);
-        } finally {
-            lock.unlock();
         }
-        LOG.info("note " + note + " added to the indexing queue");
+        LOG.info("Note " + note + "was added in the indexing queue");
+        lock.lock();
+        notEmpty.signalAll();
+        lock.unlock();
     }
 
     public synchronized void rebuildIndex(ProgressHandle ph) {
