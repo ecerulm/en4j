@@ -32,7 +32,17 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
@@ -55,8 +65,7 @@ import org.openide.util.RequestProcessor;
  */
 public class SynchronizationServiceImpl implements SynchronizationService {
 
-    private long expirationTime = 0;
-    private String currentAuthToken = "";
+    private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
     private final String consumerKey = "h7ZGlOYrZCo=";
     private final String consumerSecret = "IP/dKyK3226VyqE1ndtj8/JyUwYt1kOq";
     private String a;
@@ -72,12 +81,33 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 //    private final String noteStoreUrlBase = "http://sandbox.evernote.com/edam/note/";
     private final String userStoreUrl = "https://www.evernote.com/edam/user";
     private final String noteStoreUrlBase = "http://www.evernote.com/edam/note/";
-    private final RequestProcessor RP = new RequestProcessor("Sync thread", 1, true);
-    private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
-    private NoteStore.Client currentNoteStore = null;
-    private AuthenticationResult currentAuthResult = null;
-    private UserStore.Client currentUserStore;
-    private String noteStoreUrl;
+    private int PendingRemoteUpdateNotes = 0;
+    private final ExecutorService RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(25));
+    //private final RequestProcessor RP = new RequestProcessor("Sync thread", 4, true);
+//private NoteStore.Client currentNoteStore = null;
+    //private AuthenticationResult currentAuthResult = null;
+    //private UserStore.Client currentUserStore;
+    //private String noteStoreUrl;
+    //private long expirationTime = 0;
+    //private String currentAuthToken = "";
+    private static final ThreadLocal<NoteStore.Client> currentNoteStore = new ThreadLocal<NoteStore.Client>();
+    private static final ThreadLocal<AuthenticationResult> currentAuthResult = new ThreadLocal<AuthenticationResult>();
+    private static final ThreadLocal<UserStore.Client> currentUserStore = new ThreadLocal<UserStore.Client>();
+    private static final ThreadLocal<String> noteStoreUrl = new ThreadLocal<String>();
+    private static final ThreadLocal<Long> expirationTime = new ThreadLocal<Long>() {
+
+        @Override
+        protected Long initialValue() {
+            return 0L;
+        }
+    };
+    private static final ThreadLocal<String> currentAuthToken = new ThreadLocal<String>() {
+
+        @Override
+        protected String initialValue() {
+            return "";
+        }
+    };
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
     public SynchronizationServiceImpl() {
@@ -93,20 +123,16 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             dec = new sun.misc.BASE64Decoder().decodeBuffer(consumerSecret);
             utf8 = dcipher.doFinal(dec);
             b = new String(utf8, "UTF8");
-
         } catch (Exception ex) {
             //TODO fix exception handling
             Exceptions.printStackTrace(ex);
         }
-
-
     }
 
     @Override
     public boolean sync() {
         // Set up the UserStore and check that we can talk to the server
         try {
-
             UserStore.Client userStore = getUserStore();
             boolean versionOk = userStore.checkVersion("Evernote's EDAMDemo (Java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
             if (!versionOk) {
@@ -114,8 +140,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 return false;
             }
 
-            NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-            NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
+            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+            final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
             boolean finished = false;
             do {
                 int highestUSN = nr.getHighestUSN();
@@ -128,33 +154,38 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
 
+                final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
                 final Iterator<Note> notesIterator = sc.getNotesIterator();
                 if (null != notesIterator) {
                     while (notesIterator.hasNext()) {
-                        Note noteWithoutContents = notesIterator.next();
-                        long start = System.currentTimeMillis();
-                        LOG.info("retrieving note " + noteWithoutContents.getGuid());
-                        Note note = getValidNoteStore().getNote(getValidAuthToken(), noteWithoutContents.getGuid(), true, true, false, false);
-                        long delta = System.currentTimeMillis() - start;
-                        LOG.info("retrieving " + note.getGuid() + " took " + delta + " ms");
-                        LOG.info("adding to local database note =" + note.getTitle());
-                        final NoteAdapter noteAdapter = new NoteAdapter(note);
-                        boolean suceeded = nr.add(noteAdapter);
-                        nf.index(nr.getByGuid(note.getGuid(), false));
-                        if (!suceeded) {
-                            finished = true;
-                        }
+                        final Note noteWithoutContents = notesIterator.next();
+                        Callable<Boolean> callable = new Callable<Boolean>() {
+
+                            public Boolean call() throws Exception {
+                                long start = System.currentTimeMillis();
+                                LOG.info("retrieving note " + noteWithoutContents.getGuid());
+                                Note note = getValidNoteStore().getNote(getValidAuthToken(), noteWithoutContents.getGuid(), true, true, false, false);
+                                long delta = System.currentTimeMillis() - start;
+                                LOG.info("retrieving " + note.getGuid() + " took " + delta + " ms");
+                                LOG.info("adding to local database note =" + note.getTitle());
+                                final NoteAdapter noteAdapter = new NoteAdapter(note);
+                                boolean suceeded = nr.add(noteAdapter);
+                                nf.index(nr.getByGuid(note.getGuid(), false));
+                                return suceeded;
+                            }
+                        };
+                        final Future<Boolean> task = RP.submit(callable);
+                        tasks.add(task);
+                    }
+                    if (waitForResults(tasks)) { //this waits for result from each task
+                        finished = true;
                     }
                 } else {
                     LOG.info("No notes to download");
                     finished = true;
                 }
             } while (!finished);
-
             return true;
-        } catch (EDAMNotFoundException ex) {
-            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-            return false;
         } catch (EDAMSystemException ex) {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
@@ -170,79 +201,110 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         }
     }
 
+    private boolean waitForResults(final List<Future<Boolean>> tasks) {
+        long start = System.currentTimeMillis();
+        boolean finished = false;
+
+        LOG.info("wait for " + tasks.size() + " to complete.");
+        for (Future<Boolean> future : tasks) {
+            LOG.info("get result of future " + future);
+            Boolean futureResult;
+            try {
+                futureResult = future.get();
+            } catch (InterruptedException ex) {
+                finished = true;
+                break;
+            } catch (ExecutionException ex) {
+                LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+                finished = true;
+                break;
+            }
+
+            if (!Boolean.TRUE.equals(futureResult)) {
+                finished = true;
+                break;
+            }
+        }
+        long delta = System.currentTimeMillis() - start;
+        LOG.info("checkResult = " + finished+" .It took "+delta+" ms");
+
+        return finished;
+    }
+
     private AuthenticationResult getValidAuthenticationResult() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (null == currentAuthResult) {
+        if (null == currentAuthResult.get()) {
             LOG.info("First authentication.");
             final String c = a;
             final String d = b;
             final String password = NbPreferences.forModule(SynchronizationServiceImpl.class).get("password", "");
             final String username = NbPreferences.forModule(SynchronizationServiceImpl.class).get("username", "");
-            currentAuthResult = getUserStore().authenticate(username, password, c, d);
-            setExpirationTime(currentAuthResult);
+            currentAuthResult.set(getUserStore().authenticate(username, password, c, d));
+
+            setExpirationTime(currentAuthResult.get());
         }
+
         if (isExpired()) {
             LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
-            currentAuthResult = getUserStore().refreshAuthentication(currentAuthToken);
-            setExpirationTime(currentAuthResult);
+            currentAuthResult.set(getUserStore().refreshAuthentication(currentAuthToken.get()));
+            setExpirationTime(
+                    currentAuthResult.get());
         }
-        currentAuthToken = currentAuthResult.getAuthenticationToken();
-        LOG.info("authToken: " + currentAuthResult.getAuthenticationToken());
-        return currentAuthResult;
+        currentAuthToken.set(currentAuthResult.get().getAuthenticationToken());
+        LOG.info("authToken: " + currentAuthToken);
+        return currentAuthResult.get();
     }
 
     private String getValidAuthToken() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
         //Check is the current authToken is about to expire
-        if (isExpired() || "".equals(currentAuthToken)) {
+        if (isExpired() || "".equals(currentAuthToken.get())) {
             AuthenticationResult authResult = getValidAuthenticationResult();
             User user = authResult.getUser();
-            currentAuthToken = authResult.getAuthenticationToken();
+            currentAuthToken.set(authResult.getAuthenticationToken());
             LOG.info("new authtoken: \"" + currentAuthToken + "\"");
-        }
-        //LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
-        return currentAuthToken;
+        } //LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
+        return currentAuthToken.get();
     }
 
     private NoteStore.Client getValidNoteStore() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
         if (isExpired()) {
             // Set up the NoteStore
             AuthenticationResult authResult = getValidAuthenticationResult();
-            if (null == noteStoreUrl) {
+            if (null == noteStoreUrl.get()) {
                 //noteStoreUrl must be cached because we don't get a User in
                 //from refreshAuthentication
                 User user = authResult.getUser();
-                noteStoreUrl = noteStoreUrlBase + user.getShardId();
+                noteStoreUrl.set(noteStoreUrlBase + user.getShardId());
             }
-            THttpClient noteStoreTrans = new THttpClient(noteStoreUrl);
+            THttpClient noteStoreTrans = new THttpClient(noteStoreUrl.get());
             TBinaryProtocol noteStoreProt = new TBinaryProtocol(noteStoreTrans);
-            currentNoteStore = new NoteStore.Client(noteStoreProt, noteStoreProt);
+            currentNoteStore.set(new NoteStore.Client(noteStoreProt, noteStoreProt));
         }
-        return currentNoteStore;
+        return currentNoteStore.get();
     }
 
     private boolean isExpired() {
-        final long msToExpiration = expirationTime - System.currentTimeMillis();
+        final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
         LOG.info("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
         boolean isExpired = msToExpiration < (5 * 60 * 1000L);
         return isExpired;
     }
 
     private UserStore.Client getUserStore() throws TTransportException {
-        if (null == currentUserStore) {
+        if (null == currentUserStore.get()) {
             THttpClient userStoreTrans = new THttpClient(userStoreUrl);
             TBinaryProtocol userStoreProt = new TBinaryProtocol(userStoreTrans);
-            currentUserStore = new UserStore.Client(userStoreProt, userStoreProt);
+            currentUserStore.set(new UserStore.Client(userStoreProt, userStoreProt));
         }
-        return currentUserStore;
+        return currentUserStore.get();
     }
 
     private void setExpirationTime(AuthenticationResult currentAuthResult) {
         long authStartTime = System.currentTimeMillis();
         long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
         LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
-        expirationTime = authStartTime + authValidityPeriod;
+        expirationTime.set(authStartTime + authValidityPeriod);
     }
-    private int PendingRemoteUpdateNotes = 0;
-    
+
     /**
      * Get the value of PendingRemoteUpdateNotes
      *
