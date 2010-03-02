@@ -82,14 +82,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private final String userStoreUrl = "https://www.evernote.com/edam/user";
     private final String noteStoreUrlBase = "http://www.evernote.com/edam/note/";
     private int PendingRemoteUpdateNotes = 0;
-    private final ExecutorService RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(25));
-    //private final RequestProcessor RP = new RequestProcessor("Sync thread", 4, true);
-//private NoteStore.Client currentNoteStore = null;
-    //private AuthenticationResult currentAuthResult = null;
-    //private UserStore.Client currentUserStore;
-    //private String noteStoreUrl;
-    //private long expirationTime = 0;
-    //private String currentAuthToken = "";
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(20));
     private static final ThreadLocal<NoteStore.Client> currentNoteStore = new ThreadLocal<NoteStore.Client>();
     private static final ThreadLocal<AuthenticationResult> currentAuthResult = new ThreadLocal<AuthenticationResult>();
     private static final ThreadLocal<UserStore.Client> currentUserStore = new ThreadLocal<UserStore.Client>();
@@ -112,6 +105,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
     public SynchronizationServiceImpl() {
         try {
+            com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
             KeySpec keySpec = new PBEKeySpec("55xdfsfAxkioou546bnTrjk".toCharArray(), salt, iterationCount);
             SecretKey key = SecretKeyFactory.getInstance("PBEWithMD5AndDES").generateSecret(keySpec);
             Cipher dcipher = Cipher.getInstance(key.getAlgorithm());

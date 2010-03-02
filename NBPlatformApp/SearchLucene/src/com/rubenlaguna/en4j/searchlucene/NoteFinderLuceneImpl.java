@@ -26,15 +26,8 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
-import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -57,7 +50,6 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
-import org.omg.CosNaming.NamingContextPackage.NotEmpty;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
@@ -75,21 +67,14 @@ import org.xml.sax.SAXException;
 public class NoteFinderLuceneImpl implements NoteFinder {
 
     private final int REPORTEVERY = 100;
-    //private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
     private IndexReader reader = null;
     private final RequestProcessor RP = new RequestProcessor("Indexing thread", 1, true);
     private final BlockingQueue<Document> theQueue = new ArrayBlockingQueue<Document>(100, false);
-    private final IndexWriterMonitor iwm = new IndexWriterMonitor();
-    private final Lock lock = new ReentrantLock();
-    private final Condition notEmpty = lock.newCondition();
 
-    //private IndexWriter theWriter;
     public NoteFinderLuceneImpl() {
         try {
-            //getIndexWriter().close();
-            iwm.getIndexWriter();
-            iwm.release();
+            Installer.mbean.setQueue(theQueue);
             File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
             reader = IndexReader.open(FSDirectory.open(file), true);
         } catch (CorruptIndexException ex) {
@@ -98,9 +83,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         }
 
-        RP.post(new IndexerTask(iwm, theQueue,lock,notEmpty));
+        RP.post(new IndexerTask(theQueue));
     }
-    //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
         if ("".equals(searchText.trim())) {
@@ -197,7 +181,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             return;
         }
 
-        LOG.info("Trying to add note " + note + " to the indexing queue");
         try {
             //we have a document
             theQueue.put(document);
@@ -205,19 +188,15 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         }
         LOG.info("Note " + note + "was added in the indexing queue");
-        lock.lock();
-        notEmpty.signalAll();
-        lock.unlock();
     }
 
     public synchronized void rebuildIndex(ProgressHandle ph) {
         LOG.info("about to start indexing");
         long start = System.currentTimeMillis();
         long start2 = start;
-        lock.lock();
         IndexWriter writer = null;
         try {
-            writer = iwm.getIndexWriter();
+            writer = IndexWriterFactory.getIndexWriter();
             writer.deleteAll();
             writer.commit();
             Collection<Note> notes = getAllNotes();
@@ -228,9 +207,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             int i = 0;
             for (Note noteWithoutContents : notes) {
                 if (Thread.interrupted()) {
-                    //if the task has been cancelled we skip the rest of the
-                    //notes but we still do the writer.commit()
-                    writer.close();
                     LOG.warning("Rebuild index operation was CANCELLED");
                     return;
                 }
@@ -267,24 +243,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             LOG.info("Optimize and close the index.");
             start2 = System.currentTimeMillis();
             writer.optimize();
-            writer.close();
             long delta = System.currentTimeMillis() - start2;
             LOG.info("Index optimized and closed.It took " + delta / 1000.0 + " secs.");
 
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
-        } finally {
-            try {
-                if (writer != null) {
-                    writer.close();
-                }
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            }
-            iwm.release();
-            lock.unlock();
-        }
+        } 
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
     }
@@ -327,9 +292,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private Collection<Note> getAllNotes() {
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-
         Collection<Note> toReturn = rep.getAllNotes();
-
         return toReturn;
     }
 
@@ -357,87 +320,31 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private Note getProperNote(Note noteWithoutContents) {
         return Lookup.getDefault().lookup(NoteRepository.class).get(noteWithoutContents.getId());
-
     }
 }
 
-class IndexWriterMonitor {
 
-    private final Semaphore sem = new Semaphore(1);
-    private IndexWriter current = null;
-
-    public synchronized IndexWriter getIndexWriter() {
-        try {
-            sem.acquire();
-            if (current == null) {
-                File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
-                final CustomAnalyzer analyzer = new CustomAnalyzer();
-                IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, IndexWriter.MaxFieldLength.LIMITED);
-                writer.setUseCompoundFile(true);
-                current = writer;
-            }
-            return current;
-        } catch (Exception ex) {
-            Exceptions.printStackTrace(ex);
-            return null;
-        }
-    }
-
-    public synchronized void release() {
-        if (null != current) {
-            try {
-                current.close();
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            } finally {
-                current = null;
-            }
-        }
-        sem.release();
-    }
-}
 
 class IndexerTask implements Runnable {
 
     private static final Logger LOG = Logger.getLogger(IndexerTask.class.getName());
-    private final IndexWriterMonitor iwm;
     private final BlockingQueue<Document> theQueue;
-    private final Lock lock;
-    private final Condition notEmpty;
 
-    IndexerTask(IndexWriterMonitor iwm,BlockingQueue<Document> theQueue,Lock lock,Condition notEmpty) {
-        this.iwm = iwm;
+    IndexerTask( BlockingQueue<Document> theQueue) {
         this.theQueue = theQueue;
-        this.lock = lock;
-        this.notEmpty = notEmpty;
     }
 
     public void run() {
         int i = 0;
         IndexWriter writer = null;
         boolean noerrors = true;
-        writer = iwm.getIndexWriter();
+        writer = IndexWriterFactory.getIndexWriter();
         while (noerrors && (!Thread.currentThread().isInterrupted())) {
             i++;
             LOG.info("before acquiring lock in indexer thread");
-            try {
-                while (theQueue.isEmpty()) {
-                    LOG.info("indexing queue is empty. waiting...");
-                    iwm.release();
-                    writer = null;
-                    lock.lock();
-
-                    try {
-                        notEmpty.await();
-                    } catch (InterruptedException interruptedException) {
-                    } finally {
-                        lock.unlock();
-                    }
-                    LOG.info("indexing queue notEmpty condition fulfilled");
-                    writer = iwm.getIndexWriter();
-                }
+            try {                
                 LOG.info("indexing queue size: " + theQueue.size());
-                Document document = theQueue.poll();
+                Document document = theQueue.take();
                 if (null != document) {
                     writer.addDocument(document);
                     LOG.info("Indexed note " + document.getField("title").stringValue());
@@ -449,13 +356,7 @@ class IndexerTask implements Runnable {
             }
             LOG.info("continue while loop");
         } //while
-        try {
-            if (writer != null) {
-                iwm.release();
-            }
-        } catch (Exception ex) {
-            Exceptions.printStackTrace(ex);
-        }
+        
         LOG.warning("indexer thread terminated!!");
     }
 }
