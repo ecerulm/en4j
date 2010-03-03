@@ -97,7 +97,7 @@ public class NoteFinderLuceneImplTest implements Lookup.Provider {
             }
         });
          instance = new NoteFinderLuceneImpl();
-        instance.rebuildIndex();
+        instance.rebuildIndex(null);
     }
 
     @AfterClass
