@@ -26,6 +26,8 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -50,6 +52,7 @@ import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
+import org.openide.util.RequestProcessor;
 import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -64,26 +67,30 @@ import org.xml.sax.SAXException;
 public class NoteFinderLuceneImpl implements NoteFinder {
 
     private final int REPORTEVERY = 100;
-    private DOMFragmentParser domParser = new DOMFragmentParser();
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
     private IndexReader reader = null;
+    private final RequestProcessor RP = new RequestProcessor("Indexing thread", 1, true);
+    private final BlockingQueue<Document> theQueue = new ArrayBlockingQueue<Document>(100, false);
 
     public NoteFinderLuceneImpl() {
         try {
-            getIndexWriter().close();
+            Installer.mbean.setQueue(theQueue);
             File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
             reader = IndexReader.open(FSDirectory.open(file), true);
-        } catch (Exception ex) {
+        } catch (CorruptIndexException ex) {
+            Exceptions.printStackTrace(ex);
+        } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+
+        RP.post(new IndexerTask(theQueue));
     }
-    //private Analyzer analyzer = new SimpleAnalyzer();
 
     public Collection<Note> find(String searchText) {
         if ("".equals(searchText.trim())) {
             return Collections.EMPTY_LIST;
         }
-        long start=System.currentTimeMillis();
+        long start = System.currentTimeMillis();
         searchText = searchText.trim();
 //        String patternStr = "(?:\\w)\\s+";
         String patternStr = "\\s+";
@@ -155,44 +162,41 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
-        long delta=System.currentTimeMillis()-start;
-        LOG.info("find took "+delta/1000.0+" secs. "+toReturn.size()+" results found");
+        long delta = System.currentTimeMillis() - start;
+        LOG.info("find took " + delta / 1000.0 + " secs. " + toReturn.size() + " results found");
         return toReturn;
     }
 
     public void index(Note n) {
-        IndexWriter writer = null;
-        try {
-            writer = getIndexWriter();
-            Note note = getProperNote(n);
-
-            if (null != note) {
-                Document document = getLuceneDocument(note);
-                writer.addDocument(document);
-                LOG.info("Indexed note "+note.getGuid());
-                writer.commit();
-                writer.close();
-            }
-        } catch (Exception ex) {
-            Exceptions.printStackTrace(ex);
-        } finally {
+        Note note = getProperNote(n);
+        Document document = null;
+        if (null != note) {
             try {
-                if (writer != null) {
-                    writer.close();
-                }
+                document = getLuceneDocument(note);
             } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
+                LOG.log(Level.WARNING, "couldn't parse note " + note.getGuid(), ex);
+                return;
             }
+        } else {
+            return;
         }
+
+        try {
+            //we have a document
+            theQueue.put(document);
+        } catch (InterruptedException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+        LOG.info("Note " + note + "was added in the indexing queue");
     }
 
-    public void rebuildIndex(ProgressHandle ph) {
+    public synchronized void rebuildIndex(ProgressHandle ph) {
         LOG.info("about to start indexing");
         long start = System.currentTimeMillis();
         long start2 = start;
         IndexWriter writer = null;
         try {
-            writer = getIndexWriter();
+            writer = IndexWriterFactory.getIndexWriter();
             writer.deleteAll();
             writer.commit();
             Collection<Note> notes = getAllNotes();
@@ -203,9 +207,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             int i = 0;
             for (Note noteWithoutContents : notes) {
                 if (Thread.interrupted()) {
-                    //if the task has been cancelled we skip the rest of the
-                    //notes but we still do the writer.commit()
-                    writer.close();
                     LOG.warning("Rebuild index operation was CANCELLED");
                     return;
                 }
@@ -240,34 +241,17 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             writer.commit();
             LOG.info(i + " notes indexed so far.");
             LOG.info("Optimize and close the index.");
-            start2=System.currentTimeMillis();
+            start2 = System.currentTimeMillis();
             writer.optimize();
-            writer.close();
-            long delta=System.currentTimeMillis()-start2;
-            LOG.info("Index optimized and closed.It took "+delta/1000.0+ " secs.");
+            long delta = System.currentTimeMillis() - start2;
+            LOG.info("Index optimized and closed.It took " + delta / 1000.0 + " secs.");
 
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
-        } finally {
-            try {
-                if (writer != null) {
-                    writer.close();
-                }
-            } catch (Exception ex) {
-                Exceptions.printStackTrace(ex);
-            }
-        }
+        } 
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
-    }
-
-    private IndexWriter getIndexWriter() throws IOException {
-        File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
-        final CustomAnalyzer analyzer = new CustomAnalyzer();
-        IndexWriter writer = new IndexWriter(FSDirectory.open(file), analyzer, IndexWriter.MaxFieldLength.LIMITED);
-        writer.setUseCompoundFile(true);
-        return writer;
     }
 
     private Document getLuceneDocument(Note note) throws SAXException, IOException {
@@ -280,6 +264,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         //according to Lucene in Action 7.4 we should use
         //JTidy or NekoHTML to parse the thlm
         DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        DOMFragmentParser domParser = new DOMFragmentParser();
         domParser.parse(new InputSource(new StringReader(note.getContent())), node);
         StringBuffer sb = new StringBuffer();
         sb.setLength(0);
@@ -307,9 +292,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private Collection<Note> getAllNotes() {
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-
         Collection<Note> toReturn = rep.getAllNotes();
-
         return toReturn;
     }
 
@@ -337,6 +320,43 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     private Note getProperNote(Note noteWithoutContents) {
         return Lookup.getDefault().lookup(NoteRepository.class).get(noteWithoutContents.getId());
+    }
+}
 
+
+
+class IndexerTask implements Runnable {
+
+    private static final Logger LOG = Logger.getLogger(IndexerTask.class.getName());
+    private final BlockingQueue<Document> theQueue;
+
+    IndexerTask( BlockingQueue<Document> theQueue) {
+        this.theQueue = theQueue;
+    }
+
+    public void run() {
+        int i = 0;
+        IndexWriter writer = null;
+        boolean noerrors = true;
+        writer = IndexWriterFactory.getIndexWriter();
+        while (noerrors && (!Thread.currentThread().isInterrupted())) {
+            i++;
+            LOG.info("before acquiring lock in indexer thread");
+            try {                
+                LOG.info("indexing queue size: " + theQueue.size());
+                Document document = theQueue.take();
+                if (null != document) {
+                    writer.addDocument(document);
+                    LOG.info("Indexed note " + document.getField("title").stringValue());
+                    writer.commit();
+                }
+            } catch (Exception ex) {
+                noerrors = false;
+                Exceptions.printStackTrace(ex);
+            }
+            LOG.info("continue while loop");
+        } //while
+        
+        LOG.warning("indexer thread terminated!!");
     }
 }
