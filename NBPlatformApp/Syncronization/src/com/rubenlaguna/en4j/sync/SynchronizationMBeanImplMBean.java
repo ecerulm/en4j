@@ -3,7 +3,6 @@
  *
  * Created on March 2, 2010, 8:57 PM
  */
-
 package com.rubenlaguna.en4j.sync;
 
 /**
@@ -11,8 +10,7 @@ package com.rubenlaguna.en4j.sync;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-public interface SynchronizationMBeanImplMBean
-{
+public interface SynchronizationMBeanImplMBean {
 
     /**
      * Get number of connection thread
@@ -23,7 +21,12 @@ public interface SynchronizationMBeanImplMBean
      * Get number of synch download tasks in the queue
      */
     public int getQueue();
-    
+
+    public long getTasks();
+
+    public int getActiveThreads();
+
+    public int getPoolSize();
 }
 
 

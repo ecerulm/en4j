@@ -43,6 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
@@ -82,7 +83,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private final String userStoreUrl = "https://www.evernote.com/edam/user";
     private final String noteStoreUrlBase = "http://www.evernote.com/edam/note/";
     private int PendingRemoteUpdateNotes = 0;
-    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(20));
+    private static final int MAX_QUEUED_NOTES = 25;
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
     private static final ThreadLocal<NoteStore.Client> currentNoteStore = new ThreadLocal<NoteStore.Client>();
     private static final ThreadLocal<AuthenticationResult> currentAuthResult = new ThreadLocal<AuthenticationResult>();
     private static final ThreadLocal<UserStore.Client> currentUserStore = new ThreadLocal<UserStore.Client>();
@@ -136,13 +138,15 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
             final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
             final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
-            boolean finished = false;
+            boolean errorDetected = false;
+            boolean moreNotesToDownload = true;
+            setSyncFailed(false);
             do {
                 int highestUSN = nr.getHighestUSN();
                 LOG.info("highest updateSequenceNumber in the database = " + highestUSN);
                 //boolean fullSync = (highestUSN == 0);
                 LOG.info("retrieving SyncChunk");
-                SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, 25, true);
+                SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, true);
                 LOG.info("SyncChunk retrieved");
                 int pendingUpdates = sc.getUpdateCount() - highestUSN;
                 setPendingRemoteUpdateNotes(pendingUpdates);
@@ -160,25 +164,38 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                                 LOG.info("retrieving note " + noteWithoutContents.getGuid());
                                 Note note = getValidNoteStore().getNote(getValidAuthToken(), noteWithoutContents.getGuid(), true, true, false, false);
                                 long delta = System.currentTimeMillis() - start;
-                                LOG.info("retrieving " + note.getGuid() + " took " + delta + " ms");
+                                final String guid = note.getGuid();
+                                LOG.info("retrieving " + guid + " took " + delta + " ms");
                                 LOG.info("adding to local database note =" + note.getTitle());
                                 final NoteAdapter noteAdapter = new NoteAdapter(note);
                                 boolean suceeded = nr.add(noteAdapter);
-                                nf.index(nr.getByGuid(note.getGuid(), false));
+                                if (suceeded) {
+                                    final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
+                                    if (null == byGuid) {
+                                        LOG.warning("the note " + guid + " was not added properly to the db");
+                                        return false;
+                                    }
+                                    nf.index(byGuid);
+                                } else {
+                                    LOG.warning("the note " + guid + " was not added properly to the db");
+                                }
                                 return suceeded;
                             }
                         };
+                        //TODO: java.util.concurrent.RejectedExecutionException
                         final Future<Boolean> task = RP.submit(callable);
                         tasks.add(task);
                     }
                     if (waitForResults(tasks)) { //this waits for result from each task
-                        finished = true;
+                        LOG.warning("Synchronization stopped. One of the notes could not be downloaded or added");
+                        errorDetected = true;
+                        setSyncFailed(true);
                     }
                 } else {
                     LOG.info("No notes to download");
-                    finished = true;
+                    moreNotesToDownload = false;
                 }
-            } while (!finished);
+            } while (!errorDetected && moreNotesToDownload);
             return true;
         } catch (EDAMSystemException ex) {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
@@ -197,32 +214,43 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
     private boolean waitForResults(final List<Future<Boolean>> tasks) {
         long start = System.currentTimeMillis();
-        boolean finished = false;
+        boolean error = false;
 
         LOG.info("wait for " + tasks.size() + " to complete.");
         for (Future<Boolean> future : tasks) {
             LOG.info("get result of future " + future);
             Boolean futureResult;
             try {
-                futureResult = future.get();
+                futureResult = future.get(5, TimeUnit.MINUTES);
             } catch (InterruptedException ex) {
-                finished = true;
+                LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
+                error = true;
                 break;
             } catch (ExecutionException ex) {
                 LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-                finished = true;
+                error = true;
+                break;
+            } catch (TimeoutException ex) {
+                LOG.log(Level.WARNING, "Sync couldn't complete because" + future + " timed out");
+                error = true;
                 break;
             }
 
             if (!Boolean.TRUE.equals(futureResult)) {
-                finished = true;
+                LOG.warning("Sync couldn't complete because future task " + future);
+                error = true;
                 break;
             }
         }
+        if (error) {
+            for (Future<Boolean> future : tasks) {
+                future.cancel(true);
+            }
+        }
         long delta = System.currentTimeMillis() - start;
-        LOG.info("checkResult = " + finished+" .It took "+delta+" ms");
+        LOG.info("checkResult = " + error + " .It took " + delta + " ms");
 
-        return finished;
+        return error;
     }
 
     private AuthenticationResult getValidAuthenticationResult() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
@@ -312,6 +340,28 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         int oldValue = this.PendingRemoteUpdateNotes;
         this.PendingRemoteUpdateNotes = PendingRemoteUpdateNotes;
         propertyChangeSupport.firePropertyChange(PROP_PENDINGREMOTEUPDATENOTES, oldValue, this.PendingRemoteUpdateNotes);
+    }
+    protected boolean syncFailed = false;
+    public static final String PROP_SYNCFAILED = "syncFailed";
+
+    /**
+     * Get the value of syncFailed
+     *
+     * @return the value of syncFailed
+     */
+    public boolean isSyncFailed() {
+        return syncFailed;
+    }
+
+    /**
+     * Set the value of syncFailed
+     *
+     * @param syncFailed new value of syncFailed
+     */
+    private void setSyncFailed(boolean syncFailed) {
+        boolean oldSyncFailed = this.syncFailed;
+        this.syncFailed = syncFailed;
+        propertyChangeSupport.firePropertyChange(PROP_SYNCFAILED, oldSyncFailed, syncFailed);
     }
 
     /**

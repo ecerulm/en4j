@@ -77,8 +77,8 @@ public class NoteRepositoryImpl implements NoteRepository {
             Query query1 = entityManager.createQuery(queryText);
             listNotes.addAll(query1.getResultList());
         } catch (PersistenceException ex) {
-            LOG.warning("could not load the notes from the db. Is the module closing?");
-//            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
+//            LOG.warning("could not load the notes from the db. Is the module closing?");
+            LOG.log(Level.WARNING, "Couldn't retrieve the record from the db due to", ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -107,10 +107,6 @@ public class NoteRepositoryImpl implements NoteRepository {
         try {
             String queryText2 = "SELECT n FROM Notes n WHERE n.id = :id ";
             Query queryById = entityManager.createQuery(queryText2);
-//            OpenJPAQuery kq = OpenJPAPersistence.cast(queryById);
-//            JDBCFetchPlan fetch = (JDBCFetchPlan) kq.getFetchPlan();
-//            fetch.setEagerFetchMode(FetchMode.PARALLEL);
-//            fetch.setSubclassFetchMode(FetchMode.JOIN);
             queryById.setParameter("id", id);
             final Notes result = (Notes) queryById.getSingleResult();
             //entityManager.
@@ -121,7 +117,8 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             toReturn = fromNotes(result);
         } catch (PersistenceException ex) {
-            LOG.warning("could not load the note from the db. Is the module closing?");
+//            LOG.warning("could not load the note from the db. Is the module closing?");
+            LOG.log(Level.WARNING,"could not load the note from the db. Is the module closing?",ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -136,13 +133,8 @@ public class NoteRepositoryImpl implements NoteRepository {
         try {
             String queryText2 = "SELECT n FROM Notes n WHERE n.guid = :id ";
             Query queryById = entityManager.createQuery(queryText2);
-//            OpenJPAQuery kq = OpenJPAPersistence.cast(queryById);
-//            JDBCFetchPlan fetch = (JDBCFetchPlan) kq.getFetchPlan();
-//            fetch.setEagerFetchMode(FetchMode.PARALLEL);
-//            fetch.setSubclassFetchMode(FetchMode.JOIN);
             queryById.setParameter("id", id);
             final Notes result = (Notes) queryById.getSingleResult();
-            //entityManager.
             if (withContents) {
                 result.getContent();
                 result.getResources();
@@ -213,9 +205,6 @@ public class NoteRepositoryImpl implements NoteRepository {
                                             com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
 
                                             byte[] data = r.getData().getValue();
-                                            String hashword = getHash(data);
-
-                                            resourceEntity.setHash(hashword);
                                             resourceEntity.setData(data);
                                             resourceEntity.setOwner(entityNode);
                                             entityNode.addResource(resourceEntity);
@@ -257,17 +246,7 @@ public class NoteRepositoryImpl implements NoteRepository {
         }
     }
 
-    private String getHash(byte[] data) {
-        try {
-            MessageDigest md5 = MessageDigest.getInstance("MD5");
-            BigInteger hash = new BigInteger(1, md5.digest(data));
-            String hashword = hash.toString(16);
-            return hashword;
-        } catch (NoSuchAlgorithmException ex) {
-//            Exceptions.printStackTrace(ex);
-            throw new RuntimeException(ex);
-        }
-    }
+
 
     public int getHighestUSN() {
 
@@ -324,7 +303,22 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                     byte[] data = resource.getData();
                     resourceEntity.setData(data);
-                    resourceEntity.setHash(getHash(data));
+                    resourceEntity.setAlternateData(resource.getAlternateData());
+                    resourceEntity.setAltitude(resource.getAltitude());
+                    resourceEntity.setCameraMake(resource.getCameraMake());
+                    resourceEntity.setCameraModel(resource.getCameraModel());
+                    //resourceEntity.setClientWillIndex(toReturn);
+                    resourceEntity.setFilename(resource.getFilename());
+                    resourceEntity.setGuid(resource.getGuid());
+                    resourceEntity.setLatitude(resource.getLatitude());
+                    resourceEntity.setLongitude(resource.getLongitude());
+                    resourceEntity.setMime(resource.getMime());
+                    resourceEntity.setNoteguid(n.getGuid());
+                    resourceEntity.setPremiumAttachment(resource.getPremiumAttachment());
+                    resourceEntity.setRecognition(resource.getRecognition());
+                    resourceEntity.setTimestamp(resource.getTimestamp());
+                   
+
                     resourceEntity.setOwner(entityToPersist);
                     entityToPersist.addResource(resourceEntity);
                     entityManager.persist(resourceEntity);
@@ -334,7 +328,8 @@ public class NoteRepositoryImpl implements NoteRepository {
                 entityManager.getTransaction().commit();
             } catch (PersistenceException ex) {
 //                LOG.log(Level.WARNING, "Could add note due to ...", ex);
-                LOG.warning("could not load the note from the db. Is the module closing?");
+//                LOG.warning("could not load the note from the db. Is the module closing?");
+                  LOG.log(Level.WARNING,"could not load the note from the db. Is the module closing?",ex);
                 toReturn = false;
             } finally {
                 //we need to rollback the transaction if it

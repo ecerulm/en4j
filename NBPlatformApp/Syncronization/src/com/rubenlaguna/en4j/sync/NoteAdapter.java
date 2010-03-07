@@ -104,12 +104,7 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
             while (resourcesIterator.hasNext()) {
                 final com.evernote.edam.type.Resource resource = resourcesIterator.next();
 
-                Resource resourceToReturn = new Resource() {
-
-                    public byte[] getData() {
-                        return resource.getData().getBody();
-                    }
-                };
+                Resource resourceToReturn = new ResourceAdapter(resource);
                 toReturn.add(resourceToReturn);
             }
         }

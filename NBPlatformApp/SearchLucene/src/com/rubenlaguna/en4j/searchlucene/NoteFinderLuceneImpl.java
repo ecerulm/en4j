@@ -74,6 +74,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public NoteFinderLuceneImpl() {
         try {
+            //make sure that there is an index that the readers can open
+            IndexWriterFactory.getIndexWriter().commit();
             Installer.mbean.setQueue(theQueue);
             File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
             reader = IndexReader.open(FSDirectory.open(file), true);
@@ -319,7 +321,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private Note getProperNote(Note noteWithoutContents) {
-        return Lookup.getDefault().lookup(NoteRepository.class).get(noteWithoutContents.getId());
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        final Integer id = noteWithoutContents.getId();
+        return nr.get(id);
     }
 }
 

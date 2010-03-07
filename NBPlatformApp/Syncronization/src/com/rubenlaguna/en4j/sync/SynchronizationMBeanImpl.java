@@ -39,6 +39,17 @@ public class SynchronizationMBeanImpl implements SynchronizationMBeanImplMBean {
         return threadPoolExecutor.getQueue().size();
     }
 
+    public long getTasks() {
+        return threadPoolExecutor.getTaskCount();
+    }
+
+    public int getActiveThreads() {
+        return threadPoolExecutor.getActiveCount();
+    }
+    public int getPoolSize() {
+        return threadPoolExecutor.getPoolSize();
+    }
+
 }
 
 

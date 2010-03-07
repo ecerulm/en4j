@@ -16,6 +16,8 @@
  */
 package com.rubenlaguna.en4j.noteinterface;
 
+import java.util.Date;
+
 /**
  *
  * @author ecerulm
@@ -23,4 +25,30 @@ package com.rubenlaguna.en4j.noteinterface;
 public interface Resource {
 
     byte[] getData();
+
+    byte[] getAlternateData();
+
+    double getAltitude();
+
+    public double getLatitude();
+
+    public double getLongitude();
+
+    public boolean getPremiumAttachment();
+
+    String getCameraMake();
+
+    String getCameraModel();
+
+    String getFilename();
+
+    String getGuid();
+
+    String getMime();
+
+    String getNoteguid();
+
+    byte[] getRecognition();
+
+    Date getTimestamp();
 }

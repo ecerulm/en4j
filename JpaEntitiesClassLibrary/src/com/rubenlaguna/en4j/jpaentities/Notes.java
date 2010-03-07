@@ -17,6 +17,9 @@
 package com.rubenlaguna.en4j.jpaentities;
 
 import java.io.Serializable;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -31,12 +34,12 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.MapKey;
-import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.UniqueConstraint;
+import javax.persistence.Version;
 
 /**
  *
@@ -49,10 +52,9 @@ import javax.persistence.UniqueConstraint;
 //)
 @Entity
 @Table(name = "NOTES", uniqueConstraints = {
-         @UniqueConstraint(columnNames = "GUID"),
-         @UniqueConstraint(columnNames = "USN")
-       }
-)
+    @UniqueConstraint(columnNames = "GUID"),
+    @UniqueConstraint(columnNames = "USN")
+})
 public class Notes implements Serializable {
 
     @Id
@@ -82,8 +84,10 @@ public class Notes implements Serializable {
     @MapKey(name = "hashValue")
     private Map<String, Resource> resources = new HashMap<String, Resource>();
     @Basic(optional = false)
-    @Column(name = "USN",  nullable = false)
+    @Column(name = "USN", nullable = false)
     private int updateSequenceNumber = 0;
+    @Version
+    private long version;
 
     public Notes() {
     }
@@ -202,4 +206,5 @@ public class Notes implements Serializable {
     public String toString() {
         return "com.rubenlaguna.noteentitieslibrary.Notes[id=" + id + "]";
     }
+
 }
