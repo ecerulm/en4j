@@ -10,15 +10,40 @@
  */
 package com.rubenlaguna.en4j.NoteContentViewModule;
 
+import com.rubenlaguna.en4j.noteinterface.Resource;
+import org.apache.commons.io.FilenameUtils;
+import java.awt.Desktop;
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import javax.swing.SwingWorker;
+import org.openide.util.Exceptions;
+
 /**
  *
  * @author ecerulm
  */
 public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
 
+    private Resource resource = null;
+
     /** Creates new form UnrecognizedResourceJPanel */
     public UnrecognizedResourceJPanel() {
         initComponents();
+    }
+
+    UnrecognizedResourceJPanel(Resource resource) {
+        this();
+        this.resource = resource;
+        if (null != resource) {
+            setFilename(resource.getFilename());
+            setMime(resource.getMime());
+            setFilesize(resource.getData().length);
+        }
     }
 
     /** This method is called from within the constructor to
@@ -38,6 +63,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         filenameJLabel = new javax.swing.JLabel();
         mimeJLabel = new javax.swing.JLabel();
         filesizeJLabel = new javax.swing.JLabel();
+        jButton1 = new javax.swing.JButton();
 
         jLabel12.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel12.text")); // NOI18N
 
@@ -56,6 +82,13 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
 
         filesizeJLabel.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.filesizeJLabel.text")); // NOI18N
 
+        jButton1.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jButton1.text")); // NOI18N
+        jButton1.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                jButton1MouseReleased(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -65,15 +98,18 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                 .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel2)
-                    .addComponent(jLabel3)
-                    .addComponent(jLabel4))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(filenameJLabel)
-                    .addComponent(mimeJLabel)
-                    .addComponent(filesizeJLabel))
-                .addContainerGap(99, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel3)
+                            .addComponent(jLabel4))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(filesizeJLabel)
+                            .addComponent(filenameJLabel)
+                            .addComponent(mimeJLabel)))
+                    .addComponent(jButton1))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -92,13 +128,41 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel4)
-                            .addComponent(filesizeJLabel))))
+                            .addComponent(filesizeJLabel))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton1)))
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
+
+    private void jButton1MouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jButton1MouseReleased
+        new SwingWorker<Void, Void>() {
+
+            @Override
+            protected Void doInBackground() throws Exception {
+                try {
+                    //get temp dir
+                    //save resource to tmp file
+                    String extension = FilenameUtils.getExtension(resource.getFilename());
+                    File tempFile = File.createTempFile("en4j", "."+extension);
+                    OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile));
+                    os.write(resource.getData());
+                    os.close();
+                    Desktop dt = Desktop.getDesktop();
+                    dt.open(tempFile);
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+                return null;
+            }
+        }.execute();
+        // desktop api to open file
+
+    }//GEN-LAST:event_jButton1MouseReleased
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel filenameJLabel;
     private javax.swing.JLabel filesizeJLabel;
+    private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel2;
@@ -120,6 +184,6 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
     }
 
     void setFilesize(int length) {
-        filesizeJLabel.setText(new Integer(length).toString()+" bytes");
+        filesizeJLabel.setText(new Integer(length).toString() + " bytes");
     }
 }

@@ -179,12 +179,8 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
 
 
         final Resource resource = this.note.getResource(hash);
-        UnrecognizedResourceJPanel cc = new UnrecognizedResourceJPanel();
-        if (null != resource) {
-            cc.setFilename(resource.getFilename());
-            cc.setMime(resource.getMime());
-            cc.setFilesize(resource.getData().length);
-        }
+        UnrecognizedResourceJPanel cc = new UnrecognizedResourceJPanel(resource);
+
         //cc.setText("Missing implementation for en-media");
         //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());

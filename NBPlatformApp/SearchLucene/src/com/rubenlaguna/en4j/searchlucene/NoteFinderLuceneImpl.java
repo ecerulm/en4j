@@ -187,7 +187,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             //we have a document
             theQueue.put(document);
         } catch (InterruptedException ex) {
-            Exceptions.printStackTrace(ex);
+            LOG.warning("thread interrupted before the note could be put in the indexing queue");
+            return;
         }
         LOG.info("Note " + note + "was added in the indexing queue");
     }
@@ -345,9 +346,8 @@ class IndexerTask implements Runnable {
         writer = IndexWriterFactory.getIndexWriter();
         while (noerrors && (!Thread.currentThread().isInterrupted())) {
             i++;
-            LOG.info("before acquiring lock in indexer thread");
             try {                
-                LOG.info("indexing queue size: " + theQueue.size());
+                LOG.info("waiting for new document to appear in the indexing queue. indexing queue size: " + theQueue.size());
                 Document document = theQueue.take();
                 if (null != document) {
                     writer.addDocument(document);
@@ -358,7 +358,6 @@ class IndexerTask implements Runnable {
                 noerrors = false;
                 Exceptions.printStackTrace(ex);
             }
-            LOG.info("continue while loop");
         } //while
         
         LOG.warning("indexer thread terminated!!");
