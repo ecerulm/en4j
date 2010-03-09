@@ -142,6 +142,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 factory.setValidating(false);
                 //factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
                 factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+                factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
 
                 // Create the builder and parse the file
                 String content = n.getContent();
