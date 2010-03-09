@@ -8,7 +8,6 @@
  *
  * Created on 2010-feb-15, 16:26:41
  */
-
 package com.rubenlaguna.en4j.NoteContentViewModule;
 
 /**
@@ -36,13 +35,9 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel4 = new javax.swing.JLabel();
-        jLabel5 = new javax.swing.JLabel();
-        jLabel6 = new javax.swing.JLabel();
-        jLabel7 = new javax.swing.JLabel();
-        jLabel8 = new javax.swing.JLabel();
-        jLabel9 = new javax.swing.JLabel();
-        jLabel10 = new javax.swing.JLabel();
-        jLabel11 = new javax.swing.JLabel();
+        filenameJLabel = new javax.swing.JLabel();
+        mimeJLabel = new javax.swing.JLabel();
+        filesizeJLabel = new javax.swing.JLabel();
 
         jLabel12.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel12.text")); // NOI18N
 
@@ -55,49 +50,29 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
 
         jLabel4.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel4.text")); // NOI18N
 
-        jLabel5.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel5.text")); // NOI18N
+        filenameJLabel.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.filenameJLabel.text")); // NOI18N
 
-        jLabel6.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel6.text")); // NOI18N
+        mimeJLabel.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.mimeJLabel.text")); // NOI18N
 
-        jLabel7.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel7.text")); // NOI18N
-
-        jLabel8.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel8.text")); // NOI18N
-
-        jLabel9.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel9.text")); // NOI18N
-
-        jLabel10.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel10.text")); // NOI18N
-
-        jLabel11.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel11.text")); // NOI18N
+        filesizeJLabel.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.filesizeJLabel.text")); // NOI18N
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel2)
-                            .addComponent(jLabel3)
-                            .addComponent(jLabel4))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jLabel7)
-                            .addComponent(jLabel8)
-                            .addComponent(jLabel9)))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(150, 150, 150)
-                        .addComponent(jLabel6)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel11))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(150, 150, 150)
-                        .addComponent(jLabel5)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel10)))
+                    .addComponent(jLabel2)
+                    .addComponent(jLabel3)
+                    .addComponent(jLabel4))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(filenameJLabel)
+                    .addComponent(mimeJLabel)
+                    .addComponent(filesizeJLabel))
                 .addContainerGap(99, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -105,45 +80,46 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 128, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel2)
-                            .addComponent(jLabel7))
+                            .addComponent(filenameJLabel))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel3)
-                            .addComponent(jLabel8))
+                            .addComponent(mimeJLabel))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel4)
-                            .addComponent(jLabel9))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel5)
-                            .addComponent(jLabel10))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(jLabel6)
-                            .addComponent(jLabel11)))
-                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(filesizeJLabel))))
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
-
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel filenameJLabel;
+    private javax.swing.JLabel filesizeJLabel;
     private javax.swing.JLabel jLabel1;
-    private javax.swing.JLabel jLabel10;
-    private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel12;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
-    private javax.swing.JLabel jLabel5;
-    private javax.swing.JLabel jLabel6;
-    private javax.swing.JLabel jLabel7;
-    private javax.swing.JLabel jLabel8;
-    private javax.swing.JLabel jLabel9;
+    private javax.swing.JLabel mimeJLabel;
     // End of variables declaration//GEN-END:variables
 
+    void setFilename(String filename) {
+        if (filename == null) {
+            filenameJLabel.setText("[no name]");
+        } else {
+            filenameJLabel.setText(filename);
+        }
+    }
+
+    void setMime(String mime) {
+        mimeJLabel.setText(mime);
+    }
+
+    void setFilesize(int length) {
+        filesizeJLabel.setText(new Integer(length).toString()+" bytes");
+    }
 }

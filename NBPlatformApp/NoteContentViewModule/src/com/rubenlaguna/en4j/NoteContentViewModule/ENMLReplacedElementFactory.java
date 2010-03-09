@@ -68,11 +68,12 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
 
         if ("en-media".equals(box.getElement().getNodeName())) {
             LOG.log(Level.INFO, "en-media detected");
-            final String type = box.getElement().getAttribute("type");
 
-            if ("image/jpeg".equalsIgnoreCase(type)) {
+            final String type = box.getElement().getAttribute("type");
+            String hash = box.getElement().getAttribute("hash");
+
+            if (isImage(type)) {
                 LOG.log(Level.INFO, "en-media type: image/jpeg");
-                String hash = box.getElement().getAttribute("hash");
                 LOG.log(Level.INFO, "en-media hash: " + hash);
 
                 toReturn = loadImage(context, hash);
@@ -82,11 +83,10 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
                 //
                 //    toReturn = loadImage()
                 //            return toReturn;
-            //} else if("im") {
+                //} else if("im") {
 
             } else {
-
-                toReturn = unrecognizedResource(context);
+                toReturn = unrecognizedResource(context, hash);
             }
         }
 
@@ -95,6 +95,14 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
             toReturn = delegate.createReplacedElement(context, box, uac, cssWidth, cssHeight);
         }
 
+        return toReturn;
+    }
+
+    private boolean isImage(final String type) {
+        boolean toReturn =false;
+        toReturn = toReturn ||"image/jpeg".equalsIgnoreCase(type);
+        toReturn = toReturn ||"image/gif".equalsIgnoreCase(type);
+        toReturn = toReturn ||"image/png".equalsIgnoreCase(type);
         return toReturn;
     }
 
@@ -166,10 +174,17 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         this.note = n;
     }
 
-    private ReplacedElement unrecognizedResource(LayoutContext context) {
+    private ReplacedElement unrecognizedResource(LayoutContext context, String hash) {
         ReplacedElement toReturn = null;
 
-        JComponent cc = new UnrecognizedResourceJPanel();
+
+        final Resource resource = this.note.getResource(hash);
+        UnrecognizedResourceJPanel cc = new UnrecognizedResourceJPanel();
+        if (null != resource) {
+            cc.setFilename(resource.getFilename());
+            cc.setMime(resource.getMime());
+            cc.setFilesize(resource.getData().length);
+        }
         //cc.setText("Missing implementation for en-media");
         //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
