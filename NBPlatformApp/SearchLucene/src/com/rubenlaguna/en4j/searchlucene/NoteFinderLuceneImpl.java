@@ -16,10 +16,13 @@
  */
 package com.rubenlaguna.en4j.searchlucene;
 
+import com.drew.metadata.MetadataException;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -48,6 +51,9 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
@@ -252,7 +258,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
-        } 
+        }
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
     }
@@ -264,15 +270,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         document.add(idField);
         Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
         document.add(titleField);
-        //according to Lucene in Action 7.4 we should use
-        //JTidy or NekoHTML to parse the thlm
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
-        StringBuffer sb = new StringBuffer();
-        sb.setLength(0);
-        getText(sb, node);
-        String text = sb.toString();
+        DocumentFragment node = parseNote(note);
+        //StringBuffer sb = new StringBuffer();
+        //sb.append(getText(node));
+        String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
             //LOG.info("indexing "+text);
             Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
@@ -288,9 +289,58 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         allText.append(note.getTitle());
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
+        for (Resource r : note.getResources()) {
+            LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+            if (r.getRecognition() != null) {
+                LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                DocumentFragment rnode = parseXmlByteArray(r.getRecognition());
+                final String recognitionText = getText(rnode);
+                LOG.fine("recognitionText: " + recognitionText);
+                allText.append(" ").append(recognitionText);
+            } else {
+                if (r.getMime().contains("image")){
+                    LOG.info("no recognition for "+"resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                }
+            }
+            if (isDocument(r)) {
+                Metadata metadata = new Metadata();
+                if (r.getFilename() != null) {
+                    metadata.set(Metadata.RESOURCE_NAME_KEY, r.getFilename());
+                }
+                metadata.set(Metadata.CONTENT_TYPE, r.getMime());
+                try {
+                    final String parseResourceText = new Tika().parseToString(new ByteArrayInputStream(r.getData()), metadata);
+                    if (!"".equals(parseResourceText)) {
+                        LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
+                    }
+                    allText.append(parseResourceText);
+                } catch (Exception ex) {
+                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ")", ex);
+                }
+            }
+        }
+
         Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
         document.add(allField);
         return document;
+    }
+
+    private boolean isDocument(Resource r) {
+        boolean isDocument = true;
+        isDocument = isDocument && !"application/vnd.evernote.ink".equals(r.getMime());
+        if (null != r.getMime()) {
+            isDocument = isDocument && !r.getMime().contains("image");
+        }
+        return isDocument;
+    }
+
+    private DocumentFragment parseNote(Note note) throws IOException, SAXException {
+        //according to Lucene in Action 7.4 we should use
+        //JTidy or NekoHTML to parse the thlm
+        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        DOMFragmentParser domParser = new DOMFragmentParser();
+        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
+        return node;
     }
 
     private Collection<Note> getAllNotes() {
@@ -299,7 +349,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    private void getText(StringBuffer sb, Node node) {
+    private String getText(Node node) {
+        final StringBuffer sb = new StringBuffer(" ");
         final String localName = node.getNodeName();
         if ("en-media".equalsIgnoreCase(localName)) {
             final String fname = ((Element) node).getAttribute("alt");
@@ -316,9 +367,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         if (children != null) {
             int len = children.getLength();
             for (int i = 0; i < len; i++) {
-                getText(sb, children.item(i));
+                sb.append(getText(children.item(i)));
             }
         }
+        return sb.toString();
     }
 
     private Note getProperNote(Note noteWithoutContents) {
@@ -326,16 +378,21 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Integer id = noteWithoutContents.getId();
         return nr.get(id);
     }
+
+    private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
+        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        DOMFragmentParser domParser = new DOMFragmentParser();
+        domParser.parse(new InputSource(new ByteArrayInputStream(theArray)), node);
+        return node;
+    }
 }
-
-
 
 class IndexerTask implements Runnable {
 
     private static final Logger LOG = Logger.getLogger(IndexerTask.class.getName());
     private final BlockingQueue<Document> theQueue;
 
-    IndexerTask( BlockingQueue<Document> theQueue) {
+    IndexerTask(BlockingQueue<Document> theQueue) {
         this.theQueue = theQueue;
     }
 
@@ -346,7 +403,7 @@ class IndexerTask implements Runnable {
         writer = IndexWriterFactory.getIndexWriter();
         while (noerrors && (!Thread.currentThread().isInterrupted())) {
             i++;
-            try {                
+            try {
                 LOG.info("waiting for new document to appear in the indexing queue. indexing queue size: " + theQueue.size());
                 Document document = theQueue.take();
                 if (null != document) {
@@ -359,7 +416,7 @@ class IndexerTask implements Runnable {
                 Exceptions.printStackTrace(ex);
             }
         } //while
-        
+
         LOG.warning("indexer thread terminated!!");
     }
 }

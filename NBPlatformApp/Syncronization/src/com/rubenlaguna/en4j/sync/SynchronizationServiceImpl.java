@@ -162,7 +162,13 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                             public Boolean call() throws Exception {
                                 long start = System.currentTimeMillis();
                                 LOG.info("retrieving note " + noteWithoutContents.getGuid());
-                                Note note = getValidNoteStore().getNote(getValidAuthToken(), noteWithoutContents.getGuid(), true, true, false, false);
+                                Note note = null;
+                                try {
+                                    note = getValidNoteStore().getNote(getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
+                                } catch (TTransportException ex) {
+                                    LOG.log(Level.WARNING, "Couldn't retrieve note " + noteWithoutContents.getGuid(), ex);
+                                    return false;
+                                }
                                 long delta = System.currentTimeMillis() - start;
                                 final String guid = note.getGuid();
                                 LOG.info("retrieving " + guid + " took " + delta + " ms");
