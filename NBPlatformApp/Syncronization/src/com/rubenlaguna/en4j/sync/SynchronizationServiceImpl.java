@@ -87,7 +87,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     public boolean sync() {
         // Set up the UserStore and check that we can talk to the server
         try {
-            Util util = Util.getInstance();
+            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
             UserStore.Client userStore = util.getUserStore();
             boolean versionOk = userStore.checkVersion("Evernote's EDAMDemo (Java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
             if (!versionOk) {
@@ -258,7 +258,7 @@ class RetrieveAndAddTask implements Callable<Boolean> {
     public Boolean call() throws Exception {
         long start = System.currentTimeMillis();
         LOG.info("retrieving note " + noteWithoutContents.getGuid());
-        Util util = Util.getInstance();
+        EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
         Note note = null;
         try {
             note = util.getValidNoteStore().getNote(util.getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
@@ -289,143 +289,3 @@ class RetrieveAndAddTask implements Callable<Boolean> {
     }
 }
 
-class Util {
-
-    private final Logger LOG = Logger.getLogger(Util.class.getName());
-//    private final String userStoreUrl = "https://sandbox.evernote.com/edam/user";
-//    private final String noteStoreUrlBase = "http://sandbox.evernote.com/edam/note/";
-    private final String userStoreUrl = "https://www.evernote.com/edam/user";
-    private final String noteStoreUrlBase = "http://www.evernote.com/edam/note/";
-    // 8-byte Salt
-    static final byte[] salt = {
-        (byte) 0xA9, (byte) 0x9B, (byte) 0xC8, (byte) 0x32,
-        (byte) 0x56, (byte) 0x35, (byte) 0xE3, (byte) 0x03
-    };
-    // Iteration count
-    final int iterationCount = 19;
-    private final String consumerKey = "h7ZGlOYrZCo=";
-    private final String consumerSecret = "IP/dKyK3226VyqE1ndtj8/JyUwYt1kOq";
-    private String a;
-    private String b;
-    private static final ThreadLocal<NoteStore.Client> currentNoteStore = new ThreadLocal<NoteStore.Client>();
-    private static final ThreadLocal<AuthenticationResult> currentAuthResult = new ThreadLocal<AuthenticationResult>();
-    private static final ThreadLocal<UserStore.Client> currentUserStore = new ThreadLocal<UserStore.Client>();
-    private static final ThreadLocal<String> noteStoreUrl = new ThreadLocal<String>();
-    private static final ThreadLocal<Long> expirationTime = new ThreadLocal<Long>() {
-
-        @Override
-        protected Long initialValue() {
-            return 0L;
-        }
-    };
-    private static final ThreadLocal<String> currentAuthToken = new ThreadLocal<String>() {
-
-        @Override
-        protected String initialValue() {
-            return "";
-        }
-    };
-    private static Util theInstance;
-
-    private Util() {
-        try {
-            KeySpec keySpec = new PBEKeySpec("55xdfsfAxkioou546bnTrjk".toCharArray(), salt, iterationCount);
-            SecretKey key = SecretKeyFactory.getInstance("PBEWithMD5AndDES").generateSecret(keySpec);
-            Cipher dcipher = Cipher.getInstance(key.getAlgorithm());
-            AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
-            dcipher.init(Cipher.DECRYPT_MODE, key, paramSpec);
-            byte[] dec = new sun.misc.BASE64Decoder().decodeBuffer(consumerKey);
-            byte[] utf8 = dcipher.doFinal(dec);
-            a = new String(utf8, "UTF8");
-            dec = new sun.misc.BASE64Decoder().decodeBuffer(consumerSecret);
-            utf8 = dcipher.doFinal(dec);
-            b = new String(utf8, "UTF8");
-        } catch (Exception ex) {
-            Exceptions.printStackTrace(ex);
-        }
-    }
-
-    public static synchronized Util getInstance() {
-        if (theInstance == null) {
-            theInstance = new Util();
-        }
-        return theInstance;
-    }
-
-    private AuthenticationResult getValidAuthenticationResult() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (null == currentAuthResult.get()) {
-            LOG.info("First authentication.");
-            final String c = a;
-            final String d = b;
-            final String password = NbPreferences.forModule(SynchronizationServiceImpl.class).get("password", "");
-            final String username = NbPreferences.forModule(SynchronizationServiceImpl.class).get("username", "");
-            currentAuthResult.set(getUserStore().authenticate(username, password, c, d));
-
-            setExpirationTime(currentAuthResult.get());
-        }
-
-        if (isExpired()) {
-            LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
-            currentAuthResult.set(getUserStore().refreshAuthentication(currentAuthToken.get()));
-            setExpirationTime(
-                    currentAuthResult.get());
-        }
-        currentAuthToken.set(currentAuthResult.get().getAuthenticationToken());
-        LOG.info("authToken: " + currentAuthToken);
-        return currentAuthResult.get();
-    }
-
-    public String getValidAuthToken() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        //Check is the current authToken is about to expire
-        if (isExpired() || "".equals(currentAuthToken.get())) {
-            AuthenticationResult authResult = getValidAuthenticationResult();
-            User user = authResult.getUser();
-            currentAuthToken.set(authResult.getAuthenticationToken());
-            LOG.info("new authtoken: \"" + currentAuthToken + "\"");
-        } //LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
-        return currentAuthToken.get();
-    }
-
-    public NoteStore.Client getValidNoteStore() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (isExpired()) {
-            // Set up the NoteStore
-            AuthenticationResult authResult = getValidAuthenticationResult();
-            if (null == noteStoreUrl.get()) {
-                //noteStoreUrl must be cached because we don't get a User in
-                //from refreshAuthentication
-                User user = authResult.getUser();
-                noteStoreUrl.set(noteStoreUrlBase + user.getShardId());
-            }
-            THttpClient noteStoreTrans = new THttpClient(noteStoreUrl.get());
-            noteStoreTrans.setConnectTimeout(30000); //30s
-            noteStoreTrans.setReadTimeout(30000);//30s
-            TBinaryProtocol noteStoreProt = new TBinaryProtocol(noteStoreTrans);
-            currentNoteStore.set(new NoteStore.Client(noteStoreProt, noteStoreProt));
-
-        }
-        return currentNoteStore.get();
-    }
-
-    private boolean isExpired() {
-        final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
-        LOG.info("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
-        boolean isExpired = msToExpiration < (5 * 60 * 1000L);
-        return isExpired;
-    }
-
-    public UserStore.Client getUserStore() throws TTransportException {
-        if (null == currentUserStore.get()) {
-            THttpClient userStoreTrans = new THttpClient(userStoreUrl);
-            TBinaryProtocol userStoreProt = new TBinaryProtocol(userStoreTrans);
-            currentUserStore.set(new UserStore.Client(userStoreProt, userStoreProt));
-        }
-        return currentUserStore.get();
-    }
-
-    private void setExpirationTime(AuthenticationResult currentAuthResult) {
-        long authStartTime = System.currentTimeMillis();
-        long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
-        LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
-        expirationTime.set(authStartTime + authValidityPeriod);
-    }
-}
