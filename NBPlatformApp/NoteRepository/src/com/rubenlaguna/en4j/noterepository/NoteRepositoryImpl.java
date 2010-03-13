@@ -35,6 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.xml.bind.JAXBContext;
@@ -117,7 +118,6 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             toReturn = fromNotes(result);
         } catch (PersistenceException ex) {
-//            LOG.warning("could not load the note from the db. Is the module closing?");
             LOG.log(Level.WARNING,"could not load the note from the db. Is the module closing?",ex);
         } finally {
             //enough since there is no transaction in the try-block
