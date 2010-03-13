@@ -101,18 +101,18 @@ import org.openide.util.NbPreferences;
             final String password = NbPreferences.forModule(SynchronizationServiceImpl.class).get("password", "");
             final String username = NbPreferences.forModule(SynchronizationServiceImpl.class).get("username", "");
             currentAuthResult.set(getUserStore().authenticate(username, password, c, d));
-
             setExpirationTime(currentAuthResult.get());
+            Installer.mbean.incrementReauthCounter();
         }
 
         if (isExpired()) {
             LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
             currentAuthResult.set(getUserStore().refreshAuthentication(currentAuthToken.get()));
-            setExpirationTime(
-                    currentAuthResult.get());
+            setExpirationTime(currentAuthResult.get());
+            Installer.mbean.incrementReauthCounter();
         }
         currentAuthToken.set(currentAuthResult.get().getAuthenticationToken());
-        LOG.info("authToken: " + currentAuthToken);
+        LOG.fine("authToken: " + currentAuthToken);
         return currentAuthResult.get();
     }
 
@@ -122,8 +122,8 @@ import org.openide.util.NbPreferences;
             AuthenticationResult authResult = getValidAuthenticationResult();
             User user = authResult.getUser();
             currentAuthToken.set(authResult.getAuthenticationToken());
-            LOG.info("new authtoken: \"" + currentAuthToken + "\"");
-        } //LOG.info("currentAuthToken: \""+currentAuthToken+"\"");
+            LOG.fine("new authtoken: \"" + currentAuthToken + "\"");
+        } 
         return currentAuthToken.get();
     }
 
@@ -149,7 +149,7 @@ import org.openide.util.NbPreferences;
 
     private boolean isExpired() {
         final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
-        LOG.info("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
+        LOG.fine("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
         boolean isExpired = msToExpiration < (5 * 60 * 1000L);
         return isExpired;
     }

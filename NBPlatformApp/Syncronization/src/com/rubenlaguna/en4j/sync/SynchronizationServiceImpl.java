@@ -16,23 +16,16 @@
  */
 package com.rubenlaguna.en4j.sync;
 
-import com.evernote.edam.error.EDAMNotFoundException;
 import com.evernote.edam.error.EDAMSystemException;
 import com.evernote.edam.error.EDAMUserException;
-import com.evernote.edam.notestore.NoteStore;
 import com.evernote.edam.notestore.SyncChunk;
 import com.evernote.edam.type.Note;
-import com.evernote.edam.type.User;
-import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.UserStore;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.AlgorithmParameterSpec;
-import java.security.spec.KeySpec;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -47,19 +40,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.PBEParameterSpec;
 import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransportException;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
-import org.openide.util.NbPreferences;
-import org.openide.util.RequestProcessor;
 
 /**
  *
@@ -71,16 +55,13 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
     private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
+    private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
+    protected boolean syncFailed = false;
+    public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
 
     public SynchronizationServiceImpl() {
-        try {
-            com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
-
-        } catch (Exception ex) {
-            //TODO fix exception handling
-            Exceptions.printStackTrace(ex);
-        }
+        com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
     }
 
     @Override
@@ -109,22 +90,14 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 int pendingUpdates = sc.getUpdateCount() - highestUSN;
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
-
-                final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
+                final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks = new ArrayList<Future<com.rubenlaguna.en4j.noteinterface.Note>>();
                 final Iterator<Note> notesIterator = sc.getNotesIterator();
                 if (null != notesIterator) {
-                    while (notesIterator.hasNext()) {
-                        final Note noteWithoutContents = notesIterator.next();
-
-                        Callable<Boolean> callable = new RetrieveAndAddTask(noteWithoutContents);
-
-
-                        //TODO: java.util.concurrent.RejectedExecutionException
-                        final Future<Boolean> task = RP.submit(callable);
-                        tasks.add(task);
-                    }
-                    if (waitForResults(tasks)) { //this waits for result from each task
-                        LOG.warning("Synchronization stopped. One of the notes could not be downloaded or added");
+                    retrieveNotesAsync(notesIterator, tasks);
+                    if (!addNotesToDb(tasks)) {
+                        for (Future<com.rubenlaguna.en4j.noteinterface.Note> future : tasks) {
+                            future.cancel(true);
+                        }
                         errorDetected = true;
                         setSyncFailed(true);
                     }
@@ -133,61 +106,64 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                     moreNotesToDownload = false;
                 }
             } while (!errorDetected && moreNotesToDownload);
-            return true;
-        } catch (EDAMSystemException ex) {
-            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-            return false;
-        } catch (TException ex) {
-            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-            return false;
-        } catch (EDAMUserException ex) {
-            LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-            return false;
-        } catch (IllegalStateException ex) {
+            return !errorDetected;
+        } catch (Exception ex) {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
         }
     }
 
-    private boolean waitForResults(final List<Future<Boolean>> tasks) {
-        long start = System.currentTimeMillis();
-        boolean error = false;
-
-        LOG.info("wait for " + tasks.size() + " to complete.");
-        for (Future<Boolean> future : tasks) {
-            LOG.info("get result of future " + future);
-            Boolean futureResult;
-            try {
-                futureResult = future.get(5, TimeUnit.MINUTES);
-            } catch (InterruptedException ex) {
-                LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-                error = true;
-                break;
-            } catch (ExecutionException ex) {
-                LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
-                error = true;
-                break;
-            } catch (TimeoutException ex) {
-                LOG.log(Level.WARNING, "Sync couldn't complete because" + future + " timed out");
-                error = true;
-                break;
-            }
-
-            if (!Boolean.TRUE.equals(futureResult)) {
-                LOG.warning("Sync couldn't complete because future task " + future);
-                error = true;
-                break;
-            }
+    private void retrieveNotesAsync(final Iterator<Note> notesIterator, final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks) {
+        while (notesIterator.hasNext()) {
+            final Note noteWithoutContents = notesIterator.next();
+            Callable<com.rubenlaguna.en4j.noteinterface.Note> callable = new RetrieveNoteTask(noteWithoutContents);
+            //TODO: java.util.concurrent.RejectedExecutionException
+            final Future<com.rubenlaguna.en4j.noteinterface.Note> task = RP.submit(callable);
+            tasks.add(task);
         }
-        if (error) {
-            for (Future<Boolean> future : tasks) {
-                future.cancel(true);
+    }
+
+    private boolean addNotesToDb(final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks) {
+        long start = System.currentTimeMillis();
+        final int total = tasks.size();
+        LOG.info("wait for " + total + " notes to download.");
+        try {
+            int i = 0;
+            for (Future<com.rubenlaguna.en4j.noteinterface.Note> future : tasks) {
+                i++;
+                LOG.info("get note ("+i+"/"+total+") of future " + future);
+                com.rubenlaguna.en4j.noteinterface.Note note = future.get(5, TimeUnit.MINUTES);
+                boolean suceeded = addToDb(note);
+                if (!suceeded) {
+                    return false;
+                }
             }
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "Sync couldn't complete because of:", ex);
+            return false;
         }
         long delta = System.currentTimeMillis() - start;
-        LOG.info("checkResult = " + error + " .It took " + delta + " ms");
+        LOG.info("It took " + delta + " ms");
+        return true;
+    }
 
-        return error;
+    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
+        final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        boolean suceeded = nr.add(note);
+        if (suceeded) {
+            final String guid = note.getGuid();
+            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
+            if (null == byGuid) {
+                LOG.warning("the note " + guid + " was not added properly to the db");
+                return false;
+            }
+            nf.index(byGuid); //non blocking
+            return true;
+        } else {
+            LOG.log(Level.WARNING, "Fail to add Note \"" + note.getTitle() + "\" to database");
+            return false;
+        }
     }
 
     /**
@@ -204,8 +180,6 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         this.PendingRemoteUpdateNotes = PendingRemoteUpdateNotes;
         propertyChangeSupport.firePropertyChange(PROP_PENDINGREMOTEUPDATENOTES, oldValue, this.PendingRemoteUpdateNotes);
     }
-    protected boolean syncFailed = false;
-    public static final String PROP_SYNCFAILED = "syncFailed";
 
     /**
      * Get the value of syncFailed
@@ -246,16 +220,15 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     }
 }
 
-class RetrieveAndAddTask implements Callable<Boolean> {
-
-    private final Logger LOG = Logger.getLogger(RetrieveAndAddTask.class.getName());
+class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.Note> {
+    private final Logger LOG = Logger.getLogger(RetrieveNoteTask.class.getName());
     private Note noteWithoutContents = null;
 
-    RetrieveAndAddTask(Note noteWithoutContents) {
+    RetrieveNoteTask(Note noteWithoutContents) {
         this.noteWithoutContents = noteWithoutContents;
     }
 
-    public Boolean call() throws Exception {
+    public com.rubenlaguna.en4j.noteinterface.Note call() throws Exception {
         long start = System.currentTimeMillis();
         LOG.info("retrieving note " + noteWithoutContents.getGuid());
         EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
@@ -264,28 +237,12 @@ class RetrieveAndAddTask implements Callable<Boolean> {
             note = util.getValidNoteStore().getNote(util.getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
         } catch (TTransportException ex) {
             LOG.log(Level.WARNING, "Couldn't retrieve note " + noteWithoutContents.getGuid(), ex);
-            return false;
+            return null;
         }
         long delta = System.currentTimeMillis() - start;
         final String guid = note.getGuid();
         LOG.info("retrieving " + guid + " took " + delta + " ms");
-        LOG.info("adding to local database note =" + note.getTitle());
         final NoteAdapter noteAdapter = new NoteAdapter(note);
-        final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-            
-        boolean suceeded = nr.add(noteAdapter);
-        if (suceeded) {
-            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
-            if (null == byGuid) {
-                LOG.warning("the note " + guid + " was not added properly to the db");
-                return false;
-            }
-            nf.index(byGuid);
-        } else {
-            LOG.warning("the note " + guid + " was not added properly to the db");
-        }
-        return suceeded;
+        return noteAdapter;
     }
 }
-
