@@ -94,8 +94,8 @@ import org.openide.util.NbPreferences;
     }
 
     private AuthenticationResult getValidAuthenticationResult() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (null == currentAuthResult.get()) {
-            LOG.info("First authentication.");
+        if (null == currentAuthResult.get() || isExpired()) {
+            LOG.info("First authentication or auth token is expired and cannot be refreshed.");
             final String c = a;
             final String d = b;
             final String password = NbPreferences.forModule(SynchronizationServiceImpl.class).get("password", "");
@@ -105,7 +105,8 @@ import org.openide.util.NbPreferences;
             Installer.mbean.incrementReauthCounter();
         }
 
-        if (isExpired()) {
+        if (isAboutToExpire()) {
+            //refresh the auth token
             LOG.info("The current AuthenticationResult is about to expire. Getting a new one.");
             currentAuthResult.set(getUserStore().refreshAuthentication(currentAuthToken.get()));
             setExpirationTime(currentAuthResult.get());
@@ -118,7 +119,7 @@ import org.openide.util.NbPreferences;
 
     public String getValidAuthToken() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
         //Check is the current authToken is about to expire
-        if (isExpired() || "".equals(currentAuthToken.get())) {
+        if (isAboutToExpire() || "".equals(currentAuthToken.get())) {
             AuthenticationResult authResult = getValidAuthenticationResult();
             User user = authResult.getUser();
             currentAuthToken.set(authResult.getAuthenticationToken());
@@ -128,7 +129,7 @@ import org.openide.util.NbPreferences;
     }
 
     public NoteStore.Client getValidNoteStore() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
-        if (isExpired()) {
+        if (isAboutToExpire()) {
             // Set up the NoteStore
             AuthenticationResult authResult = getValidAuthenticationResult();
             if (null == noteStoreUrl.get()) {
@@ -147,10 +148,16 @@ import org.openide.util.NbPreferences;
         return currentNoteStore.get();
     }
 
-    private boolean isExpired() {
+    private boolean isAboutToExpire() {
         final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
         LOG.fine("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
         boolean isExpired = msToExpiration < (5 * 60 * 1000L);
+        return isExpired;
+    }
+    private boolean isExpired() {
+        final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
+        LOG.fine("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
+        boolean isExpired = msToExpiration < (5000L); //less than 5s
         return isExpired;
     }
 
