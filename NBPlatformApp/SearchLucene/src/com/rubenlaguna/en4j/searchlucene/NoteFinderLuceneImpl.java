@@ -299,7 +299,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 allText.append(" ").append(recognitionText);
             } else {
                 if (r.getMime().contains("image")){
-                    LOG.info("no recognition for "+"resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                    LOG.fine("no recognition for "+"resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
                 }
             }
             if (isDocument(r)) {
@@ -314,8 +314,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                         LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
                     }
                     allText.append(parseResourceText);
-                } catch (Exception ex) {
-                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ")", ex);
+                } catch (TikaException ex) {
+                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") TikaException catched", ex);
                 }
             }
         }
