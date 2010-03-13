@@ -14,6 +14,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class SynchronizationMBeanImpl implements SynchronizationMBeanImplMBean {
     private ThreadPoolExecutor threadPoolExecutor=null;
+    private int auth = 0;
     
     public SynchronizationMBeanImpl(){
     }
@@ -48,6 +49,14 @@ public class SynchronizationMBeanImpl implements SynchronizationMBeanImplMBean {
     }
     public int getPoolSize() {
         return threadPoolExecutor.getPoolSize();
+    }
+
+    public synchronized void  incrementReauthCounter() {
+        auth++;
+    }
+
+    public int getNumberOfAuths() {
+        return auth;
     }
 
 }
