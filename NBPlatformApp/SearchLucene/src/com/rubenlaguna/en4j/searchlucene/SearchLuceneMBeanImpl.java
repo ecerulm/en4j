@@ -6,6 +6,7 @@
 package com.rubenlaguna.en4j.searchlucene;
 
 import java.util.Queue;
+import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.lucene.document.Document;
 
 /**
@@ -15,7 +16,7 @@ import org.apache.lucene.document.Document;
  */
 public class SearchLuceneMBeanImpl implements SearchLuceneMBeanImplMBean {
 
-    private Queue<Document> theQueue;
+    private ThreadPoolExecutor threadPoolExecutor;
 
     public SearchLuceneMBeanImpl() {
     }
@@ -24,14 +25,24 @@ public class SearchLuceneMBeanImpl implements SearchLuceneMBeanImplMBean {
      * Get number of documents waiting to be indexed
      */
     public int getIndexQueueSize() {
-        if (null == theQueue) {
+        if (null == threadPoolExecutor) {
             return 0;
         }
-        return theQueue.size();
+        return threadPoolExecutor.getQueue().size();
     }
 
-    void setQueue(Queue<Document> theQueue) {
-        this.theQueue=theQueue;
+    /**
+     * Get number of actived threads
+     */
+    public int getActiveThreads() {
+        if (null == threadPoolExecutor) {
+            return 0;
+        }
+        return threadPoolExecutor.getActiveCount();
+    }
+
+    void setThreadPoolExecutor(ThreadPoolExecutor RP) {
+        this.threadPoolExecutor = RP;
     }
 }
 
