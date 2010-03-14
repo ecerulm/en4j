@@ -3,7 +3,6 @@
  *
  * Created on March 2, 2010, 7:48 PM
  */
-
 package com.rubenlaguna.en4j.searchlucene;
 
 /**
@@ -11,14 +10,17 @@ package com.rubenlaguna.en4j.searchlucene;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-public interface SearchLuceneMBeanImplMBean
-{
+public interface SearchLuceneMBeanImplMBean {
 
     /**
      * Get number of documents waiting to be indexed
      */
     public int getIndexQueueSize();
-    
+
+    /**
+     * Get number of threads actively indexing
+     */
+    public int getActiveThreads();
 }
 
 
