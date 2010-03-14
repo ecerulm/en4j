@@ -271,6 +271,9 @@ public class NoteRepositoryImpl implements NoteRepository {
     }
 
     public boolean add(Note n) {
+        if (null==n){
+            return false;
+        }
         LOG.info("add note: " + n);
         EntityManager entityManager = null;
         try {

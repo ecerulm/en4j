@@ -140,7 +140,7 @@ import org.openide.util.NbPreferences;
             }
             THttpClient noteStoreTrans = new THttpClient(noteStoreUrl.get());
             noteStoreTrans.setConnectTimeout(30000); //30s
-            noteStoreTrans.setReadTimeout(30000);//30s
+            noteStoreTrans.setReadTimeout(180*1000);//180s
             TBinaryProtocol noteStoreProt = new TBinaryProtocol(noteStoreTrans);
             currentNoteStore.set(new NoteStore.Client(noteStoreProt, noteStoreProt));
 

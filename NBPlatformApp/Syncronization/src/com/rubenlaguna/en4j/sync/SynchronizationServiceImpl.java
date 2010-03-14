@@ -16,8 +16,6 @@
  */
 package com.rubenlaguna.en4j.sync;
 
-import com.evernote.edam.error.EDAMSystemException;
-import com.evernote.edam.error.EDAMUserException;
 import com.evernote.edam.notestore.SyncChunk;
 import com.evernote.edam.type.Note;
 import com.evernote.edam.userstore.UserStore;
@@ -31,18 +29,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.thrift.TException;
 import org.apache.thrift.transport.TTransportException;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 /**
@@ -55,7 +47,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
     private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
-    private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
+    //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
@@ -131,8 +123,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             int i = 0;
             for (Future<com.rubenlaguna.en4j.noteinterface.Note> future : tasks) {
                 i++;
-                LOG.info("get note ("+i+"/"+total+") of future " + future);
-                com.rubenlaguna.en4j.noteinterface.Note note = future.get(5, TimeUnit.MINUTES);
+                LOG.info("get note (" + i + "/" + total + ") of future " + future);
+                com.rubenlaguna.en4j.noteinterface.Note note = future.get(1, TimeUnit.DAYS);
                 boolean suceeded = addToDb(note);
                 if (!suceeded) {
                     return false;
@@ -221,6 +213,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 }
 
 class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.Note> {
+
     private final Logger LOG = Logger.getLogger(RetrieveNoteTask.class.getName());
     private Note noteWithoutContents = null;
 
@@ -230,7 +223,7 @@ class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.No
 
     public com.rubenlaguna.en4j.noteinterface.Note call() throws Exception {
         long start = System.currentTimeMillis();
-        LOG.info("retrieving note " + noteWithoutContents.getGuid());
+        LOG.fine("Start downloading note " + noteWithoutContents.getGuid());
         EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
         Note note = null;
         try {
@@ -241,7 +234,7 @@ class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.No
         }
         long delta = System.currentTimeMillis() - start;
         final String guid = note.getGuid();
-        LOG.info("retrieving " + guid + " took " + delta + " ms");
+        LOG.info("It took " + delta + " ms" + " to download note " + guid);
         final NoteAdapter noteAdapter = new NoteAdapter(note);
         return noteAdapter;
     }
