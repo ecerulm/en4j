@@ -20,6 +20,8 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -27,7 +29,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -48,6 +53,9 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
@@ -69,14 +77,22 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private final int REPORTEVERY = 100;
     private static Logger LOG = Logger.getLogger(NoteFinderLuceneImpl.class.getName());
     private IndexReader reader = null;
-    private final RequestProcessor RP = new RequestProcessor("Indexing thread", 1, true);
-    private final BlockingQueue<Document> theQueue = new ArrayBlockingQueue<Document>(100, false);
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(1, 4, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(2), new MyThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
+    private boolean pendingCommit = false;
+    public static final int TIME_BETWEEN_COMMITS = 10000;
+    private final RequestProcessor.Task COMMITER = RequestProcessor.getDefault().create(new Runnable() {
+
+        public void run() {
+            commitToIndex();
+        }
+    });
+    private long lastRun = 0;
 
     public NoteFinderLuceneImpl() {
         try {
             //make sure that there is an index that the readers can open
             IndexWriterFactory.getIndexWriter().commit();
-            Installer.mbean.setQueue(theQueue);
+            Installer.mbean.setThreadPoolExecutor(RP);
             File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
             reader = IndexReader.open(FSDirectory.open(file), true);
         } catch (CorruptIndexException ex) {
@@ -84,8 +100,28 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+    }
 
-        RP.post(new IndexerTask(theQueue));
+    public void commitToIndex() {
+        try {
+            if (pendingCommit) {
+                while ((System.currentTimeMillis() - lastRun) < TIME_BETWEEN_COMMITS) {
+                    long x = TIME_BETWEEN_COMMITS - (System.currentTimeMillis() - lastRun);
+                    LOG.info("waiting " + x + " ms before committing changes to index.");
+                    Thread.sleep(x);
+                }
+                long previousRun = lastRun;
+                lastRun = System.currentTimeMillis();
+                pendingCommit = false;
+                LOG.info("committing lucene index now. (" + lastRun + ") " + (lastRun - previousRun) / 1000 + " secs from previous run");
+                IndexWriterFactory.getIndexWriter().commit();
+                COMMITER.schedule(TIME_BETWEEN_COMMITS);
+            } else {
+                LOG.info("skipping commit. Nothing to commit to the index");
+            }
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "exception while commiting changes to the index", ex);
+        }
     }
 
     public Collection<Note> find(String searchText) {
@@ -145,12 +181,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 @Override
                 public void setNextReader(IndexReader reader, int docBase) throws IOException {
-                    //throw new UnsupportedOperationException("Not supported yet.");
                 }
 
                 @Override
                 public boolean acceptsDocsOutOfOrder() {
-                    //throw new UnsupportedOperationException("Not supported yet.");
                     return true;
                 }
             };
@@ -169,28 +203,33 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    public void index(Note n) {
-        Note note = getProperNote(n);
-        Document document = null;
-        if (null != note) {
-            try {
-                document = getLuceneDocument(note);
-            } catch (Exception ex) {
-                LOG.log(Level.WARNING, "couldn't parse note " + note.getGuid(), ex);
-                return;
-            }
-        } else {
-            return;
-        }
+    public void index(final Note n) {
+        LOG.fine("submitting note (" + n.getTitle() + ") for indexing");
+        RP.submit(new Runnable() {
 
-        try {
-            //we have a document
-            theQueue.put(document);
-        } catch (InterruptedException ex) {
-            LOG.warning("thread interrupted before the note could be put in the indexing queue");
-            return;
-        }
-        LOG.info("Note " + note + "was added in the indexing queue");
+            public void run() {
+                LOG.fine("Generating a lucene document from note (" + n.getTitle() + ")");
+                Note note = getProperNote(n);
+                Document document = null;
+                if (null != note) {
+                    try {
+                        document = getLuceneDocument(note);
+                        IndexWriterFactory.getIndexWriter().addDocument(document);
+                        if (!pendingCommit) {
+                            pendingCommit = true;
+                            LOG.info("scheduling COMMITER");
+                            COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                        }
+                    } catch (Exception ex) {
+                        LOG.log(Level.WARNING, "couldn't index note " + note.getGuid(), ex);
+                        return;
+                    }
+                } else {
+                    return;
+                }
+            }
+        });
+
     }
 
     public synchronized void rebuildIndex(ProgressHandle ph) {
@@ -215,24 +254,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 Note note = getProperNote(noteWithoutContents);
 
-//                LOG.info("indexing note " + note);
-
                 if (null != note) {
-                    Document document = getLuceneDocument(note);
-                    writer.addDocument(document);
+                    index(note);
                     ++i;
                     if ((i % REPORTEVERY) == 0) {
-//                    if ((System.currentTimeMillis() - start2) > 2000) { //every 5 secs
-                        //to process 12000 notes
-                        //without commiting/optimizing every 100th   137 secs
-                        //with    commiting only       every 100th   144 secs
-                        //with    committin only each 5s             201 sec
-                        //with    committin only each 2s             332 sec
-                        //with    commiting/optimizing each          502 secs
-                        //with    comminting 5s and progress outside 410 sec
-
                         ph.progress("Note: " + note.getTitle(), i);
-                        writer.commit();
                         long delta = System.currentTimeMillis() - start2;
                         start2 = System.currentTimeMillis();
                         LOG.fine(i + " notes indexed so far. This batch took " + (delta / 1000.0) + " secs");
@@ -252,7 +278,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
-        } 
+        }
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
     }
@@ -264,15 +290,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         document.add(idField);
         Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
         document.add(titleField);
-        //according to Lucene in Action 7.4 we should use
-        //JTidy or NekoHTML to parse the thlm
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
-        StringBuffer sb = new StringBuffer();
-        sb.setLength(0);
-        getText(sb, node);
-        String text = sb.toString();
+        DocumentFragment node = parseNote(note);
+        //StringBuffer sb = new StringBuffer();
+        //sb.append(getText(node));
+        String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
             //LOG.info("indexing "+text);
             Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
@@ -288,9 +309,58 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         allText.append(note.getTitle());
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
+        for (Resource r : note.getResources()) {
+            LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+            if (r.getRecognition() != null) {
+                LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                DocumentFragment rnode = parseXmlByteArray(r.getRecognition());
+                final String recognitionText = getText(rnode);
+                LOG.fine("recognitionText: " + recognitionText);
+                allText.append(" ").append(recognitionText);
+            } else {
+                if (r.getMime().contains("image")) {
+                    LOG.fine("no recognition for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                }
+            }
+            if (isDocument(r)) {
+                Metadata metadata = new Metadata();
+                if (r.getFilename() != null) {
+                    metadata.set(Metadata.RESOURCE_NAME_KEY, r.getFilename());
+                }
+                metadata.set(Metadata.CONTENT_TYPE, r.getMime());
+                try {
+                    final String parseResourceText = new Tika().parseToString(new ByteArrayInputStream(r.getData()), metadata);
+                    if (!"".equals(parseResourceText)) {
+                        LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
+                    }
+                    allText.append(parseResourceText);
+                } catch (TikaException ex) {
+                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") TikaException catched", ex);
+                }
+            }
+        }
+
         Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
         document.add(allField);
         return document;
+    }
+
+    private boolean isDocument(Resource r) {
+        boolean isDocument = true;
+        isDocument = isDocument && !"application/vnd.evernote.ink".equals(r.getMime());
+        if (null != r.getMime()) {
+            isDocument = isDocument && !r.getMime().contains("image");
+        }
+        return isDocument;
+    }
+
+    private DocumentFragment parseNote(Note note) throws IOException, SAXException {
+        //according to Lucene in Action 7.4 we should use
+        //JTidy or NekoHTML to parse the thlm
+        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        DOMFragmentParser domParser = new DOMFragmentParser();
+        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
+        return node;
     }
 
     private Collection<Note> getAllNotes() {
@@ -299,7 +369,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return toReturn;
     }
 
-    private void getText(StringBuffer sb, Node node) {
+    private String getText(Node node) {
+        final StringBuffer sb = new StringBuffer(" ");
         final String localName = node.getNodeName();
         if ("en-media".equalsIgnoreCase(localName)) {
             final String fname = ((Element) node).getAttribute("alt");
@@ -316,9 +387,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         if (children != null) {
             int len = children.getLength();
             for (int i = 0; i < len; i++) {
-                getText(sb, children.item(i));
+                sb.append(getText(children.item(i)));
             }
         }
+        return sb.toString();
     }
 
     private Note getProperNote(Note noteWithoutContents) {
@@ -326,40 +398,22 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Integer id = noteWithoutContents.getId();
         return nr.get(id);
     }
+
+    private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
+        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
+        DOMFragmentParser domParser = new DOMFragmentParser();
+        domParser.parse(new InputSource(new ByteArrayInputStream(theArray)), node);
+        return node;
+    }
 }
 
+class MyThreadFactory implements ThreadFactory {
 
+    private final ThreadFactory factory = Executors.defaultThreadFactory();
 
-class IndexerTask implements Runnable {
-
-    private static final Logger LOG = Logger.getLogger(IndexerTask.class.getName());
-    private final BlockingQueue<Document> theQueue;
-
-    IndexerTask( BlockingQueue<Document> theQueue) {
-        this.theQueue = theQueue;
-    }
-
-    public void run() {
-        int i = 0;
-        IndexWriter writer = null;
-        boolean noerrors = true;
-        writer = IndexWriterFactory.getIndexWriter();
-        while (noerrors && (!Thread.currentThread().isInterrupted())) {
-            i++;
-            try {                
-                LOG.info("waiting for new document to appear in the indexing queue. indexing queue size: " + theQueue.size());
-                Document document = theQueue.take();
-                if (null != document) {
-                    writer.addDocument(document);
-                    LOG.info("Indexed note " + document.getField("title").stringValue());
-                    writer.commit();
-                }
-            } catch (Exception ex) {
-                noerrors = false;
-                Exceptions.printStackTrace(ex);
-            }
-        } //while
-        
-        LOG.warning("indexer thread terminated!!");
+    public Thread newThread(Runnable r) {
+        Thread toReturn = factory.newThread(r);
+        toReturn.setName("indexing " + toReturn.getName());
+        return toReturn;
     }
 }

@@ -23,9 +23,6 @@ import com.rubenlaguna.en4j.noteinterface.Note;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.InputStream;
-import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -35,6 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
+import javax.persistence.NoResultException;
 import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.xml.bind.JAXBContext;
@@ -42,10 +40,6 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
-import org.apache.openjpa.persistence.OpenJPAPersistence;
-import org.apache.openjpa.persistence.OpenJPAQuery;
-import org.apache.openjpa.persistence.jdbc.FetchMode;
-import org.apache.openjpa.persistence.jdbc.JDBCFetchPlan;
 import org.netbeans.api.progress.ProgressHandle;
 
 /**
@@ -117,8 +111,7 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             toReturn = fromNotes(result);
         } catch (PersistenceException ex) {
-//            LOG.warning("could not load the note from the db. Is the module closing?");
-            LOG.log(Level.WARNING,"could not load the note from the db. Is the module closing?",ex);
+            LOG.log(Level.WARNING, "could not load the note from the db. Is the module closing?", ex);
         } finally {
             //enough since there is no transaction in the try-block
             //see http://bit.ly/b0p3Wj
@@ -127,6 +120,7 @@ public class NoteRepositoryImpl implements NoteRepository {
         //the entity now is detached 
         return toReturn;
     }
+
     public Note getByGuid(String id, boolean withContents) {
         EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
         Note toReturn = null;
@@ -246,8 +240,6 @@ public class NoteRepositoryImpl implements NoteRepository {
         }
     }
 
-
-
     public int getHighestUSN() {
 
         EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
@@ -271,7 +263,11 @@ public class NoteRepositoryImpl implements NoteRepository {
     }
 
     public boolean add(Note n) {
-        LOG.info("add note: " + n);
+        if (null == n) {
+            return false;
+        }
+        LOG.info("storing note: (" + n + ") in db");
+
         EntityManager entityManager = null;
         try {
             entityManager = Installer.getEntityManagerFactory().createEntityManager();
@@ -285,9 +281,22 @@ public class NoteRepositoryImpl implements NoteRepository {
 
             try {
                 t.begin();
+                Notes entityToPersist = null;
+                //entityManager.find(Notes.class, this)
 
-                Notes entityToPersist = new Notes();
-
+                //
+                try {
+                    String queryText2 = "SELECT n FROM Notes n WHERE n.guid = :guid ";
+                    Query queryById = entityManager.createQuery(queryText2);
+                    queryById.setParameter("guid", n.getGuid());
+                    entityToPersist = (Notes) queryById.getSingleResult();
+                    LOG.info("There is already a note with guid (" + n.getGuid() + ") in the database. Updating that one instead");
+                } catch (NoResultException ex) {
+                }
+                //
+                if (null == entityToPersist) {
+                    entityToPersist = new Notes();
+                }
                 entityToPersist.setGuid(n.getGuid());
                 entityToPersist.setTitle(n.getTitle());
 //                LOG.info("content: "+n.getContent().substring(0, 50));
@@ -299,8 +308,18 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 for (Iterator<com.rubenlaguna.en4j.noteinterface.Resource> it = n.getResources().iterator(); it.hasNext();) {
                     com.rubenlaguna.en4j.noteinterface.Resource resource = it.next();
-                    com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
-
+                    com.rubenlaguna.en4j.jpaentities.Resource resourceEntity = null;
+                    try {
+                        String queryText2 = "SELECT r FROM Resource r WHERE r.guid = :guid ";
+                        Query queryById = entityManager.createQuery(queryText2);
+                        queryById.setParameter("guid", resource.getGuid());
+                        resourceEntity =  (com.rubenlaguna.en4j.jpaentities.Resource) queryById.getSingleResult();
+                        LOG.info("There is already a resource with guid (" + resource.getGuid() + ") in the database. Updating that one instead");
+                    } catch (NoResultException ex) {
+                    }
+                    if (null == resourceEntity) {
+                        resourceEntity = new com.rubenlaguna.en4j.jpaentities.Resource();
+                    }
                     byte[] data = resource.getData();
                     resourceEntity.setData(data);
                     resourceEntity.setAlternateData(resource.getAlternateData());
@@ -317,7 +336,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                     resourceEntity.setPremiumAttachment(resource.getPremiumAttachment());
                     resourceEntity.setRecognition(resource.getRecognition());
                     resourceEntity.setTimestamp(resource.getTimestamp());
-                   
+
 
                     resourceEntity.setOwner(entityToPersist);
                     entityToPersist.addResource(resourceEntity);
@@ -326,10 +345,11 @@ public class NoteRepositoryImpl implements NoteRepository {
 
                 entityManager.persist(entityToPersist);
                 entityManager.getTransaction().commit();
+                LOG.info("Note (" + n + ") successfully stored");
             } catch (PersistenceException ex) {
 //                LOG.log(Level.WARNING, "Could add note due to ...", ex);
 //                LOG.warning("could not load the note from the db. Is the module closing?");
-                  LOG.log(Level.WARNING,"could not load the note from the db. Is the module closing?",ex);
+                LOG.log(Level.WARNING, "could not load the note from the db. Is the module closing?", ex);
                 toReturn = false;
             } finally {
                 //we need to rollback the transaction if it

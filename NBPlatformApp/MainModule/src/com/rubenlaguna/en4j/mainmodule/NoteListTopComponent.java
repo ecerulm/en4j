@@ -343,16 +343,12 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 ic.set(Collections.emptySet(), null);
                 Logger.getLogger(getName()).log(Level.WARNING, "selection changed: nothing selected");
             }
-
-
-
-
         }
     }
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        LOG.info("change in notes");
+        LOG.fine("change in notes");
         if (null != currentRefreshTask) {
             currentRefreshTask.cancel();//cancel the last refresh so we only
             //two refresh task at a given moment

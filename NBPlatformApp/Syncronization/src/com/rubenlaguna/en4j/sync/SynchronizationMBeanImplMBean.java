@@ -27,6 +27,7 @@ public interface SynchronizationMBeanImplMBean {
     public int getActiveThreads();
 
     public int getPoolSize();
+    public int getNumberOfAuths();
 }
 
 
