@@ -88,8 +88,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
                 @Override
                 public void run() {
-                    list1.clear();
-                    list1.addAll(allNotes);
+                    performSearch();
                 }
             });
         } catch (InterruptedException ex) {
@@ -188,7 +187,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             protected Collection<Note> doInBackground() throws Exception {
-                if (searchTextField.getText().trim().isEmpty()) {
+                if (searchTextField.getText().trim().isEmpty() ||searchTextField.getText().equals(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"))) {
                     return getList();
                 }
                 NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
