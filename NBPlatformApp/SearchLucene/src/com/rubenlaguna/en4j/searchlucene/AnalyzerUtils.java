@@ -19,6 +19,7 @@ package com.rubenlaguna.en4j.searchlucene;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
@@ -28,6 +29,7 @@ import org.apache.lucene.analysis.TokenStream;
  * @author ecerulm
  */
 public class AnalyzerUtils {
+    private static final Logger LOG = Logger.getLogger(AnalyzerUtils.class.getName());
 
     public static Token[] tokensFromAnalysis(Analyzer analyzer, String text) throws IOException {
         TokenStream stream = analyzer.tokenStream("contents", new StringReader(text));
@@ -47,7 +49,7 @@ public class AnalyzerUtils {
         Token[] tokens = tokensFromAnalysis(analyzer, text);
         for (int i = 0; i < tokens.length; i++) {
             Token token = tokens[i];
-            System.out.print("[" + token.termText() + "] ");
+            LOG.finest("[" + token.termText() + "] ");
         }
     }
 
@@ -62,7 +64,7 @@ public class AnalyzerUtils {
                 System.out.println();
                 System.out.print(position + ": ");
             }
-            System.out.print("[" + token.termText() + ":" + token.startOffset() + "->" + token.endOffset() + ":" + token.type() + "] ");
+            LOG.finest("[" + token.termText() + ":" + token.startOffset() + "->" + token.endOffset() + ":" + token.type() + "] ");
         }
     }
 }
