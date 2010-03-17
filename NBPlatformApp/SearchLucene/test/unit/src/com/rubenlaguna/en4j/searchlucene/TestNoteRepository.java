@@ -59,7 +59,7 @@ class TestNoteRepository implements NoteRepository {
     }
 
     public Note get(int id, boolean withContents) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return get(id);
     }
 
     public Note getByGuid(String guid, boolean withContents) {

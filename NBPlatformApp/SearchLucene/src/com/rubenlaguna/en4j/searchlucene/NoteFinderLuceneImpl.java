@@ -24,6 +24,8 @@ import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,6 +82,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private final ThreadPoolExecutor RP = new ThreadPoolExecutor(1, 4, 1, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(2), new MyThreadFactory(), new ThreadPoolExecutor.CallerRunsPolicy());
     private boolean pendingCommit = false;
     public static final int TIME_BETWEEN_COMMITS = 10000;
+    private NoteRepository nr = null;
     private final RequestProcessor.Task COMMITER = RequestProcessor.getDefault().create(new Runnable() {
 
         public void run() {
@@ -89,6 +92,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private long lastRun = 0;
 
     public NoteFinderLuceneImpl() {
+        this(Lookup.getDefault().lookup(NoteRepository.class));
+    }
+
+    NoteFinderLuceneImpl(NoteRepository testNoteRepository) {
+        nr = testNoteRepository;
         try {
             //make sure that there is an index that the readers can open
             IndexWriterFactory.getIndexWriter().commit();
@@ -100,6 +108,19 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+    }
+
+    public void setInfoStream(PrintStream os) {
+        IndexWriterFactory.getIndexWriter().setInfoStream(os);
+    }
+
+    public int getNumDocs() {
+        try {
+            return IndexWriterFactory.getIndexWriter().numDocs()-IndexWriterFactory.getIndexWriter().numRamDocs();
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
+        }
+        return 0;
     }
 
     public void commitToIndex() {
@@ -175,8 +196,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     Document document = searcher.doc(scoreId);
                     int docId = Integer.parseInt(document.getField("id").stringValue());
 
-                    NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-                    toReturn.add(rep.get(docId, false));
+                    //NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+                    toReturn.add(nr.get(docId, false));
                 }
 
                 @Override
@@ -244,7 +265,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Collection<Note> notes = getAllNotes();
 
             LOG.info("number of notes " + notes.size());
-            ph.switchToDeterminate(notes.size());
+            if (null != ph) {
+                ph.switchToDeterminate(notes.size());
+            }
 
             int i = 0;
             for (Note noteWithoutContents : notes) {
@@ -258,7 +281,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     index(note);
                     ++i;
                     if ((i % REPORTEVERY) == 0) {
-                        ph.progress("Note: " + note.getTitle(), i);
+                        if (null != null) {
+                            ph.progress("Note: " + note.getTitle(), i);
+                        }
                         long delta = System.currentTimeMillis() - start2;
                         start2 = System.currentTimeMillis();
                         LOG.fine(i + " notes indexed so far. This batch took " + (delta / 1000.0) + " secs");
@@ -266,6 +291,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 } else {
                     break;//for loop
                 }
+            }
+            while(RP.getActiveCount()>0 || RP.getQueue().size()>0) {
+                LOG.finer("thread sleep until all notes are really indexed");
+                Thread.sleep(1000);
             }
             writer.commit();
             LOG.info(i + " notes indexed so far.");
@@ -341,6 +370,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
 
         Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
+        LOG.finest("note indexed with text:\n" + allText.toString());
         document.add(allField);
         return document;
     }
@@ -364,8 +394,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private Collection<Note> getAllNotes() {
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-        Collection<Note> toReturn = rep.getAllNotes();
+//        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+        Collection<Note> toReturn = nr.getAllNotes();
         return toReturn;
     }
 
@@ -394,7 +424,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private Note getProperNote(Note noteWithoutContents) {
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+//        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         final Integer id = noteWithoutContents.getId();
         return nr.get(id);
     }
