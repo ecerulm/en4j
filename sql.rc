@@ -1,0 +1,9 @@
+# the test database
+# connect using
+# java -Xmx1024ms -jar ~/JavaOpt/hsqldb-2.0.0-rc8/lib/sqltool.jar --rcfile ./sql.rc en4j
+
+urlid en4j
+url jdbc:hsqldb:file:/Users/ecerulm/NetBeansProjects/en4j/NBPlatformApp/build/testuserdir/en4j/db;shutdown=true
+username SA
+password
+transiso TRANSACTION_READ_COMMITTED

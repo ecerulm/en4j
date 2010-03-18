@@ -41,10 +41,12 @@ public class Installer extends ModuleInstall {
         entityManager.createNativeQuery("SET FILES LOG SIZE 40").executeUpdate();
         //entityManager.createNativeQuery("SET FILES CACHE SIZE 5000").executeUpdate();
         entityManager.createNativeQuery("CHECKPOINT").executeUpdate();
+        int d = entityManager.createNativeQuery("DELETE FROM RESOURCES WHERE OWNER_ID=NULL").executeUpdate();
+
 
         entityManager.getTransaction().commit();
         entityManager.close();
-
+        LOG.info(d + " orphan resources deleted ");
     }
 
     @Override
@@ -66,7 +68,7 @@ public class Installer extends ModuleInstall {
 
     }
 
-    public static EntityManagerFactory getEntityManagerFactory() throws IllegalStateException{
+    public static EntityManagerFactory getEntityManagerFactory() throws IllegalStateException {
         if (EMF == null) {
             Map properties = new HashMap();
             connectionURL = "jdbc:hsqldb:file:" + System.getProperty("netbeans.user") + "/en4j/db";

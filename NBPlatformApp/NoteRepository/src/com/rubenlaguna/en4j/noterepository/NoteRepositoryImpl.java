@@ -266,7 +266,7 @@ public class NoteRepositoryImpl implements NoteRepository {
         if (null == n) {
             return false;
         }
-        LOG.info("storing note: (" + n + ") in db");
+        LOG.info("storing note: (" + n.getGuid() + ") in db");
 
         EntityManager entityManager = null;
         try {
@@ -297,6 +297,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                 if (null == entityToPersist) {
                     entityToPersist = new Notes();
                 }
+
                 entityToPersist.setGuid(n.getGuid());
                 entityToPersist.setTitle(n.getTitle());
 //                LOG.info("content: "+n.getContent().substring(0, 50));
@@ -305,6 +306,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                 entityToPersist.setSourceurl(n.getSourceurl());
                 entityToPersist.setUpdated(n.getUpdated());
                 entityToPersist.setUpdateSequenceNumber(n.getUpdateSequenceNumber());
+                entityManager.persist(entityToPersist);
 
                 for (Iterator<com.rubenlaguna.en4j.noteinterface.Resource> it = n.getResources().iterator(); it.hasNext();) {
                     com.rubenlaguna.en4j.noteinterface.Resource resource = it.next();
@@ -313,7 +315,8 @@ public class NoteRepositoryImpl implements NoteRepository {
                         String queryText2 = "SELECT r FROM Resource r WHERE r.guid = :guid ";
                         Query queryById = entityManager.createQuery(queryText2);
                         queryById.setParameter("guid", resource.getGuid());
-                        resourceEntity =  (com.rubenlaguna.en4j.jpaentities.Resource) queryById.getSingleResult();
+                        LOG.info("Trying to find a resource " + resource.getGuid());
+                        resourceEntity = (com.rubenlaguna.en4j.jpaentities.Resource) queryById.getSingleResult();
                         LOG.info("There is already a resource with guid (" + resource.getGuid() + ") in the database. Updating that one instead");
                     } catch (NoResultException ex) {
                     }
