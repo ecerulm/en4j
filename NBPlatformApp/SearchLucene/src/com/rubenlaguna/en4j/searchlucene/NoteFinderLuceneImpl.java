@@ -21,10 +21,10 @@ import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -83,6 +83,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private boolean pendingCommit = false;
     public static final int TIME_BETWEEN_COMMITS = 10000;
     private NoteRepository nr = null;
+    private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private final RequestProcessor.Task COMMITER = RequestProcessor.getDefault().create(new Runnable() {
 
         public void run() {
@@ -101,8 +102,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             //make sure that there is an index that the readers can open
             IndexWriterFactory.getIndexWriter().commit();
             Installer.mbean.setThreadPoolExecutor(RP);
-            File file = new File(System.getProperty("netbeans.user") + "/en4jluceneindex");
-            reader = IndexReader.open(FSDirectory.open(file), true);
+            reader = IndexReader.open(IndexWriterFactory.getIndexWriter().getDirectory(), true);
         } catch (CorruptIndexException ex) {
             Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
@@ -116,7 +116,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public int getNumDocs() {
         try {
-            return IndexWriterFactory.getIndexWriter().numDocs()-IndexWriterFactory.getIndexWriter().numRamDocs();
+            return IndexWriterFactory.getIndexWriter().numDocs() - IndexWriterFactory.getIndexWriter().numRamDocs();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -136,6 +136,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 pendingCommit = false;
                 LOG.info("committing lucene index now. (" + lastRun + ") " + (lastRun - previousRun) / 1000 + " secs from previous run");
                 IndexWriterFactory.getIndexWriter().commit();
+                this.pcs.firePropertyChange("index", true, false);
                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
             } else {
                 LOG.info("skipping commit. Nothing to commit to the index");
@@ -167,16 +168,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         try {
             IndexReader newReader = reader.reopen();
             if (newReader != reader) {
-                LOG.info("reader reopened");
                 reader.close();
             }
             reader = newReader;
-
-            reader.reopen();
+            LOG.info("using index version: "+reader.getVersion());
             final IndexSearcher searcher = new IndexSearcher(reader);
 
-            final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_CURRENT);
-            AnalyzerUtils.displayTokensWithFullDetails(analyzer, searchText);
+            final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_29);
             QueryParser parser = new CustomQueryParser("all", analyzer);
             parser.setDefaultOperator(QueryParser.Operator.AND);
 
@@ -194,9 +192,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 public void collect(int doc) throws IOException {
                     int scoreId = doc;
                     Document document = searcher.doc(scoreId);
-                    int docId = Integer.parseInt(document.getField("id").stringValue());
+                    final String stringValue = document.getField("id").stringValue();
+                    int docId = Integer.parseInt(stringValue);
 
                     //NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
+                    LOG.info("doc id " + stringValue + " matches the search.");
                     toReturn.add(nr.get(docId, false));
                 }
 
@@ -210,8 +210,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
             };
             searcher.search(query, collector);
-
-
+            searcher.close();
         } catch (ParseException ex) {
             Exceptions.printStackTrace(ex);
         } catch (CorruptIndexException ex) {
@@ -281,7 +280,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     index(note);
                     ++i;
                     if ((i % REPORTEVERY) == 0) {
-                        if (null != null) {
+                        if (ph != null) {
                             ph.progress("Note: " + note.getTitle(), i);
                         }
                         long delta = System.currentTimeMillis() - start2;
@@ -292,18 +291,19 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     break;//for loop
                 }
             }
-            while(RP.getActiveCount()>0 || RP.getQueue().size()>0) {
+            while (RP.getActiveCount() > 0 || RP.getQueue().size() > 0) {
                 LOG.finer("thread sleep until all notes are really indexed");
                 Thread.sleep(1000);
             }
-            writer.commit();
+            commitToIndex();
             LOG.info(i + " notes indexed so far.");
             LOG.info("Optimize and close the index.");
             start2 = System.currentTimeMillis();
             writer.optimize();
+            //commitToIndex();
+            this.pcs.firePropertyChange("index", true, false);
             long delta = System.currentTimeMillis() - start2;
-            LOG.info("Index optimized and closed.It took " + delta / 1000.0 + " secs.");
-
+            LOG.info("Index optimized.It took " + delta / 1000.0 + " secs.");
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
@@ -434,6 +434,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         DOMFragmentParser domParser = new DOMFragmentParser();
         domParser.parse(new InputSource(new ByteArrayInputStream(theArray)), node);
         return node;
+    }
+
+    public void addPropertyChangeListener(PropertyChangeListener listener) {
+        this.pcs.addPropertyChangeListener(listener);
+    }
+
+    public void removePropertyChangeListener(PropertyChangeListener listener) {
+        this.pcs.removePropertyChangeListener(listener);
     }
 }
 
