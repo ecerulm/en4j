@@ -15,7 +15,6 @@ import java.util.Date;
  * @author ecerulm
  */
 class AbstractNote implements Note {
-
     private int id = 0;
     private String content = "";
     private String title = "";
@@ -56,7 +55,7 @@ class AbstractNote implements Note {
     }
 
     public void setId(Integer id) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.id = id;
     }
 
     public String getSourceurl() {
@@ -72,7 +71,7 @@ class AbstractNote implements Note {
     }
 
     public void setTitle(String title) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.title=title;
     }
 
     public Date getUpdated() {

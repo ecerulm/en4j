@@ -218,7 +218,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         // TODO add your handling code here:
         if ("".equals(searchTextField.getText())) {
             LOG.info("searchTextField was empty so reset to the default text");
-            searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text") + " ruben");
+            searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"));
         }
     }//GEN-LAST:event_searchTextFieldFocusLost
     // Variables declaration - do not modify//GEN-BEGIN:variables

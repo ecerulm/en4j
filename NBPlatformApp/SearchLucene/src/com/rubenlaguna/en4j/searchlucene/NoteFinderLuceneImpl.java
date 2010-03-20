@@ -364,7 +364,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     }
                     allText.append(parseResourceText);
                 } catch (TikaException ex) {
-                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") TikaException catched", ex);
+                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note ("+note.getTitle()+") TikaException catched");
                 }
             }
         }
