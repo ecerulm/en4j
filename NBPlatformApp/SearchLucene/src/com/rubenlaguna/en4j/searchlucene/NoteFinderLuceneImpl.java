@@ -171,7 +171,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 reader.close();
             }
             reader = newReader;
-            LOG.info("using index version: "+reader.getVersion());
+            LOG.info("using index version: " + reader.getVersion());
             final IndexSearcher searcher = new IndexSearcher(reader);
 
             final Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_29);
@@ -183,25 +183,25 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             //search the query
             Collector collector = new Collector() {
 
+                private int docBase = 0;
+
                 @Override
                 public void setScorer(Scorer scorer) throws IOException {
-                    //throw new UnsupportedOperationException("Not supported yet.");
                 }
 
                 @Override
                 public void collect(int doc) throws IOException {
-                    int scoreId = doc;
+                    int scoreId = doc+docBase;
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
-
-                    //NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
                     LOG.info("doc id " + stringValue + " matches the search.");
                     toReturn.add(nr.get(docId, false));
                 }
 
                 @Override
                 public void setNextReader(IndexReader reader, int docBase) throws IOException {
+                    this.docBase = docBase;
                 }
 
                 @Override
@@ -364,7 +364,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     }
                     allText.append(parseResourceText);
                 } catch (TikaException ex) {
-                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note ("+note.getTitle()+") TikaException catched");
+                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
                 }
             }
         }
