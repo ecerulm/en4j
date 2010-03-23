@@ -25,6 +25,7 @@ import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -36,6 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.thrift.transport.TTransportException;
 import org.openide.util.Lookup;
+import org.openide.util.NbPreferences;
 
 /**
  *
@@ -43,10 +45,12 @@ import org.openide.util.Lookup;
  */
 public class SynchronizationServiceImpl implements SynchronizationService {
 
+    public static final String HIGHESTUSN = "highestUSN";
+    private static final String LASTSYNC = "lastsync";
     private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
-    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(4, 10, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(1, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
     //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
@@ -73,29 +77,35 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             boolean moreNotesToDownload = true;
             setSyncFailed(false);
             do {
-                int highestUSN = nr.getHighestUSN();
+                int highestUSN = getHighestUSN();
                 LOG.info("highest updateSequenceNumber in the database = " + highestUSN);
                 //boolean fullSync = (highestUSN == 0);
                 LOG.info("retrieving SyncChunk");
-                SyncChunk sc = util.getValidNoteStore().getSyncChunk(util.getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, true);
+                boolean isFirstSync = isFirstSync();
+                if (isFirstSync) {
+                    LOG.info("This is still the first sync.");
+                }
+                SyncChunk sc = util.getValidNoteStore().getSyncChunk(util.getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, isFirstSync);
                 LOG.info("SyncChunk retrieved");
                 int pendingUpdates = sc.getUpdateCount() - highestUSN;
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
-                final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks = new ArrayList<Future<com.rubenlaguna.en4j.noteinterface.Note>>();
+                final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
                 final Iterator<Note> notesIterator = sc.getNotesIterator();
                 if (null != notesIterator) {
                     retrieveNotesAsync(notesIterator, tasks);
-                    if (!addNotesToDb(tasks)) {
-                        for (Future<com.rubenlaguna.en4j.noteinterface.Note> future : tasks) {
+                    if (!waitForAllTaskToComplete(tasks)) {
+                        for (Future<Boolean> future : tasks) {
                             future.cancel(true);
                         }
                         errorDetected = true;
                         setSyncFailed(true);
                     }
+                    setUSN(sc.getChunkHighUSN());
                 } else {
                     LOG.info("No notes to download");
                     moreNotesToDownload = false;
+                    setLastSync(System.currentTimeMillis());
                 }
             } while (!errorDetected && moreNotesToDownload);
             return !errorDetected;
@@ -105,27 +115,26 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         }
     }
 
-    private void retrieveNotesAsync(final Iterator<Note> notesIterator, final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks) {
+    private void retrieveNotesAsync(final Iterator<Note> notesIterator, final List<Future<Boolean>> tasks) {
         while (notesIterator.hasNext()) {
             final Note noteWithoutContents = notesIterator.next();
-            Callable<com.rubenlaguna.en4j.noteinterface.Note> callable = new RetrieveNoteTask(noteWithoutContents);
+            Callable<Boolean> callable = new RetrieveAndAddNoteTask(noteWithoutContents);
             //TODO: java.util.concurrent.RejectedExecutionException
-            final Future<com.rubenlaguna.en4j.noteinterface.Note> task = RP.submit(callable);
+            final Future<Boolean> task = RP.submit(callable);
             tasks.add(task);
         }
     }
 
-    private boolean addNotesToDb(final List<Future<com.rubenlaguna.en4j.noteinterface.Note>> tasks) {
+    private boolean waitForAllTaskToComplete(final List<Future<Boolean>> tasks) {
         long start = System.currentTimeMillis();
         final int total = tasks.size();
         LOG.info("wait for " + total + " notes to download.");
         try {
             int i = 0;
-            for (Future<com.rubenlaguna.en4j.noteinterface.Note> future : tasks) {
+            for (Future<Boolean> future : tasks) {
                 i++;
                 LOG.info("get note (" + i + "/" + total + ") of future " + future);
-                com.rubenlaguna.en4j.noteinterface.Note note = future.get(1, TimeUnit.DAYS);
-                boolean suceeded = addToDb(note);
+                boolean suceeded = future.get(1, TimeUnit.DAYS);
                 if (!suceeded) {
                     return false;
                 }
@@ -137,25 +146,6 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         long delta = System.currentTimeMillis() - start;
         LOG.info("It took " + delta + " ms");
         return true;
-    }
-
-    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
-        final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-        boolean suceeded = nr.add(note);
-        if (suceeded) {
-            final String guid = note.getGuid();
-            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
-            if (null == byGuid) {
-                LOG.warning("the note " + guid + " was not added properly to the db");
-                return false;
-            }
-            nf.index(byGuid); //non blocking
-            return true;
-        } else {
-            LOG.log(Level.WARNING, "Fail to add Note \"" + note.getTitle() + "\" to database");
-            return false;
-        }
     }
 
     /**
@@ -210,18 +200,47 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         propertyChangeSupport.removePropertyChangeListener(listener);
     }
+
+    private boolean isFirstSync() {
+        long lastSync = NbPreferences.forModule(SynchronizationServiceImpl.class).getLong(LASTSYNC, 0);
+        LOG.info("Last sync was " + new Date(lastSync).toString());
+        return lastSync == 0;
+    }
+
+    private void setLastSync(long currentTimeMillis) {
+        NbPreferences.forModule(SynchronizationServiceImpl.class).putLong(LASTSYNC, currentTimeMillis);
+    }
+
+    private int getHighestUSN() {
+        int highestUSN = NbPreferences.forModule(SynchronizationServiceImpl.class).getInt(HIGHESTUSN, 0);
+        LOG.info("Higest USN is " + highestUSN);
+        return highestUSN;
+    }
+
+    private void setUSN(int chunkHighUSN) {
+        LOG.info("setUSN: getHighestUSN=" + getHighestUSN() + " chunkHighUSN=" + chunkHighUSN);
+        if (chunkHighUSN > getHighestUSN()) {
+            synchronized (this) {
+                if (chunkHighUSN > getHighestUSN()) {
+                    LOG.info("Updating USN from " + getHighestUSN() + " to " + chunkHighUSN);
+                    NbPreferences.forModule(SynchronizationServiceImpl.class).putInt(HIGHESTUSN, chunkHighUSN);
+                }
+            }
+        }
+    }
 }
 
-class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.Note> {
+class RetrieveAndAddNoteTask implements Callable<Boolean> {
 
-    private final Logger LOG = Logger.getLogger(RetrieveNoteTask.class.getName());
+    private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
     private Note noteWithoutContents = null;
 
-    RetrieveNoteTask(Note noteWithoutContents) {
+    RetrieveAndAddNoteTask(Note noteWithoutContents) {
         this.noteWithoutContents = noteWithoutContents;
     }
 
-    public com.rubenlaguna.en4j.noteinterface.Note call() throws Exception {
+    @Override
+    public Boolean call() throws Exception {
         long start = System.currentTimeMillis();
         LOG.fine("Start downloading note " + noteWithoutContents.getGuid());
         EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
@@ -236,6 +255,25 @@ class RetrieveNoteTask implements Callable<com.rubenlaguna.en4j.noteinterface.No
         final String guid = note.getGuid();
         LOG.info("It took " + delta + " ms" + " to download note " + guid);
         final NoteAdapter noteAdapter = new NoteAdapter(note);
-        return noteAdapter;
+        return addToDb(noteAdapter);
+    }
+
+    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
+        final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        boolean suceeded = nr.add(note);
+        if (suceeded) {
+            final String guid = note.getGuid();
+            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
+            if (null == byGuid) {
+                LOG.warning("the note " + guid + " was not added properly to the db");
+                return false;
+            }
+            nf.index(byGuid); //non blocking
+            return true;
+        } else {
+            LOG.log(Level.WARNING, "Fail to add Note \"" + note.getTitle() + "\" to database");
+            return false;
+        }
     }
 }
