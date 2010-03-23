@@ -39,8 +39,6 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
     }
 
     public String getContent() {
-//        LOG.info("adaptee ="+adaptee);
-//        LOG.info("adaptee.getContent() ="+adaptee.getContent());
         return adaptee.getContent();
     }
 
@@ -82,7 +80,7 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
     }
 
     public Date getUpdated() {
-        return new Date(adaptee.getUpdated() * 1000L);
+        return new Date(adaptee.getUpdated());
     }
 
     public void setUpdated(Date updated) {
@@ -113,5 +111,24 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
 
     public String getGuid() {
         return adaptee.getGuid();
+    }
+
+    public boolean isActive() {
+        return adaptee.isActive();
+    }
+
+    public void setActive(boolean active) {
+        adaptee.setActive(active);
+    }
+
+    public Date getDeleted() {
+        if (adaptee.isSetDeleted()) {
+            return new Date(adaptee.getDeleted());
+        }
+        return null;
+    }
+
+    public void setDeleted(Date date) {
+        adaptee.setDeleted(date.getTime());
     }
 }
