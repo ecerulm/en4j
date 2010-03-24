@@ -84,6 +84,13 @@ public class Notes implements Serializable {
     @MapKey(name = "hashValue")
     private Map<String, Resource> resources = new HashMap<String, Resource>();
     @Basic(optional = false)
+    @Column(name = "active", nullable = false)
+    private boolean active = false;
+    @Basic(optional = true)
+    @Column(name = "deleted", nullable = true)
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date deleted;
+    @Basic(optional = false)
     @Column(name = "USN", nullable = false)
     private int updateSequenceNumber = 0;
     @Version
@@ -156,6 +163,22 @@ public class Notes implements Serializable {
         this.title = title;
     }
 
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
+    public Date getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Date deleted) {
+        this.deleted = deleted;
+    }
+
     public Date getUpdated() {
         return updated;
     }
@@ -206,5 +229,4 @@ public class Notes implements Serializable {
     public String toString() {
         return "com.rubenlaguna.noteentitieslibrary.Notes[id=" + id + "]";
     }
-
 }

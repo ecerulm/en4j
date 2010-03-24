@@ -189,6 +189,7 @@ public class NoteRepositoryImpl implements NoteRepository {
                                     entityNode.setCreated(new Date());
                                     entityNode.setUpdated(new Date());
                                     entityNode.setTitle(n.getTitle());
+
                                     //TODO: add resources to the database
                                     List<Resource> resources = n.getResource();
 
@@ -282,9 +283,6 @@ public class NoteRepositoryImpl implements NoteRepository {
             try {
                 t.begin();
                 Notes entityToPersist = null;
-                //entityManager.find(Notes.class, this)
-
-                //
                 try {
                     String queryText2 = "SELECT n FROM Notes n WHERE n.guid = :guid ";
                     Query queryById = entityManager.createQuery(queryText2);
@@ -306,6 +304,8 @@ public class NoteRepositoryImpl implements NoteRepository {
                 entityToPersist.setSourceurl(n.getSourceurl());
                 entityToPersist.setUpdated(n.getUpdated());
                 entityToPersist.setUpdateSequenceNumber(n.getUpdateSequenceNumber());
+                entityToPersist.setActive(n.isActive());
+                entityToPersist.setDeleted(n.getDeleted());
                 entityManager.persist(entityToPersist);
 
                 for (Iterator<com.rubenlaguna.en4j.noteinterface.Resource> it = n.getResources().iterator(); it.hasNext();) {

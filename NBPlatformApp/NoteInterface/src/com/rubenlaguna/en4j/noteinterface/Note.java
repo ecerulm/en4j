@@ -51,6 +51,14 @@ public interface Note {
 
     int getUpdateSequenceNumber();
 
+    boolean isActive();
+
+    void setActive(boolean active);
+
+    Date getDeleted();
+
+    void setDeleted(Date deleted);
+
     Resource getResource(String hash);
 
     Collection<Resource> getResources();

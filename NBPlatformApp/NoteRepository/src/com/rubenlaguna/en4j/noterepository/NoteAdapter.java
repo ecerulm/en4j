@@ -79,7 +79,7 @@ class NoteAdapter implements Note {
 
     public Resource getResource(String hash) {
         final com.rubenlaguna.en4j.jpaentities.Resource resource = adaptee.getResource(hash);
-        if (null==resource) {
+        if (null == resource) {
             return null;
         }
         Resource toReturn = new ResourceAdapter(resource);
@@ -128,5 +128,21 @@ class NoteAdapter implements Note {
 
     public String getGuid() {
         return adaptee.getGuid();
+    }
+
+    public boolean isActive() {
+        return adaptee.isActive();
+    }
+
+    public void setActive(boolean active) {
+        adaptee.setActive(active);
+    }
+
+    public Date getDeleted() {
+        return adaptee.getDeleted();
+    }
+
+    public void setDeleted(Date deleted) {
+        adaptee.setDeleted(deleted);
     }
 }
