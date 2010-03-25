@@ -39,6 +39,8 @@ public interface NoteRepository {
 
     Note getByGuid(String guid, boolean withContents);
 
+    boolean isUpToDate(String guid, int usn);
+
     boolean add(Note n);
 
     int getHighestUSN();

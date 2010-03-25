@@ -379,4 +379,23 @@ public class NoteRepositoryImpl implements NoteRepository {
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.removePropertyChangeListener(listener);
     }
+
+    public boolean isUpToDate(String guid, int usn) {
+        EntityManager entityManager = Installer.getEntityManagerFactory().createEntityManager();
+        boolean toReturn = false;
+        try {
+            String queryText2 = "SELECT n FROM Notes n WHERE n.guid= :guid AND n.updateSequenceNumber = :USN ";
+            Query queryById = entityManager.createQuery(queryText2);
+            queryById.setParameter("guid", guid);
+            queryById.setParameter("USN", usn);
+            toReturn = !queryById.getResultList().isEmpty();
+        } catch (PersistenceException ex) {
+            LOG.log(Level.WARNING, "could not load the note from the db. Is the module closing?", ex);
+        } finally {
+            //enough since there is no transaction in the try-block
+            //see http://bit.ly/b0p3Wj
+            entityManager.close();
+        }
+        return toReturn;
+    }
 }
