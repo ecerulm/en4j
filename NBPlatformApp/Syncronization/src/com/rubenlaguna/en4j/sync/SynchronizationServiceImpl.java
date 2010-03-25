@@ -50,7 +50,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
-    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(1, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
     //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
@@ -100,8 +100,9 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                         }
                         errorDetected = true;
                         setSyncFailed(true);
+                    } else {
+                        setUSN(sc.getChunkHighUSN());
                     }
-                    setUSN(sc.getChunkHighUSN());
                 } else {
                     LOG.info("No notes to download");
                     moreNotesToDownload = false;
@@ -242,20 +243,24 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     @Override
     public Boolean call() throws Exception {
         long start = System.currentTimeMillis();
-        LOG.fine("Start downloading note " + noteWithoutContents.getGuid());
-        EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
-        Note note = null;
-        try {
-            note = util.getValidNoteStore().getNote(util.getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
-        } catch (TTransportException ex) {
-            LOG.log(Level.WARNING, "Couldn't retrieve note " + noteWithoutContents.getGuid(), ex);
-            return null;
+        if (!isUpToDate()) {
+            LOG.fine("Start downloading note " + noteWithoutContents.getGuid());
+            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
+            Note note = null;
+            try {
+                note = util.getValidNoteStore().getNote(util.getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
+            } catch (TTransportException ex) {
+                LOG.log(Level.WARNING, "Couldn't retrieve note " + noteWithoutContents.getGuid(), ex);
+                return null;
+            }
+            long delta = System.currentTimeMillis() - start;
+            final String guid = note.getGuid();
+            LOG.info("It took " + delta + " ms" + " to download note " + guid);
+            final NoteAdapter noteAdapter = new NoteAdapter(note);
+            return addToDb(noteAdapter);
+        } else {
+            return true;
         }
-        long delta = System.currentTimeMillis() - start;
-        final String guid = note.getGuid();
-        LOG.info("It took " + delta + " ms" + " to download note " + guid);
-        final NoteAdapter noteAdapter = new NoteAdapter(note);
-        return addToDb(noteAdapter);
     }
 
     private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
@@ -275,5 +280,10 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
             LOG.log(Level.WARNING, "Fail to add Note \"" + note.getTitle() + "\" to database");
             return false;
         }
+    }
+
+    private boolean isUpToDate() {
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        return nr.isUpToDate(noteWithoutContents.getGuid(), noteWithoutContents.getUpdateSequenceNum());
     }
 }
