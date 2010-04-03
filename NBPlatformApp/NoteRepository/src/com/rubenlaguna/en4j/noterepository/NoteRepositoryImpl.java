@@ -20,6 +20,7 @@ import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.jaxb.generated.Resource;
 import com.rubenlaguna.en4j.jpaentities.Notes;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.InputStream;
@@ -263,7 +264,8 @@ public class NoteRepositoryImpl implements NoteRepository {
         return toReturn;
     }
 
-    public boolean add(Note n) {
+    @Override
+    public boolean add(NoteReader n) {
         if (null == n) {
             return false;
         }

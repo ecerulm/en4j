@@ -17,6 +17,7 @@
 package com.rubenlaguna.en4j.interfaces;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import java.beans.PropertyChangeListener;
 import java.io.InputStream;
 import java.util.Collection;
@@ -41,7 +42,7 @@ public interface NoteRepository {
 
     boolean isUpToDate(String guid, int usn);
 
-    boolean add(Note n);
+    boolean add(NoteReader n);
 
     int getHighestUSN();
 
