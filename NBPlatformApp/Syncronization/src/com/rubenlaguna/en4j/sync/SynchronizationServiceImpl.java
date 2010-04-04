@@ -307,7 +307,8 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     }
 
     private boolean isUpToDate() {
+//        return false;
         final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-        return nr.isUpToDate(noteGuid, usn);
+        return nr.isNoteUpToDate(noteGuid, usn);
     }
 }

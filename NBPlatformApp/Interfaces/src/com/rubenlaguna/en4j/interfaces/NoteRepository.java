@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.interfaces;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.NoteReader;
+import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.beans.PropertyChangeListener;
 import java.io.InputStream;
 import java.util.Collection;
@@ -40,12 +41,13 @@ public interface NoteRepository {
 
     Note getByGuid(String guid, boolean withContents);
 
-    boolean isUpToDate(String guid, int usn);
+    Resource getResource(String guid, String hash);
+
+    boolean isNoteUpToDate(String guid, int usn);
 
     boolean add(NoteReader n);
 
-    int getHighestUSN();
-
+//    int getHighestUSN();
     void addPropertyChangeListener(PropertyChangeListener listener);
 
     void removePropertyChangeListener(PropertyChangeListener listener);

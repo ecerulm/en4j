@@ -5,7 +5,9 @@
 package com.rubenlaguna.en4j.sync;
 
 import com.evernote.edam.type.Data;
-import com.evernote.edam.type.Resource;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 /**
@@ -22,7 +24,7 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
     public byte[] getData() {
         final Data data = resource.getData();
-        if (data==null){
+        if (data == null) {
             return null;
         }
         return data.getBody();
@@ -30,7 +32,7 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
     public byte[] getAlternateData() {
         final Data alternateData = resource.getAlternateData();
-        if (alternateData==null){
+        if (alternateData == null) {
             return null;
         }
         return alternateData.getBody();
@@ -78,7 +80,7 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
     public byte[] getRecognition() {
         final Data recognition = resource.getRecognition();
-        if(null==recognition){
+        if (null == recognition) {
             return null;
         }
         return recognition.getBody();
@@ -86,5 +88,28 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
     public Date getTimestamp() {
         return new Date(resource.getAttributes().getTimestamp());
+    }
+
+    public String getAlternateDataHash() {
+        if (getAlternateData() != null) {
+            return generateHash(getAlternateData());
+        } else {
+            return null;
+        }
+    }
+
+    public String getDataHash() {
+        return generateHash(getData());
+    }
+
+    private String generateHash(byte[] data) {
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            BigInteger hash = new BigInteger(1, md5.digest(data));
+            String hashword = hash.toString(16);
+            return hashword;
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 }

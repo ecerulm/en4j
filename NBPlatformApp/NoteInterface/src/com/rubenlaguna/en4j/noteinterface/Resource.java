@@ -26,7 +26,11 @@ public interface Resource {
 
     byte[] getData();
 
+    String getDataHash();
+
     byte[] getAlternateData();
+
+    String getAlternateDataHash();
 
     double getAltitude();
 

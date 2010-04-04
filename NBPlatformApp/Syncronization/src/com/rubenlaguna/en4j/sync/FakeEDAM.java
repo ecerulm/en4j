@@ -143,17 +143,16 @@ class FakeEDAM implements EDAMIf {
             public Date getTimestamp() {
                 return new Date();
             }
-        };
 
-        String tempHashword = "";
-        try {
-            MessageDigest md5 = MessageDigest.getInstance("MD5");
-            BigInteger hash = new BigInteger(1, md5.digest(barray));
-            tempHashword = hash.toString(16);
-        } catch (NoSuchAlgorithmException ex) {
-            throw new RuntimeException(ex);
-        }
-        final String hashword = tempHashword;
+            public String getDataHash() {
+                return generateHash(barray);
+            }
+
+            public String getAlternateDataHash() {
+                return null;
+            }
+        };
+        final String hashword = generateHash(barray);
         NoteReader toReturn = new NoteReader() {
 
             public String getContent() {
@@ -227,6 +226,18 @@ class FakeEDAM implements EDAMIf {
         };
 
         return toReturn;
+    }
+
+    private String generateHash(final byte[] barray) throws RuntimeException {
+        String tempHashword = "";
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            BigInteger hash = new BigInteger(1, md5.digest(barray));
+            tempHashword = hash.toString(16);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex);
+        }
+        return tempHashword;
     }
 
     @Override
