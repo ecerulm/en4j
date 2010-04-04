@@ -16,7 +16,6 @@
  */
 package com.rubenlaguna.en4j.sync;
 
-import com.evernote.edam.type.Note;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
@@ -48,32 +47,41 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
-    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2), new ThreadPoolExecutor.CallerRunsPolicy());
     //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
+    private final EDAMIf util;
 
     public SynchronizationServiceImpl() {
         com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
+        final String fakeEDAM = System.getProperty("fakeEDAM");
+
+        System.out.println("fakeEDAM =" + fakeEDAM);
+
+        if (fakeEDAM != null) {
+            util = new FakeEDAM(fakeEDAM);
+        } else {
+            util = EvernoteProtocolUtil.getInstance();
+        }
     }
 
     @Override
-    public boolean sync() {
-        // Set up the UserStore and check that we can talk to the server
+    public boolean sync() { // Set up the UserStore and check that we can talk to the server
+
         try {
-            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
-//            UserStore.Client userStore = util.getUserStore();
+            setSyncFailed(false);
             boolean versionOk = util.checkVersion();
             if (!versionOk) {
                 LOG.warning("Incompatible EDAM client protocol version");
+                setSyncFailed(true);
                 return false;
             }
 
 //            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
             boolean errorDetected = false;
             boolean moreNotesToDownload = true;
-            setSyncFailed(false);
             do {
                 int highestUSN = getHighestUSN();
                 LOG.info("highest updateSequenceNumber in the database = " + highestUSN);
@@ -92,8 +100,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
                 final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
-                final Iterator<NoteInfo> notesIterator = sc.iterator();
-                if (null != notesIterator) {
+                if (sc.size() > 0) {
+                    final Iterator<NoteInfo> notesIterator = sc.iterator();
                     retrieveNotesAsync(notesIterator, tasks);
                     if (!waitForAllTaskToComplete(tasks)) {
                         for (Future<Boolean> future : tasks) {
@@ -131,7 +139,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private void retrieveNotesAsync(final Iterator<NoteInfo> notesIterator, final List<Future<Boolean>> tasks) {
         while (notesIterator.hasNext()) {
             final NoteInfo note = notesIterator.next();
-            Callable<Boolean> callable = new RetrieveAndAddNoteTask(note);
+            Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
             //TODO: java.util.concurrent.RejectedExecutionException
             final Future<Boolean> task = RP.submit(callable);
             tasks.add(task);
@@ -243,17 +251,17 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     }
 }
 
-
-
 class RetrieveAndAddNoteTask implements Callable<Boolean> {
 
     private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
-    private final String noteGuid ;
+    private final String noteGuid;
     private final int usn;
+    private final EDAMIf util;
 
-    RetrieveAndAddNoteTask(NoteInfo note) {
+    RetrieveAndAddNoteTask(NoteInfo note, EDAMIf util) {
         this.noteGuid = note.guid;
         this.usn = note.usn;
+        this.util = util;
     }
 
     @Override
@@ -261,8 +269,8 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
         long start = System.currentTimeMillis();
         if (!isUpToDate()) {
             LOG.fine("Start downloading note " + noteGuid);
-            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
-            com.rubenlaguna.en4j.noteinterface.Note note = null;
+            //EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
+            com.rubenlaguna.en4j.noteinterface.NoteReader note = null;
             try {
                 note = util.getNote(noteGuid, true, true, true, true);
             } catch (Exception ex) {
@@ -279,7 +287,7 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
         }
     }
 
-    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
+    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.NoteReader note) {
         final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
         final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         boolean suceeded = nr.add(note);

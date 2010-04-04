@@ -36,7 +36,7 @@ import org.openide.util.NbPreferences;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class EvernoteProtocolUtil {
+class EvernoteProtocolUtil implements EDAMIf {
 
     private final Logger LOG = Logger.getLogger(EvernoteProtocolUtil.class.getName());
 //    private final String userStoreUrl = "https://sandbox.evernote.com/edam/user";
@@ -185,7 +185,8 @@ class EvernoteProtocolUtil {
         expirationTime.set(authStartTime + authValidityPeriod);
     }
 
-    boolean checkVersion() {
+    @Override
+    public boolean checkVersion() {
         try {
             return getUserStore().checkVersion("en4j (evernote for java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
         } catch (Exception ex) {
@@ -194,6 +195,7 @@ class EvernoteProtocolUtil {
         return false;
     }
 
+    @Override
     public Collection<NoteInfo> getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) {
         try {
             SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
@@ -212,11 +214,13 @@ class EvernoteProtocolUtil {
         return Collections.EMPTY_LIST;
     }
 
-    int getUpdateCount() {
+    @Override
+    public int getUpdateCount() {
         return updateCount.get();
     }
 
-    com.rubenlaguna.en4j.noteinterface.Note getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
+    @Override
+    public com.rubenlaguna.en4j.noteinterface.Note getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
         Note n = getValidNoteStore().getNote(getValidAuthToken(), noteGuid, true, true, true, true);
         NoteAdapter na = new NoteAdapter(n);
         return na;
