@@ -26,6 +26,7 @@ import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -192,7 +193,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 @Override
                 public void collect(int doc) throws IOException {
-                    int scoreId = doc+docBase;
+                    int scoreId = doc + docBase;
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
@@ -235,7 +236,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 if (null != note) {
                     try {
                         document = getLuceneDocument(note);
-                        IndexWriterFactory.getIndexWriter().updateDocument(new Term("id",n.getId().toString()),document);
+                        IndexWriterFactory.getIndexWriter().updateDocument(new Term("id", n.getId().toString()), document);
                         if (!pendingCommit) {
                             pendingCommit = true;
                             LOG.info("scheduling COMMITER");
@@ -359,13 +360,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
-                    
-                    final String parseResourceText = new Tika().parseToString(new ByteArrayInputStream(r.getData()), metadata);
-                    if (!"".equals(parseResourceText)) {
-                        LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
-                    }
-                    allText.append(parseResourceText);
-                } catch (TikaException ex) {
+                    final Reader docTikaReader = new Tika().parse(new ByteArrayInputStream(r.getData()), metadata);
+                    document.add(new Field("all", docTikaReader));
+                } catch (Exception ex) {
                     LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
                 }
             }
