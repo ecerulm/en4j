@@ -47,6 +47,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Collector;
@@ -234,7 +235,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 if (null != note) {
                     try {
                         document = getLuceneDocument(note);
-                        IndexWriterFactory.getIndexWriter().addDocument(document);
+                        IndexWriterFactory.getIndexWriter().updateDocument(new Term("id",n.getId().toString()),document);
                         if (!pendingCommit) {
                             pendingCommit = true;
                             LOG.info("scheduling COMMITER");
@@ -358,6 +359,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
+                    
                     final String parseResourceText = new Tika().parseToString(new ByteArrayInputStream(r.getData()), metadata);
                     if (!"".equals(parseResourceText)) {
                         LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
