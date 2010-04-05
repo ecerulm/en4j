@@ -5,12 +5,16 @@
 package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.util.Exceptions;
 
@@ -80,13 +84,32 @@ class ResourceImpl implements Resource, Serializable {
             pstmt.setString(1, guid);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                final byte[] bytes = rs.getBytes("DATA");
-                if (null != bytes) {
-                    getLogger().info("data retrieve for resource guid:" + guid + " size:" + bytes.length);
-                } else {
-                    getLogger().info("cannot find data for resource guid:" + guid);
+                final Blob blob = rs.getBlob("DATA");
+                final InputStream is = blob.getBinaryStream();
+                // Create the byte array to hold the data
+                final byte[] toReturn = new byte[(int) blob.length()];
+
+                // Read in the bytes
+                int offset = 0;
+                int numRead = 0;
+                try {
+                    while (offset < toReturn.length
+                            && (numRead = is.read(toReturn, offset, toReturn.length - offset)) >= 0) {
+                        offset += numRead;
+                    }
+
+                    // Ensure all the bytes have been read in
+                    if (offset < toReturn.length) {
+                        getLogger().warning("could not completely read data for resource guid:"+guid);
+                        //throw new IOException("Could not completely read file " + file.getName());
+                    }
+                } catch (IOException e) {
+                    getLogger().log(Level.WARNING, "caught exception:", e);
+                } finally {
+                    // Close the input stream and return bytes
+                    try {is.close();} catch (IOException e) {}
                 }
-                return bytes;
+                return toReturn;
             }
 
         } catch (SQLException sQLException) {

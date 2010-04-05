@@ -7,7 +7,10 @@ package com.rubenlaguna.en4j.noterepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.IOException;
+import java.io.Reader;
 import java.io.Serializable;
+import java.nio.CharBuffer;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -60,7 +63,20 @@ class NoteImpl implements Note, Serializable {
         try {
             ResultSet rs = getConnection().createStatement().executeQuery("SELECT CONTENT FROM NOTES WHERE GUID='" + this.guid + "'");
             if (rs.next()) {
-                return rs.getString("CONTENT");
+                final Reader characterStream = rs.getCharacterStream("CONTENT");
+                CharBuffer cb = CharBuffer.allocate(64000);
+                StringBuffer sb = new StringBuffer();
+                try {
+                    while (characterStream.ready()) {
+                        cb.clear();
+                        characterStream.read(cb);
+                        cb.flip();
+                        sb.append(cb);
+                    }
+                } catch (IOException e) {
+                    getLogger().log(Level.WARNING,"caught exception:",e);
+                }
+                return sb.toString();
             }
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
@@ -142,12 +158,12 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Resource getResource(String hash) {
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(guid,hash);
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(guid, hash);
     }
 
     public Collection<Resource> getResources() {
         List<Resource> toReturn = new ArrayList<Resource>();
-        for(String hash : resourcesHashes) {
+        for (String hash : resourcesHashes) {
             toReturn.add(getResource(hash));
         }
         return toReturn;

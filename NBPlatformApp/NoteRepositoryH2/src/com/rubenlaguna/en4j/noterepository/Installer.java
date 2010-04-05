@@ -57,7 +57,7 @@ public class Installer extends ModuleInstall {
                         + "ISACTIVE BIT NOT NULL, "
                         + "GUID CHAR(36) NOT NULL,"
                         + "SERIALIZEDOBJECT OTHER, "
-                        + "CONTENT VARCHAR(5242880) NOT NULL,"
+                        + "CONTENT CLOB(5242880) NOT NULL,"
                         //                        + "PRIMARY KEY (ID), "
                         + "CONSTRAINT UNQ_GUID UNIQUE (GUID))");
                 LOG.info("CREATE RESOURCES table.");
@@ -67,7 +67,7 @@ public class Installer extends ModuleInstall {
                         + "SERIALIZEDOBJECT OTHER, "
                         + "OWNERGUID CHAR(36), "
                         + "HASH CHAR(32), "
-                        + "DATA BINARY, "
+                        + "DATA BLOB, "
                         + "CONSTRAINT UNQ_GUID_RES UNIQUE (GUID))");
                 c.createStatement().execute("CREATE INDEX I_RSOURCS_OWNER ON RESOURCES (OWNERGUID)");
             } else {

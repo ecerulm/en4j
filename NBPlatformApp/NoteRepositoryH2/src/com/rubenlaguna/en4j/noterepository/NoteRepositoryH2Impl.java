@@ -22,7 +22,9 @@ import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -175,7 +177,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setBoolean(1, n.isActive());
             insertStmt.setString(2, guid);
             insertStmt.setObject(3, n);
-            insertStmt.setString(4, note.getContent());
+            insertStmt.setCharacterStream(4, new StringReader(note.getContent()));
             final int rowCount = insertStmt.executeUpdate();
             if (rowCount != 1) {
                 return false;
@@ -199,7 +201,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setObject(2, r);
             insertStmt.setString(3, r.getNoteguid());
             insertStmt.setString(4, r.getDataHash());
-            insertStmt.setBytes(5, resource.getData());
+            insertStmt.setBinaryStream(5, new ByteArrayInputStream(resource.getData()));
             LOG.info("inserting resource guid:" + guid + " size:" + resource.getData().length);
 
             final int rowCount = insertStmt.executeUpdate();

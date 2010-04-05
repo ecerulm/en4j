@@ -69,7 +69,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
     @Override
     public boolean sync() { // Set up the UserStore and check that we can talk to the server
-
+        setPendingRemoteUpdateNotes(-1);
         try {
             setSyncFailed(false);
             boolean versionOk = util.checkVersion();
