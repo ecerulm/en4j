@@ -30,6 +30,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
@@ -45,6 +46,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     private final Logger LOG = Logger.getLogger(NoteRepositoryH2Impl.class.getName());
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private Connection connection = null;
+    private final Map softrefMapById = new SoftHashMap();
+    private final Map softrefMapByGuid = new SoftHashMap();
+    private final Map resSoftMapByGuid = new SoftHashMap();
 
     public NoteRepositoryH2Impl() {
         //            c.createStatement().execute(
@@ -84,6 +88,11 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Note get(int id) {
+        final Note cached = (Note) softrefMapById.get(id);
+        if (null != cached) {
+            LOG.info("cache hit note id:"+id);
+            return cached;
+        }
         try {
             PreparedStatement pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE ID = ?");
             pstmt.setInt(1, id);
@@ -92,7 +101,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 LOG.info("No entry found with id = " + id);
                 return null;
             }
-            return (Note) rs.getObject("SERIALIZEDOBJECT");
+            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
+            softrefMapById.put(id,toReturn);
+            return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
@@ -104,6 +115,11 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Note getByGuid(String guid, boolean withContents) {
+        final Note cached = (Note) softrefMapByGuid.get(guid);
+        if (null != cached) {
+            LOG.info("cache hit note guid:"+guid);
+            return cached;
+        }
         try {
             LOG.info("searching note with guid: " + guid);
             PreparedStatement stmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE GUID = ?");
@@ -113,7 +129,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 LOG.info("There is no entry in the db  with guid: " + guid);
                 return null;
             }
-            return (Note) rs.getObject("SERIALIZEDOBJECT");
+            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
+            softrefMapByGuid.put(guid,toReturn);
+            return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
@@ -128,7 +146,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         return note.getUpdateSequenceNumber() >= usn;
     }
 
-    public boolean add(NoteReader note) {
+    public synchronized boolean add(NoteReader note) {
 
 
         //first iterate over resources and
@@ -197,6 +215,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Resource getResource(String guid, String hash) {
+        final Resource cached = (Resource) resSoftMapByGuid.get(guid+hash);
+        if (null != cached) {
+            LOG.info("cache hit resource parent guid:"+guid+" hash:"+hash);
+            return cached;
+        }
+
         try {
             LOG.info("searching resource with parent guid: " + guid + " and hash: " + hash);
             PreparedStatement pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
@@ -207,7 +231,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 LOG.info("There is no entry in the db  with guid: " + guid);
                 return null;
             }
-            return (Resource) rs.getObject("SERIALIZEDOBJECT");
+            final Resource toReturn = (Resource) rs.getObject("SERIALIZEDOBJECT");
+            resSoftMapByGuid.put(guid+hash, toReturn);
+            return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
