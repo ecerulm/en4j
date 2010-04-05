@@ -4,7 +4,6 @@
  */
 package com.rubenlaguna.en4j.sync;
 
-import com.evernote.edam.error.EDAMNotFoundException;
 import com.evernote.edam.error.EDAMSystemException;
 import com.evernote.edam.error.EDAMUserException;
 import com.evernote.edam.notestore.NoteStore;
@@ -220,7 +219,7 @@ class EvernoteProtocolUtil implements EDAMIf {
     }
 
     @Override
-    public com.rubenlaguna.en4j.noteinterface.Note getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
+    public com.rubenlaguna.en4j.noteinterface.NoteReader getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
         Note n = getValidNoteStore().getNote(getValidAuthToken(), noteGuid, true, true, true, true);
         NoteAdapter na = new NoteAdapter(n);
         return na;

@@ -60,23 +60,31 @@ class NoteImpl implements Note, Serializable {
     }
 
     public String getContent() {
+        final Reader characterStream = getContentAsReader();
+        if (null == characterStream) {
+            return "";
+        }
+        CharBuffer cb = CharBuffer.allocate(64000);
+        StringBuffer sb = new StringBuffer();
+        try {
+            while (characterStream.ready()) {
+                cb.clear();
+                characterStream.read(cb);
+                cb.flip();
+                sb.append(cb);
+            }
+        } catch (IOException e) {
+            getLogger().log(Level.WARNING, "caught exception:", e);
+        }
+        return sb.toString();
+    }
+
+    public Reader getContentAsReader() {
         try {
             ResultSet rs = getConnection().createStatement().executeQuery("SELECT CONTENT FROM NOTES WHERE GUID='" + this.guid + "'");
             if (rs.next()) {
                 final Reader characterStream = rs.getCharacterStream("CONTENT");
-                CharBuffer cb = CharBuffer.allocate(64000);
-                StringBuffer sb = new StringBuffer();
-                try {
-                    while (characterStream.ready()) {
-                        cb.clear();
-                        characterStream.read(cb);
-                        cb.flip();
-                        sb.append(cb);
-                    }
-                } catch (IOException e) {
-                    getLogger().log(Level.WARNING,"caught exception:",e);
-                }
-                return sb.toString();
+                return characterStream;
             }
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);

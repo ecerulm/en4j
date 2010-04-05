@@ -20,6 +20,7 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -27,7 +28,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Reader;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -55,10 +55,8 @@ import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
-import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
@@ -388,7 +386,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         //JTidy or NekoHTML to parse the thlm
         DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
         DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
+        domParser.parse(new InputSource(note.getContentAsReader()), node);
         return node;
     }
 

@@ -24,7 +24,6 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -177,7 +176,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setBoolean(1, n.isActive());
             insertStmt.setString(2, guid);
             insertStmt.setObject(3, n);
-            insertStmt.setCharacterStream(4, new StringReader(note.getContent()));
+            insertStmt.setCharacterStream(4, note.getContentAsReader());
             final int rowCount = insertStmt.executeUpdate();
             if (rowCount != 1) {
                 return false;

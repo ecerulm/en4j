@@ -11,6 +11,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -155,7 +157,7 @@ class FakeEDAM implements EDAMIf {
         final String hashword = generateHash(barray);
         NoteReader toReturn = new NoteReader() {
 
-            public String getContent() {
+            public Reader getContentAsReader() {
 
                 StringBuffer sb = new StringBuffer();
                 sb.append("<?xml version=\"1.0\" encoding=\"UTF - 8\"?>");
@@ -178,7 +180,7 @@ class FakeEDAM implements EDAMIf {
                     Exceptions.printStackTrace(iOException);
                 }
                 sb.append("</en-note>");
-                return sb.toString();
+                return new StringReader(sb.toString());
 //                throw new UnsupportedOperationException("Not supported yet.");
             }
 

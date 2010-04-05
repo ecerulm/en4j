@@ -4,6 +4,7 @@
  */
 package com.rubenlaguna.en4j.noteinterface;
 
+import java.io.Reader;
 import java.util.Collection;
 import java.util.Date;
 
@@ -13,7 +14,8 @@ import java.util.Date;
  */
 public interface NoteReader {
 
-    String getContent();
+//    String getContent();
+    Reader getContentAsReader();
 
     Date getCreated();
 
