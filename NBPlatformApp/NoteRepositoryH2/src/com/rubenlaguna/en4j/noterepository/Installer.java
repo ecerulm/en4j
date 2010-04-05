@@ -33,6 +33,12 @@ public class Installer extends ModuleInstall {
             Exceptions.printStackTrace(ex);
         }
         try {
+            c.createStatement().execute("SET CACHE_SIZE 1024");
+            c.createStatement().execute("SET MAX_LOG_SIZE 0");
+            c.createStatement().execute("SET MAX_MEMORY_ROWS 0");
+            c.createStatement().execute("SET MAX_MEMORY_UNDO 0");
+            c.createStatement().execute("SET MAX_OPERATION_MEMORY 0");
+            c.createStatement().execute("SET UNDO_LOG 0");
             ResultSet rs = c.getMetaData().getTables(null, null, "%", null);
             boolean notesTableAlreadyExists = false;
 //            boolean resourcesTableAlreadyExists = false;
@@ -45,11 +51,8 @@ public class Installer extends ModuleInstall {
             }
 
             if (!notesTableAlreadyExists) {
-//                c.createStatement().execute("SET FILES LOG FALSE");
-//                c.createStatement().execute("SET FILES CACHE ROWS 10");
-//                c.createStatement().execute("SET FILES CACHE SIZE 5000");
                 LOG.info("CREATE NOTES table.");
-                c.createStatement().execute("CREATE  TABLE NOTES ("
+                c.createStatement().execute("CREATE TABLE NOTES ("
                         + "ID IDENTITY, "
                         + "ISACTIVE BIT NOT NULL, "
                         + "GUID CHAR(36) NOT NULL,"
