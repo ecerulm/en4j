@@ -27,16 +27,17 @@ public class Installer extends ModuleInstall {
         try {
             Class.forName("org.h2.Driver").newInstance();
             String connectionURL = "jdbc:h2:" + System.getProperty("netbeans.user") + "/en4jh2db/db";
-            c = DriverManager.getConnection(connectionURL);
+            c = DriverManager.getConnection(connectionURL, "", "");
+
             c.setAutoCommit(true);
         } catch (Exception ex) {
             Exceptions.printStackTrace(ex);
         }
         try {
-            c.createStatement().execute("SET CACHE_SIZE 1024");
-            c.createStatement().execute("SET MAX_LOG_SIZE 2");
-            c.createStatement().execute("SET MAX_MEMORY_ROWS 2");
-            c.createStatement().execute("SET MAX_MEMORY_UNDO 2");
+            c.createStatement().execute("SET CACHE_SIZE 16384");
+            c.createStatement().execute("SET MAX_LOG_SIZE 32");
+            c.createStatement().execute("SET MAX_MEMORY_ROWS 10000");
+            c.createStatement().execute("SET MAX_MEMORY_UNDO 50000");
             c.createStatement().execute("SET MAX_OPERATION_MEMORY 100000");
             c.createStatement().execute("SET UNDO_LOG 1");
             ResultSet rs = c.getMetaData().getTables(null, null, "%", null);

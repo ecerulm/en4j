@@ -12,6 +12,7 @@ import java.io.Reader;
 import java.io.Serializable;
 import java.nio.CharBuffer;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -29,10 +30,7 @@ import org.openide.util.Lookup;
  */
 class NoteImpl implements Note, Serializable {
 
-//    private final Integer id=-1;
     private final String guid;
-//    private transient Logger LOG = Logger.getLogger(NoteImpl.class.getName());
-//    private final String contentHash;
     private final Date created;
     private final Date deleted;
     private final Collection<String> resourcesHashes = new ArrayList<String>();
@@ -41,12 +39,9 @@ class NoteImpl implements Note, Serializable {
     private final int usn;
     private final Date updated;
     private final boolean active;
-    //private final transient Connection connection = Installer.c;
 
     NoteImpl(NoteReader note) {
-//        this.id = note.getId();
         this.guid = note.getGuid();
-//        this.contentHash = note.getContentHash();
         this.created = note.getCreated();
         this.deleted = note.getDeleted();
         for (Resource r : note.getResources()) {
@@ -75,19 +70,42 @@ class NoteImpl implements Note, Serializable {
             }
         } catch (IOException e) {
             getLogger().log(Level.WARNING, "caught exception:", e);
+        } finally {
+            try {
+                characterStream.close();
+            } catch (IOException e) {
+            }
         }
         return sb.toString();
     }
 
     public Reader getContentAsReader() {
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            ResultSet rs = getConnection().createStatement().executeQuery("SELECT CONTENT FROM NOTES WHERE GUID='" + this.guid + "'");
+            pstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
             if (rs.next()) {
                 final Reader characterStream = rs.getCharacterStream("CONTENT");
                 return characterStream;
             }
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
         return null;
     }
@@ -105,14 +123,34 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Integer getId() {
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            ResultSet rs = getConnection().createStatement().executeQuery("SELECT ID FROM NOTES WHERE GUID ='" + this.guid + "'");
+            pstmt = getConnection().prepareStatement("SELECT ID FROM NOTES WHERE GUID =?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt("ID");
+                final int toReturn = rs.getInt("ID");
+                return toReturn;
             }
         } catch (SQLException sQLException) {
             getLogger().log(Level.WARNING, "exception caught:", sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
+
         return -1;
 
     }

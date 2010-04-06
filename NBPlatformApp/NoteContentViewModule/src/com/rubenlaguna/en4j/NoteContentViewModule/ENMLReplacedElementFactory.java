@@ -136,18 +136,15 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //TODO: add a real implementation that returns an image
         ReplacedElement toReturn = null;
 
-        //JTextArea cc = new JTextArea();
-        //NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-//        byte[] imageData = getImage(hash);
-//        if (null == imageData) {
-//            return null;
-//        }
         InputStream is = getImage(hash);
         Image image = null;
+        if (is == null) {
+            return brokenImage(context, 100, 100);
+        }
         try {
             image = ImageIO.read(is);
         } catch (IOException e) {
-            LOG.log(Level.WARNING,"exception caught:",e);
+            LOG.log(Level.WARNING, "exception caught:", e);
         } finally {
             try {
                 is.close();
@@ -158,8 +155,6 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         ImageIcon icon = new ImageIcon(image);
 
         JLabel cc = new JLabel(icon);
-        //cc.setText("Missing implementation for en-media");
-        //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
 
         context.getCanvas().add(cc);

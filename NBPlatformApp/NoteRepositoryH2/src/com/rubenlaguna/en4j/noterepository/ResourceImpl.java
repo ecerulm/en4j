@@ -79,10 +79,12 @@ class ResourceImpl implements Resource, Serializable {
 
     public byte[] getData() {
         getLogger().info("resource guid:" + guid);
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            PreparedStatement pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
+            pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
             pstmt.setString(1, guid);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             if (rs.next()) {
                 final Blob blob = rs.getBlob("DATA");
                 final InputStream is = blob.getBinaryStream();
@@ -100,30 +102,51 @@ class ResourceImpl implements Resource, Serializable {
 
                     // Ensure all the bytes have been read in
                     if (offset < toReturn.length) {
-                        getLogger().warning("could not completely read data for resource guid:"+guid);
+                        getLogger().warning("could not completely read data for resource guid:" + guid);
                         //throw new IOException("Could not completely read file " + file.getName());
                     }
                 } catch (IOException e) {
                     getLogger().log(Level.WARNING, "caught exception:", e);
                 } finally {
                     // Close the input stream and return bytes
-                    try {is.close();} catch (IOException e) {}
+                    try {
+                        is.close();
+                    } catch (IOException e) {
+                    }
+
                 }
                 return toReturn;
             }
 
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
 
         return null;
     }
+
     public InputStream getDataAsInputStream() {
         getLogger().info("resource guid:" + guid);
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            PreparedStatement pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
+            pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
             pstmt.setString(1, guid);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             if (rs.next()) {
                 final Blob blob = rs.getBlob("DATA");
                 final InputStream is = blob.getBinaryStream();
@@ -132,6 +155,20 @@ class ResourceImpl implements Resource, Serializable {
 
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
 
         return null;

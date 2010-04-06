@@ -72,13 +72,30 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
     public Collection<Note> getAllNotes() {
         List<Note> toReturn = new ArrayList<Note>();
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            ResultSet rs = connection.createStatement().executeQuery("SELECT SERIALIZEDOBJECT FROM NOTES");
+            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES");
+            rs = pstmt.executeQuery();
             while (rs.next()) {
                 toReturn.add((Note) rs.getObject("SERIALIZEDOBJECT"));
             }
         } catch (SQLException ex) {
             Exceptions.printStackTrace(ex);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
         return toReturn;
     }
@@ -93,10 +110,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             LOG.info("cache hit note id:" + id);
             return cached;
         }
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
-            PreparedStatement pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE ID = ?");
+            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE ID = ?");
             pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             if (!rs.next()) {
                 LOG.info("No entry found with id = " + id);
                 return null;
@@ -107,6 +126,20 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
     }
 
@@ -120,21 +153,40 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             LOG.info("cache hit note guid:" + guid);
             return cached;
         }
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
             LOG.info("searching note with guid: " + guid);
-            PreparedStatement stmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE GUID = ?");
-            stmt.setString(1, guid);
-            ResultSet rs = stmt.executeQuery();
+            pstmt = connection.prepareStatement("SELECT ID FROM NOTES WHERE GUID = ?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
             if (!rs.next()) {
                 LOG.info("There is no entry in the db  with guid: " + guid);
                 return null;
             }
-            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
+//            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
+            final int id = rs.getInt("ID");
+            final Note toReturn = get(id);
             softrefMapByGuid.put(guid, toReturn);
             return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
     }
 
@@ -177,6 +229,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setObject(3, n);
             insertStmt.setCharacterStream(4, note.getContentAsReader());
             final int rowCount = insertStmt.executeUpdate();
+            insertStmt.close();
             if (rowCount != 1) {
                 return false;
             }
@@ -188,13 +241,15 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     private boolean insertResource(Resource resource) {
+        PreparedStatement deleteStmt = null;
+        PreparedStatement insertStmt = null;
         try {
             ResourceImpl r = new ResourceImpl(resource);
             String guid = r.getGuid();
-            PreparedStatement deleteStmt = connection.prepareStatement("DELETE FROM RESOURCES WHERE GUID=?");
+            deleteStmt = connection.prepareStatement("DELETE FROM RESOURCES WHERE GUID=?");
             deleteStmt.setString(1, guid);
             deleteStmt.executeUpdate();
-            PreparedStatement insertStmt = this.connection.prepareStatement("INSERT INTO RESOURCES VALUES(?,?,?,?,?)");
+            insertStmt = this.connection.prepareStatement("INSERT INTO RESOURCES VALUES(?,?,?,?,?)");
             insertStmt.setString(1, guid);
             insertStmt.setObject(2, r);
             insertStmt.setString(3, r.getNoteguid());
@@ -211,6 +266,19 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             LOG.log(Level.WARNING, "exception while trying to insert resource " + resource.getGuid(), sQLException);
 //            Exceptions.printStackTrace(sQLException);
             return false;
+        } finally {
+            if (null != deleteStmt) {
+                try {
+                    deleteStmt.close();
+                } catch (SQLException ex) {
+                }
+            }
+            if (null != insertStmt) {
+                try {
+                    insertStmt.close();
+                } catch (SQLException ex) {
+                }
+            }
         }
     }
 
