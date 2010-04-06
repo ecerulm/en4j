@@ -7,10 +7,12 @@ package com.rubenlaguna.en4j.sync;
 import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigInteger;
@@ -92,6 +94,10 @@ class FakeEDAM implements EDAMIf {
 
             public byte[] getData() {
                 return data;
+            }
+
+            public InputStream getDataAsInputStream() {
+                return new ByteArrayInputStream(data);
             }
 
             public byte[] getAlternateData() {

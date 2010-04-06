@@ -5,6 +5,8 @@
 package com.rubenlaguna.en4j.sync;
 
 import com.evernote.edam.type.Data;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,6 +30,11 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
             return null;
         }
         return data.getBody();
+    }
+
+    @Override
+    public InputStream getDataAsInputStream() {
+        return new ByteArrayInputStream(getData());
     }
 
     public byte[] getAlternateData() {

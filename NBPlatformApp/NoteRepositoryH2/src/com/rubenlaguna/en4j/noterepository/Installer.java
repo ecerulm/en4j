@@ -34,11 +34,11 @@ public class Installer extends ModuleInstall {
         }
         try {
             c.createStatement().execute("SET CACHE_SIZE 1024");
-            c.createStatement().execute("SET MAX_LOG_SIZE 0");
-            c.createStatement().execute("SET MAX_MEMORY_ROWS 0");
-            c.createStatement().execute("SET MAX_MEMORY_UNDO 0");
-            c.createStatement().execute("SET MAX_OPERATION_MEMORY 0");
-            c.createStatement().execute("SET UNDO_LOG 0");
+            c.createStatement().execute("SET MAX_LOG_SIZE 2");
+            c.createStatement().execute("SET MAX_MEMORY_ROWS 2");
+            c.createStatement().execute("SET MAX_MEMORY_UNDO 2");
+            c.createStatement().execute("SET MAX_OPERATION_MEMORY 100000");
+            c.createStatement().execute("SET UNDO_LOG 1");
             ResultSet rs = c.getMetaData().getTables(null, null, "%", null);
             boolean notesTableAlreadyExists = false;
 //            boolean resourcesTableAlreadyExists = false;

@@ -20,7 +20,6 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
-import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -358,7 +357,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
-                    final Reader docTikaReader = new Tika().parse(new ByteArrayInputStream(r.getData()), metadata);
+                    final Reader docTikaReader = new Tika().parse(r.getDataAsInputStream(), metadata);
                     document.add(new Field("all", docTikaReader));
                 } catch (Exception ex) {
                     LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");

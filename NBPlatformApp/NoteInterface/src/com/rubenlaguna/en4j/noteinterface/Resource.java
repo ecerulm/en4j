@@ -16,6 +16,7 @@
  */
 package com.rubenlaguna.en4j.noteinterface;
 
+import java.io.InputStream;
 import java.util.Date;
 
 /**
@@ -24,7 +25,9 @@ import java.util.Date;
  */
 public interface Resource {
 
-    byte[] getData();
+//    byte[] getData();
+
+    InputStream getDataAsInputStream();
 
     String getDataHash();
 

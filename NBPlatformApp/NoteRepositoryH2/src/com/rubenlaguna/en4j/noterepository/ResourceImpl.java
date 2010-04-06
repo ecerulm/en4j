@@ -118,6 +118,24 @@ class ResourceImpl implements Resource, Serializable {
 
         return null;
     }
+    public InputStream getDataAsInputStream() {
+        getLogger().info("resource guid:" + guid);
+        try {
+            PreparedStatement pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final Blob blob = rs.getBlob("DATA");
+                final InputStream is = blob.getBinaryStream();
+                return is;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        }
+
+        return null;
+    }
 
     public String getDataHash() {
         return datahash;

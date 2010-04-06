@@ -22,7 +22,6 @@ import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -91,7 +90,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     public Note get(int id) {
         final Note cached = (Note) softrefMapById.get(id);
         if (null != cached) {
-            LOG.info("cache hit note id:"+id);
+            LOG.info("cache hit note id:" + id);
             return cached;
         }
         try {
@@ -103,7 +102,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return null;
             }
             final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
-            softrefMapById.put(id,toReturn);
+            softrefMapById.put(id, toReturn);
             return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
@@ -118,7 +117,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     public Note getByGuid(String guid, boolean withContents) {
         final Note cached = (Note) softrefMapByGuid.get(guid);
         if (null != cached) {
-            LOG.info("cache hit note guid:"+guid);
+            LOG.info("cache hit note guid:" + guid);
             return cached;
         }
         try {
@@ -131,7 +130,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return null;
             }
             final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
-            softrefMapByGuid.put(guid,toReturn);
+            softrefMapByGuid.put(guid, toReturn);
             return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
@@ -200,8 +199,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setObject(2, r);
             insertStmt.setString(3, r.getNoteguid());
             insertStmt.setString(4, r.getDataHash());
-            insertStmt.setBinaryStream(5, new ByteArrayInputStream(resource.getData()));
-            LOG.info("inserting resource guid:" + guid + " size:" + resource.getData().length);
+            insertStmt.setBinaryStream(5, resource.getDataAsInputStream());
+            LOG.info("inserting resource guid:" + guid);
 
             final int rowCount = insertStmt.executeUpdate();
             if (rowCount == 1) {
@@ -209,16 +208,16 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
             return false;
         } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception while trying to insert resource " + resource.getGuid() + " size:" + resource.getData().length, sQLException);
+            LOG.log(Level.WARNING, "exception while trying to insert resource " + resource.getGuid(), sQLException);
 //            Exceptions.printStackTrace(sQLException);
             return false;
         }
     }
 
     public Resource getResource(String guid, String hash) {
-        final Resource cached = (Resource) resSoftMapByGuid.get(guid+hash);
+        final Resource cached = (Resource) resSoftMapByGuid.get(guid + hash);
         if (null != cached) {
-            LOG.info("cache hit resource parent guid:"+guid+" hash:"+hash);
+            LOG.info("cache hit resource parent guid:" + guid + " hash:" + hash);
             return cached;
         }
 
@@ -233,7 +232,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return null;
             }
             final Resource toReturn = (Resource) rs.getObject("SERIALIZEDOBJECT");
-            resSoftMapByGuid.put(guid+hash, toReturn);
+            resSoftMapByGuid.put(guid + hash, toReturn);
             return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
