@@ -28,30 +28,12 @@ import org.openide.util.Lookup;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class NoteImpl implements Note, Serializable {
+class NoteImpl implements Note {
 
-    private final String guid;
-    private final Date created;
-    private final Date deleted;
-    private final Collection<String> resourcesHashes = new ArrayList<String>();
-    private final String sourceurl;
-    private final String title;
-    private final int usn;
-    private final Date updated;
-    private final boolean active;
+    private final int id;
 
-    NoteImpl(NoteReader note) {
-        this.guid = note.getGuid();
-        this.created = note.getCreated();
-        this.deleted = note.getDeleted();
-        for (Resource r : note.getResources()) {
-            this.resourcesHashes.add(r.getDataHash());
-        }
-        this.sourceurl = note.getSourceurl();
-        this.title = note.getTitle();
-        this.usn = note.getUpdateSequenceNumber();
-        this.updated = note.getUpdated();
-        this.active = note.isActive();
+    NoteImpl(int id) {
+        this.id = id;
     }
 
     public String getContent() {
@@ -83,8 +65,8 @@ class NoteImpl implements Note, Serializable {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            pstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE GUID=?");
-            pstmt.setString(1, guid);
+            pstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?");
+            pstmt.setInt(1, id);
             rs = pstmt.executeQuery();
             if (rs.next()) {
                 final Reader characterStream = rs.getCharacterStream("CONTENT");
@@ -123,14 +105,22 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    public String getSourceurl() {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            pstmt = getConnection().prepareStatement("SELECT ID FROM NOTES WHERE GUID =?");
-            pstmt.setString(1, guid);
+            pstmt = getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?");
+            pstmt.setInt(1, id);
             rs = pstmt.executeQuery();
             if (rs.next()) {
-                final int toReturn = rs.getInt("ID");
+                final String toReturn = rs.getString("SOURCEURL");
                 return toReturn;
             }
         } catch (SQLException sQLException) {
@@ -150,17 +140,8 @@ class NoteImpl implements Note, Serializable {
                 }
             }
         }
+        return "";
 
-        return -1;
-
-    }
-
-    public void setId(Integer id) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    public String getSourceurl() {
-        return this.sourceurl;
     }
 
     public void setSourceurl(String sourceurl) {
@@ -168,7 +149,34 @@ class NoteImpl implements Note, Serializable {
     }
 
     public String getTitle() {
-        return this.title;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?");
+            pstmt.setInt(1, id);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String toReturn = rs.getString("TITLE");
+                return toReturn;
+            }
+        } catch (SQLException sQLException) {
+            getLogger().log(Level.WARNING, "exception caught:", sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+        return "";
     }
 
     public void setTitle(String title) {
@@ -176,7 +184,7 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Date getUpdated() {
-        return this.updated;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setUpdated(Date updated) {
@@ -184,11 +192,38 @@ class NoteImpl implements Note, Serializable {
     }
 
     public int getUpdateSequenceNumber() {
-        return this.usn;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?");
+            pstmt.setInt(1, id);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final int toReturn = rs.getInt("USN");
+                return toReturn;
+            }
+        } catch (SQLException sQLException) {
+            getLogger().log(Level.WARNING, "exception caught:", sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+        return -1;
     }
 
     public boolean isActive() {
-        return this.active;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setActive(boolean active) {
@@ -196,7 +231,7 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Date getDeleted() {
-        return this.deleted;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setDeleted(Date deleted) {
@@ -204,19 +239,70 @@ class NoteImpl implements Note, Serializable {
     }
 
     public Resource getResource(String hash) {
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(guid, hash);
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(getGuid(), hash);
     }
 
     public Collection<Resource> getResources() {
         List<Resource> toReturn = new ArrayList<Resource>();
-        for (String hash : resourcesHashes) {
-            toReturn.add(getResource(hash));
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?");
+            pstmt.setString(1, getGuid());
+            rs = pstmt.executeQuery();
+            while (rs.next()) {
+                final String hash = rs.getString("HASH");
+                toReturn.add(getResource(hash));
+            }
+        } catch (SQLException sQLException) {
+            getLogger().log(Level.WARNING, "exception caught:", sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
         }
         return toReturn;
     }
 
     public String getGuid() {
-        return this.guid;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?");
+            pstmt.setInt(1, id);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String toReturn = rs.getString("GUID");
+                return toReturn;
+            }
+        } catch (SQLException sQLException) {
+            getLogger().log(Level.WARNING, "exception caught:", sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+        return "";
     }
 
     private Connection getConnection() {

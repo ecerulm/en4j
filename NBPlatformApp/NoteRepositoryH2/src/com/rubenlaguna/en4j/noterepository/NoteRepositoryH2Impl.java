@@ -51,14 +51,6 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     private final Map resSoftMapByGuid = new SoftHashMap();
 
     public NoteRepositoryH2Impl() {
-        //            c.createStatement().execute(
-        //                  "CREATE CACHED TABLE NOTES ("
-        //                        + "ID INTEGER NOT NULL, "
-        //                        + "ISACTIVE BIT NOT NULL, "
-        //                        + "GUID VARCHAR(36) NOT NULL,"
-        //                        + "SERIALIZEDOBJECT OTHER, "
-        //                        + "PRIMARY KEY (ID), "
-        //                        + "CONSTRAINT UNQ_GUID UNIQUE (GUID))");
         this.connection = com.rubenlaguna.en4j.noterepository.Installer.c;
     }
 
@@ -75,10 +67,11 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES");
+            pstmt = connection.prepareStatement("SELECT ID FROM NOTES");
             rs = pstmt.executeQuery();
             while (rs.next()) {
-                toReturn.add((Note) rs.getObject("SERIALIZEDOBJECT"));
+                final int id = rs.getInt("ID");
+                toReturn.add(get(id));
             }
         } catch (SQLException ex) {
             Exceptions.printStackTrace(ex);
@@ -110,37 +103,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             LOG.info("cache hit note id:" + id);
             return cached;
         }
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM NOTES WHERE ID = ?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (!rs.next()) {
-                LOG.info("No entry found with id = " + id);
-                return null;
-            }
-            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
-            softrefMapById.put(id, toReturn);
-            return toReturn;
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-            return null;
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
+        final Note toReturn = new NoteImpl(id);
+        softrefMapById.put(id, toReturn);
+        return toReturn;
     }
 
     public Note get(int id, boolean withContents) {
@@ -217,19 +182,23 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     private boolean insertNote(NoteReader note) {
+        PreparedStatement deleteStmt = null;
+        PreparedStatement insertStmt = null;
         try {
-            NoteImpl n = new NoteImpl(note);
-            String guid = n.getGuid();
-            PreparedStatement deleteStmt = connection.prepareStatement("DELETE FROM NOTES WHERE GUID=?");
+            String guid = note.getGuid();
+
+            deleteStmt = connection.prepareStatement("DELETE FROM NOTES WHERE GUID=?");
             deleteStmt.setString(1, guid);
             deleteStmt.executeUpdate();
-            PreparedStatement insertStmt = this.connection.prepareStatement("INSERT INTO NOTES VALUES(NULL,?,?,?,?)");
-            insertStmt.setBoolean(1, n.isActive());
+            insertStmt = this.connection.prepareStatement("INSERT INTO NOTES (ID,ISACTIVE,GUID,CONTENT,TITLE,SOURCEURL,USN) VALUES(NULL,?,?,?,?,?,?)");
+            insertStmt.setBoolean(1, note.isActive());
             insertStmt.setString(2, guid);
-            insertStmt.setObject(3, n);
-            insertStmt.setCharacterStream(4, note.getContentAsReader());
+            insertStmt.setCharacterStream(3, note.getContentAsReader());
+            insertStmt.setString(4, note.getTitle());
+            insertStmt.setString(5, note.getSourceurl());
+            insertStmt.setInt(6, note.getUpdateSequenceNumber());
+
             final int rowCount = insertStmt.executeUpdate();
-            insertStmt.close();
             if (rowCount != 1) {
                 return false;
             }
@@ -237,6 +206,19 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         } catch (SQLException ex) {
             Exceptions.printStackTrace(ex);
             return false;
+        } finally {
+            if (null != insertStmt) {
+                try {
+                    insertStmt.close();
+                } catch (SQLException ex) {
+                }
+            }
+            if (null != deleteStmt) {
+                try {
+                    deleteStmt.close();
+                } catch (SQLException ex) {
+                }
+            }
         }
     }
 
@@ -289,12 +271,14 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             return cached;
         }
 
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         try {
             LOG.info("searching resource with parent guid: " + guid + " and hash: " + hash);
-            PreparedStatement pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
+            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
             pstmt.setString(1, guid);
             pstmt.setString(2, hash);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
             if (!rs.next()) {
                 LOG.info("There is no entry in the db  with guid: " + guid);
                 return null;
@@ -305,6 +289,19 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
             return null;
+        } finally {
+            if (null != rs) {
+                try {
+                    rs.close();
+                } catch (SQLException ex) {
+                }
+            }
+            if (null != pstmt) {
+                try {
+                    pstmt.close();
+                } catch (SQLException ex) {
+                }
+            }
         }
     }
 }

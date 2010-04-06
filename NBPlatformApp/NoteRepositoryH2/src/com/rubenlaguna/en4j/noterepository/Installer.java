@@ -57,9 +57,11 @@ public class Installer extends ModuleInstall {
                         + "ID IDENTITY, "
                         + "ISACTIVE BIT NOT NULL, "
                         + "GUID CHAR(36) NOT NULL,"
-                        + "SERIALIZEDOBJECT OTHER, "
+//                        + "SERIALIZEDOBJECT OTHER, "
                         + "CONTENT CLOB(5242880) NOT NULL,"
-                        //                        + "PRIMARY KEY (ID), "
+                        + "TITLE VARCHAR NOT NULL,"
+                        + "SOURCEURL VARCHAR,"
+                        + "USN INT NOT NULL,"
                         + "CONSTRAINT UNQ_GUID UNIQUE (GUID))");
                 LOG.info("CREATE RESOURCES table.");
 
