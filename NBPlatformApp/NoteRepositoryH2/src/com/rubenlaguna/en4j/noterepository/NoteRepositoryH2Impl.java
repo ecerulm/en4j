@@ -100,7 +100,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     public Note get(int id) {
         final Note cached = (Note) softrefMapById.get(id);
         if (null != cached) {
-            LOG.info("cache hit note id:" + id);
+            LOG.fine("cache hit note id:" + id);
             return cached;
         }
         final Note toReturn = new NoteImpl(id);
@@ -115,7 +115,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     public Note getByGuid(String guid, boolean withContents) {
         final Note cached = (Note) softrefMapByGuid.get(guid);
         if (null != cached) {
-            LOG.info("cache hit note guid:" + guid);
+            LOG.fine("cache hit note guid:" + guid);
             return cached;
         }
 
@@ -226,17 +226,18 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         PreparedStatement deleteStmt = null;
         PreparedStatement insertStmt = null;
         try {
-            ResourceImpl r = new ResourceImpl(resource);
-            String guid = r.getGuid();
+            String guid = resource.getGuid();
             deleteStmt = connection.prepareStatement("DELETE FROM RESOURCES WHERE GUID=?");
             deleteStmt.setString(1, guid);
             deleteStmt.executeUpdate();
-            insertStmt = this.connection.prepareStatement("INSERT INTO RESOURCES VALUES(?,?,?,?,?)");
+            insertStmt = this.connection.prepareStatement("INSERT INTO RESOURCES (GUID,OWNERGUID,HASH,DATA,FILENAME,MIME,RECOGNITION) VALUES(?,?,?,?,?,?,?)");
             insertStmt.setString(1, guid);
-            insertStmt.setObject(2, r);
-            insertStmt.setString(3, r.getNoteguid());
-            insertStmt.setString(4, r.getDataHash());
-            insertStmt.setBinaryStream(5, resource.getDataAsInputStream());
+            insertStmt.setString(2, resource.getNoteguid());
+            insertStmt.setString(3, resource.getDataHash());
+            insertStmt.setBinaryStream(4, resource.getDataAsInputStream());
+            insertStmt.setString(5, resource.getFilename());
+            insertStmt.setString(6, resource.getMime());
+            insertStmt.setBytes(7, resource.getRecognition());
             LOG.info("inserting resource guid:" + guid);
 
             final int rowCount = insertStmt.executeUpdate();
@@ -246,7 +247,6 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             return false;
         } catch (SQLException sQLException) {
             LOG.log(Level.WARNING, "exception while trying to insert resource " + resource.getGuid(), sQLException);
-//            Exceptions.printStackTrace(sQLException);
             return false;
         } finally {
             if (null != deleteStmt) {
@@ -275,7 +275,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         ResultSet rs = null;
         try {
             LOG.info("searching resource with parent guid: " + guid + " and hash: " + hash);
-            pstmt = connection.prepareStatement("SELECT SERIALIZEDOBJECT FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
+            pstmt = connection.prepareStatement("SELECT GUID FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
             pstmt.setString(1, guid);
             pstmt.setString(2, hash);
             rs = pstmt.executeQuery();
@@ -283,7 +283,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 LOG.info("There is no entry in the db  with guid: " + guid);
                 return null;
             }
-            final Resource toReturn = (Resource) rs.getObject("SERIALIZEDOBJECT");
+            final String resguid = rs.getString("GUID");
+            final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByGuid.put(guid + hash, toReturn);
             return toReturn;
         } catch (SQLException sQLException) {

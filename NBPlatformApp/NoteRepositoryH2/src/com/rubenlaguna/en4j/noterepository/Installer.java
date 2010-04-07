@@ -66,13 +66,17 @@ public class Installer extends ModuleInstall {
                 LOG.info("CREATE RESOURCES table.");
 
                 c.createStatement().execute("CREATE TABLE RESOURCES ("
-                        + "GUID CHAR(36) NOT NULL,"
-                        + "SERIALIZEDOBJECT OTHER, "
+                        + "GUID CHAR(36) NOT NULL PRIMARY KEY,"
+//                        + "SERIALIZEDOBJECT OTHER, "
                         + "OWNERGUID CHAR(36), "
                         + "HASH CHAR(32), "
                         + "DATA BLOB, "
+                        + "FILENAME VARCHAR, "
+                        + "MIME VARCHAR, "
+                        + "RECOGNITION BINARY, "
                         + "CONSTRAINT UNQ_GUID_RES UNIQUE (GUID))");
                 c.createStatement().execute("CREATE INDEX I_RSOURCS_OWNER ON RESOURCES (OWNERGUID)");
+                c.createStatement().execute("CREATE INDEX I_NOTES_GUID ON NOTES (GUID)");
             } else {
                 LOG.info("NOTES table is already there no need to execute CREATE statement");
             }

@@ -200,11 +200,15 @@ class EvernoteProtocolUtil implements EDAMIf {
             SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
             updateCount.set(sc.getUpdateCount());
             Collection<NoteInfo> toReturn = new ArrayList<NoteInfo>();
-            for (Note note : sc.getNotes()) {
-                NoteInfo ni = new NoteInfo();
-                ni.guid = note.getGuid();
-                ni.usn = note.getUpdateSequenceNum();
-                toReturn.add(ni);
+            if (sc.getNotes() != null) {
+                for (Note note : sc.getNotes()) {
+                    NoteInfo ni = new NoteInfo();
+                    ni.guid = note.getGuid();
+                    ni.usn = note.getUpdateSequenceNum();
+                    toReturn.add(ni);
+                }
+            } else {
+                LOG.info("sc.getNotes() is null");
             }
             return toReturn;
         } catch (Exception ex) {

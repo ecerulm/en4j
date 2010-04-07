@@ -24,57 +24,26 @@ import org.openide.util.Exceptions;
  */
 class ResourceImpl implements Resource, Serializable {
 
-//    private  transient Logger LOG = Logger.getLogger(ResourceImpl.class.getName());
-    private final byte[] alternateData;
-    private final double altitude;
-    private final String cameraMake;
-    private final String cameraModel;
-//    private final byte[] data;
-    private final String datahash;
-    private final double latitude;
-    private final double longitude;
-    private final String filename;
     private final String guid;
-    private final String mime;
-    private final String noteguid;
-    private final boolean premiumattachment;
-    private final byte[] recognition;
-    private final Date timestamp;
-    private final String alternateDataHash;
 
-    public ResourceImpl(Resource resource) {
-        this.alternateData = resource.getAlternateData();
-        this.alternateDataHash = resource.getAlternateDataHash();
-        this.altitude = resource.getAltitude();
-        this.cameraMake = resource.getCameraMake();
-        this.cameraModel = resource.getCameraModel();
-//        this.data = resource.getData();
-        this.datahash = resource.getDataHash();
-        this.filename = resource.getFilename();
-        this.guid = resource.getGuid();
-        this.latitude = resource.getLatitude();
-        this.longitude = resource.getLongitude();
-        this.mime = resource.getMime();
-        this.noteguid = resource.getNoteguid();
-        this.premiumattachment = resource.getPremiumAttachment();
-        this.recognition = resource.getRecognition();
-        this.timestamp = resource.getTimestamp();
+    public ResourceImpl(String guid) {
+        this.guid = guid;
     }
 
     public byte[] getAlternateData() {
-        return alternateData;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public double getAltitude() {
-        return altitude;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public String getCameraMake() {
-        return cameraMake;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public String getCameraModel() {
-        return cameraModel;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public byte[] getData() {
@@ -175,15 +144,73 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public String getDataHash() {
-        return datahash;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String hash = rs.getString("HASH");
+                return hash;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
+        return "";
     }
 
     public String getAlternateDataHash() {
-        return alternateDataHash;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public String getFilename() {
-        return filename;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String hash = rs.getString("FILENAME");
+                return hash;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
+        return "";
     }
 
     public String getGuid() {
@@ -191,31 +218,120 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public double getLatitude() {
-        return latitude;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public double getLongitude() {
-        return longitude;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public String getMime() {
-        return mime;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String hash = rs.getString("MIME");
+                return hash;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
+        return "";
+
     }
 
     public String getNoteguid() {
-        return noteguid;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final String hash = rs.getString("OWNERGUID");
+                return hash;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
+        return "";
+
     }
 
     public boolean getPremiumAttachment() {
-        return premiumattachment;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public byte[] getRecognition() {
-        return recognition;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        try {
+            pstmt = getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?");
+            pstmt.setString(1, guid);
+            rs = pstmt.executeQuery();
+            if (rs.next()) {
+                final byte[] toReturn = rs.getBytes("RECOGNITION");
+                return toReturn;
+            }
+
+        } catch (SQLException sQLException) {
+            Exceptions.printStackTrace(sQLException);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+
+        return null;
     }
 
     public Date getTimestamp() {
-        return timestamp;
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     private Connection getConnection() {
