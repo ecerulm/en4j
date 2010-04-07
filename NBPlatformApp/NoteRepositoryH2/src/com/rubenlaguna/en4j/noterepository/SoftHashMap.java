@@ -28,7 +28,7 @@ public class SoftHashMap extends AbstractMap {
     }
 
     @Override
-    public Object get(Object key) {
+    public synchronized Object get(Object key) {
         Object result = null;
         // We get the SoftReference represented by that key
         SoftReference soft_ref = (SoftReference) hash.get(key);
@@ -79,7 +79,7 @@ public class SoftHashMap extends AbstractMap {
     /** Here we go through the ReferenceQueue and remove garbage
     collected SoftValue objects from the HashMap by looking them
     up using the SoftValue.key data member. */
-    private void processQueue() {
+    private synchronized void processQueue() {
         SoftValue sv;
         while ((sv = (SoftValue) queue.poll()) != null) {
             hash.remove(sv.key); // we can access private data!
@@ -88,17 +88,17 @@ public class SoftHashMap extends AbstractMap {
 
     /** Here we put the key, value pair into the HashMap using
     a SoftValue object. */
-    public Object put(Object key, Object value) {
+    public synchronized Object put(Object key, Object value) {
         processQueue(); // throw out garbage collected values first
         return hash.put(key, new SoftValue(value, key, queue));
     }
 
-    public Object remove(Object key) {
+    public synchronized Object remove(Object key) {
         processQueue(); // throw out garbage collected values first
         return hash.remove(key);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         hardCache.clear();
         processQueue(); // throw out garbage collected values
         hash.clear();
