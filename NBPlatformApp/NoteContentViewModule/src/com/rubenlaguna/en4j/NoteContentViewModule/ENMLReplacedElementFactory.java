@@ -18,10 +18,13 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.awt.Image;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import org.w3c.dom.Element;
@@ -99,10 +102,10 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
     }
 
     private boolean isImage(final String type) {
-        boolean toReturn =false;
-        toReturn = toReturn ||"image/jpeg".equalsIgnoreCase(type);
-        toReturn = toReturn ||"image/gif".equalsIgnoreCase(type);
-        toReturn = toReturn ||"image/png".equalsIgnoreCase(type);
+        boolean toReturn = false;
+        toReturn = toReturn || "image/jpeg".equalsIgnoreCase(type);
+        toReturn = toReturn || "image/gif".equalsIgnoreCase(type);
+        toReturn = toReturn || "image/png".equalsIgnoreCase(type);
         return toReturn;
     }
 
@@ -133,16 +136,25 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //TODO: add a real implementation that returns an image
         ReplacedElement toReturn = null;
 
-        //JTextArea cc = new JTextArea();
-        //NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-        byte[] imageData = getImage(hash);
-        if (null == imageData) {
-            return null;
+        InputStream is = getImage(hash);
+        Image image = null;
+        if (is == null) {
+            return brokenImage(context, 100, 100);
         }
-        ImageIcon icon = new ImageIcon(imageData);
+        try {
+            image = ImageIO.read(is);
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "exception caught:", e);
+        } finally {
+            try {
+                is.close();
+            } catch (IOException e) {
+            }
+        }
+
+        ImageIcon icon = new ImageIcon(image);
+
         JLabel cc = new JLabel(icon);
-        //cc.setText("Missing implementation for en-media");
-        //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
 
         context.getCanvas().add(cc);
@@ -158,14 +170,22 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    private byte[] getImage(String hash) {
+    private InputStream getImage(String hash) {
         assert (null != this.note);
         final Resource resource = this.note.getResource(hash);
         if (null == resource) {
             return null;
         }
-        return resource.getData();
+        return resource.getDataAsInputStream();
     }
+//    private byte[] getImage(String hash) {
+//        assert (null != this.note);
+//        final Resource resource = this.note.getResource(hash);
+//        if (null == resource) {
+//            return null;
+//        }
+//        return resource.getData();
+//    }
 
     void setNote(Note n) {
         if (null == n) {

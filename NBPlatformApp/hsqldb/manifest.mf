@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-OpenIDE-Module: com.rubenlaguna.en4j.hsqldb
-OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/hsqldb/Bundle.properties
-OpenIDE-Module-Specification-Version: 2.0.0
-

@@ -3,11 +3,11 @@
     <type>org.netbeans.modules.apisupport.project</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/nb-module-project/3">
-            <code-name-base>com.rubenlaguna.en4j.sync</code-name-base>
+            <code-name-base>com.rubenlaguna.en4j.noterepository</code-name-base>
             <suite-component/>
             <module-dependencies>
                 <dependency>
-                    <code-name-base>com.rubenlaguna.en4j.evernoteapi</code-name-base>
+                    <code-name-base>com.rubenlaguna.commons.collections</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
@@ -23,6 +23,14 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>com.rubenlaguna.en4j.jaxb</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>1.0</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>com.rubenlaguna.en4j.noteinterface</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -31,54 +39,12 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
-                    <code-name-base>com.rubenlaguna.en4j.thrift</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>0.2</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.jdesktop.beansbinding</code-name-base>
+                    <code-name-base>org.netbeans.api.progress</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
                     <run-dependency>
                         <release-version>1</release-version>
-                        <specification-version>1.5.1.121</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.jdesktop.layout</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <release-version>1</release-version>
-                        <specification-version>1.10.1.103</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.netbeans.modules.options.api</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <release-version>1</release-version>
-                        <specification-version>1.16.1</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.openide.actions</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>6.12.1.1</specification-version>
-                    </run-dependency>
-                </dependency>
-                <dependency>
-                    <code-name-base>org.openide.awt</code-name-base>
-                    <build-prerequisite/>
-                    <compile-dependency/>
-                    <run-dependency>
-                        <specification-version>7.19.1.1</specification-version>
+                        <specification-version>1.15.1.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -100,8 +66,8 @@
             </module-dependencies>
             <public-packages/>
             <class-path-extension>
-                <runtime-relative-path>ext/jgram.jar</runtime-relative-path>
-                <binary-origin>release/modules/ext/jgram.jar</binary-origin>
+                <runtime-relative-path>ext/h2-1.2.131.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/h2-1.2.131.jar</binary-origin>
             </class-path-extension>
         </data>
     </configuration>

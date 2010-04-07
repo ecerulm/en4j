@@ -26,7 +26,7 @@ import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.StringReader;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,16 +47,15 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
-import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
@@ -191,7 +190,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
                 @Override
                 public void collect(int doc) throws IOException {
-                    int scoreId = doc+docBase;
+                    int scoreId = doc + docBase;
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
@@ -234,7 +233,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 if (null != note) {
                     try {
                         document = getLuceneDocument(note);
-                        IndexWriterFactory.getIndexWriter().addDocument(document);
+                        IndexWriterFactory.getIndexWriter().updateDocument(new Term("id", n.getId().toString()), document);
                         if (!pendingCommit) {
                             pendingCommit = true;
                             LOG.info("scheduling COMMITER");
@@ -358,12 +357,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
-                    final String parseResourceText = new Tika().parseToString(new ByteArrayInputStream(r.getData()), metadata);
-                    if (!"".equals(parseResourceText)) {
-                        LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle() + "\n parseResourceText (" + r.getMime() + "): " + parseResourceText.substring(0, Math.min(200, parseResourceText.length())).trim());
-                    }
-                    allText.append(parseResourceText);
-                } catch (TikaException ex) {
+                    final Reader docTikaReader = new Tika().parse(r.getDataAsInputStream(), metadata);
+                    document.add(new Field("all", docTikaReader));
+                } catch (Exception ex) {
                     LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
                 }
             }
@@ -389,7 +385,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         //JTidy or NekoHTML to parse the thlm
         DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
         DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new StringReader(note.getContent())), node);
+        domParser.parse(new InputSource(note.getContentAsReader()), node);
         return node;
     }
 

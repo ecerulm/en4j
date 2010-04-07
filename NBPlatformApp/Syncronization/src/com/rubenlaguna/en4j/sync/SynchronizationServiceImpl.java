@@ -16,15 +16,13 @@
  */
 package com.rubenlaguna.en4j.sync;
 
-import com.evernote.edam.notestore.SyncChunk;
-import com.evernote.edam.type.Note;
-import com.evernote.edam.userstore.UserStore;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -35,7 +33,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.thrift.transport.TTransportException;
 import org.openide.util.Lookup;
 import org.openide.util.NbPreferences;
 
@@ -50,32 +47,41 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private final Logger LOG = Logger.getLogger(SynchronizationServiceImpl.class.getName());
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
-    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2));
+    private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2), new ThreadPoolExecutor.CallerRunsPolicy());
     //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
+    private final EDAMIf util;
 
     public SynchronizationServiceImpl() {
         com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
+        final String fakeEDAM = System.getProperty("fakeEDAM");
+
+        System.out.println("fakeEDAM =" + fakeEDAM);
+
+        if (fakeEDAM != null) {
+            util = new FakeEDAM(fakeEDAM);
+        } else {
+            util = EvernoteProtocolUtil.getInstance();
+        }
     }
 
     @Override
-    public boolean sync() {
-        // Set up the UserStore and check that we can talk to the server
+    public boolean sync() { // Set up the UserStore and check that we can talk to the server
+        setPendingRemoteUpdateNotes(-1);
         try {
-            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
-            UserStore.Client userStore = util.getUserStore();
-            boolean versionOk = userStore.checkVersion("Evernote's EDAMDemo (Java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
+            setSyncFailed(false);
+            boolean versionOk = util.checkVersion();
             if (!versionOk) {
                 LOG.warning("Incompatible EDAM client protocol version");
+                setSyncFailed(true);
                 return false;
             }
 
-            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+//            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
             boolean errorDetected = false;
             boolean moreNotesToDownload = true;
-            setSyncFailed(false);
             do {
                 int highestUSN = getHighestUSN();
                 LOG.info("highest updateSequenceNumber in the database = " + highestUSN);
@@ -85,14 +91,17 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 if (isFirstSync) {
                     LOG.info("This is still the first sync.");
                 }
-                SyncChunk sc = util.getValidNoteStore().getSyncChunk(util.getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, isFirstSync);
-                LOG.info("SyncChunk retrieved");
-                int pendingUpdates = sc.getUpdateCount() - highestUSN;
+//                SyncChunk sc = util.getValidNoteStore().getSyncChunk(util.getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, isFirstSync);
+//                LOG.info("SyncChunk retrieved");
+
+//                int pendingUpdates = sc.getUpdateCount() - highestUSN;
+                Collection<NoteInfo> sc = util.getSyncChunk(highestUSN, MAX_QUEUED_NOTES, isFirstSync);
+                int pendingUpdates = util.getUpdateCount() - highestUSN;
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
                 final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
-                final Iterator<Note> notesIterator = sc.getNotesIterator();
-                if (null != notesIterator) {
+                if (sc.size() > 0) {
+                    final Iterator<NoteInfo> notesIterator = sc.iterator();
                     retrieveNotesAsync(notesIterator, tasks);
                     if (!waitForAllTaskToComplete(tasks)) {
                         for (Future<Boolean> future : tasks) {
@@ -101,7 +110,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                         errorDetected = true;
                         setSyncFailed(true);
                     } else {
-                        setUSN(sc.getChunkHighUSN());
+                        int husn = getHighestUsnInCollection(sc);
+                        setUSN(husn);
                     }
                 } else {
                     LOG.info("No notes to download");
@@ -116,10 +126,20 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         }
     }
 
-    private void retrieveNotesAsync(final Iterator<Note> notesIterator, final List<Future<Boolean>> tasks) {
+    private int getHighestUsnInCollection(Collection<NoteInfo> sc) {
+        int husn = 0;
+        for (NoteInfo noteInfo : sc) {
+            if (noteInfo.usn > husn) {
+                husn = noteInfo.usn;
+            }
+        }
+        return husn;
+    }
+
+    private void retrieveNotesAsync(final Iterator<NoteInfo> notesIterator, final List<Future<Boolean>> tasks) {
         while (notesIterator.hasNext()) {
-            final Note noteWithoutContents = notesIterator.next();
-            Callable<Boolean> callable = new RetrieveAndAddNoteTask(noteWithoutContents);
+            final NoteInfo note = notesIterator.next();
+            Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
             //TODO: java.util.concurrent.RejectedExecutionException
             final Future<Boolean> task = RP.submit(callable);
             tasks.add(task);
@@ -234,36 +254,40 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 class RetrieveAndAddNoteTask implements Callable<Boolean> {
 
     private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
-    private Note noteWithoutContents = null;
+    private final String noteGuid;
+    private final int usn;
+    private final EDAMIf util;
 
-    RetrieveAndAddNoteTask(Note noteWithoutContents) {
-        this.noteWithoutContents = noteWithoutContents;
+    RetrieveAndAddNoteTask(NoteInfo note, EDAMIf util) {
+        this.noteGuid = note.guid;
+        this.usn = note.usn;
+        this.util = util;
     }
 
     @Override
     public Boolean call() throws Exception {
         long start = System.currentTimeMillis();
         if (!isUpToDate()) {
-            LOG.fine("Start downloading note " + noteWithoutContents.getGuid());
-            EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
-            Note note = null;
+            LOG.fine("Start downloading note " + noteGuid);
+            //EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
+            com.rubenlaguna.en4j.noteinterface.NoteReader note = null;
             try {
-                note = util.getValidNoteStore().getNote(util.getValidAuthToken(), noteWithoutContents.getGuid(), true, true, true, true);
-            } catch (TTransportException ex) {
-                LOG.log(Level.WARNING, "Couldn't retrieve note " + noteWithoutContents.getGuid(), ex);
+                note = util.getNote(noteGuid, true, true, true, true);
+            } catch (Exception ex) {
+                LOG.log(Level.WARNING, "Couldn't retrieve note " + noteGuid, ex);
                 return null;
             }
             long delta = System.currentTimeMillis() - start;
             final String guid = note.getGuid();
             LOG.info("It took " + delta + " ms" + " to download note " + guid);
-            final NoteAdapter noteAdapter = new NoteAdapter(note);
-            return addToDb(noteAdapter);
+//            final NoteAdapter noteAdapter = new NoteAdapter(note);
+            return addToDb(note);
         } else {
             return true;
         }
     }
 
-    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Note note) {
+    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.NoteReader note) {
         final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
         final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         boolean suceeded = nr.add(note);
@@ -283,7 +307,8 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     }
 
     private boolean isUpToDate() {
+//        return false;
         final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-        return nr.isUpToDate(noteWithoutContents.getGuid(), noteWithoutContents.getUpdateSequenceNum());
+        return nr.isNoteUpToDate(noteGuid, usn);
     }
 }

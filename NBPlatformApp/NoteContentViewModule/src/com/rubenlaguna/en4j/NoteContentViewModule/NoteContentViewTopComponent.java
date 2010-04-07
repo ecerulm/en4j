@@ -20,8 +20,7 @@ import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
+import java.io.Reader;
 import java.util.Collection;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,19 +33,12 @@ import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ImageUtilities;
 import org.netbeans.api.settings.ConvertAsProperties;
-import org.openide.awt.NotificationDisplayer;
 import org.openide.util.Lookup;
 import org.openide.util.LookupListener;
 import org.openide.util.Utilities;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xhtmlrenderer.extend.ReplacedElementFactory;
 import org.xhtmlrenderer.simple.XHTMLPanel;
-import org.xhtmlrenderer.simple.extend.XhtmlCssOnlyNamespaceHandler;
 import org.xhtmlrenderer.simple.extend.XhtmlNamespaceHandler;
-import org.xhtmlrenderer.swing.NoNamespaceHandler;
 import org.xhtmlrenderer.swing.SwingReplacedElementFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -145,10 +137,10 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
 
                 // Create the builder and parse the file
-                String content = n.getContent();
+                Reader content = n.getContentAsReader();
                 if (null!=content) {
                     try {
-                    Document doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(content)));
+                    Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
                     panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
                     } catch (NullPointerException ex) {
                         LOG.warning("NPE when trying to process: "+content);
@@ -161,11 +153,11 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             }
         } catch (SAXException e) {
             // A parsing error occurred; the xml input is not valid
-            Logger.getLogger(getName()).log(Level.SEVERE, "Excepton", e);
+            Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
         } catch (ParserConfigurationException e) {
-            Logger.getLogger(getName()).log(Level.SEVERE, "Excepton", e);
+            Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
         } catch (IOException e) {
-            Logger.getLogger(getName()).log(Level.SEVERE, "Excepton", e);
+            Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
 
         }
 

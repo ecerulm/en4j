@@ -18,6 +18,8 @@ package com.rubenlaguna.en4j.sync;
 
 import com.evernote.edam.type.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author ecerulm
  */
-class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
+class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.NoteReader {
 
     private final Note adaptee;
     private final Logger LOG = Logger.getLogger(NoteAdapter.class.getName());
@@ -38,8 +40,11 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
         this.adaptee = note;
     }
 
-    public String getContent() {
-        return adaptee.getContent();
+//    public String getContent() {
+//        return adaptee.getContent();
+//    }
+    public Reader getContentAsReader() {
+        return new StringReader(adaptee.getContent());
     }
 
     public void setContent(String content) {

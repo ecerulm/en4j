@@ -2,17 +2,22 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.rubenlaguna.en4j.sync;
 
 import com.evernote.edam.error.EDAMSystemException;
 import com.evernote.edam.error.EDAMUserException;
 import com.evernote.edam.notestore.NoteStore;
+import com.evernote.edam.notestore.SyncChunk;
+import com.evernote.edam.type.Note;
 import com.evernote.edam.type.User;
 import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.UserStore;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
@@ -30,7 +35,7 @@ import org.openide.util.NbPreferences;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
- class EvernoteProtocolUtil {
+class EvernoteProtocolUtil implements EDAMIf {
 
     private final Logger LOG = Logger.getLogger(EvernoteProtocolUtil.class.getName());
 //    private final String userStoreUrl = "https://sandbox.evernote.com/edam/user";
@@ -48,6 +53,7 @@ import org.openide.util.NbPreferences;
     private final String consumerSecret = "IP/dKyK3226VyqE1ndtj8/JyUwYt1kOq";
     private String a;
     private String b;
+    private static final ThreadLocal<Integer> updateCount = new ThreadLocal<Integer>();
     private static final ThreadLocal<NoteStore.Client> currentNoteStore = new ThreadLocal<NoteStore.Client>();
     private static final ThreadLocal<AuthenticationResult> currentAuthResult = new ThreadLocal<AuthenticationResult>();
     private static final ThreadLocal<UserStore.Client> currentUserStore = new ThreadLocal<UserStore.Client>();
@@ -117,18 +123,18 @@ import org.openide.util.NbPreferences;
         return currentAuthResult.get();
     }
 
-    public String getValidAuthToken() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
+    private String getValidAuthToken() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
         //Check is the current authToken is about to expire
         if (isAboutToExpire() || "".equals(currentAuthToken.get())) {
             AuthenticationResult authResult = getValidAuthenticationResult();
-            User user = authResult.getUser();
+//            User user = authResult.getUser();
             currentAuthToken.set(authResult.getAuthenticationToken());
             LOG.fine("new authtoken: \"" + currentAuthToken + "\"");
-        } 
+        }
         return currentAuthToken.get();
     }
 
-    public NoteStore.Client getValidNoteStore() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
+    private NoteStore.Client getValidNoteStore() throws TTransportException, EDAMUserException, EDAMSystemException, TException {
         if (isAboutToExpire()) {
             // Set up the NoteStore
             AuthenticationResult authResult = getValidAuthenticationResult();
@@ -140,7 +146,7 @@ import org.openide.util.NbPreferences;
             }
             THttpClient noteStoreTrans = new THttpClient(noteStoreUrl.get());
             noteStoreTrans.setConnectTimeout(30000); //30s
-            noteStoreTrans.setReadTimeout(180*1000);//180s
+            noteStoreTrans.setReadTimeout(180 * 1000);//180s
             TBinaryProtocol noteStoreProt = new TBinaryProtocol(noteStoreTrans);
             currentNoteStore.set(new NoteStore.Client(noteStoreProt, noteStoreProt));
 
@@ -154,6 +160,7 @@ import org.openide.util.NbPreferences;
         boolean isExpired = msToExpiration < (5 * 60 * 1000L);
         return isExpired;
     }
+
     private boolean isExpired() {
         final long msToExpiration = expirationTime.get() - System.currentTimeMillis();
         LOG.fine("auth is valid for " + msToExpiration / 1000.0 + " seconds more (" + (msToExpiration / (1000.0 * 60)) + " minutes)");
@@ -161,7 +168,7 @@ import org.openide.util.NbPreferences;
         return isExpired;
     }
 
-    public UserStore.Client getUserStore() throws TTransportException {
+    private UserStore.Client getUserStore() throws TTransportException {
         if (null == currentUserStore.get()) {
             THttpClient userStoreTrans = new THttpClient(userStoreUrl);
             TBinaryProtocol userStoreProt = new TBinaryProtocol(userStoreTrans);
@@ -175,6 +182,51 @@ import org.openide.util.NbPreferences;
         long authValidityPeriod = currentAuthResult.getExpiration() - currentAuthResult.getCurrentTime();
         LOG.info("New AuthenticationResult valid for " + authValidityPeriod / 1000.0 + " secs.");
         expirationTime.set(authStartTime + authValidityPeriod);
+    }
+
+    @Override
+    public boolean checkVersion() {
+        try {
+            return getUserStore().checkVersion("en4j (evernote for java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "exception caught:", ex);
+        }
+        return false;
+    }
+
+    @Override
+    public Collection<NoteInfo> getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) {
+        try {
+            SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
+            updateCount.set(sc.getUpdateCount());
+            Collection<NoteInfo> toReturn = new ArrayList<NoteInfo>();
+            if (sc.getNotes() != null) {
+                for (Note note : sc.getNotes()) {
+                    NoteInfo ni = new NoteInfo();
+                    ni.guid = note.getGuid();
+                    ni.usn = note.getUpdateSequenceNum();
+                    toReturn.add(ni);
+                }
+            } else {
+                LOG.info("sc.getNotes() is null");
+            }
+            return toReturn;
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "exception caught:", ex);
+        }
+        return Collections.EMPTY_LIST;
+    }
+
+    @Override
+    public int getUpdateCount() {
+        return updateCount.get();
+    }
+
+    @Override
+    public com.rubenlaguna.en4j.noteinterface.NoteReader getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
+        Note n = getValidNoteStore().getNote(getValidAuthToken(), noteGuid, true, true, true, true);
+        NoteAdapter na = new NoteAdapter(n);
+        return na;
     }
 }
 

@@ -14,11 +14,10 @@ import com.rubenlaguna.en4j.noteinterface.Resource;
 import org.apache.commons.io.FilenameUtils;
 import java.awt.Desktop;
 import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import javax.swing.SwingWorker;
 import org.openide.util.Exceptions;
@@ -42,7 +41,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         if (null != resource) {
             setFilename(resource.getFilename());
             setMime(resource.getMime());
-            setFilesize(resource.getData().length);
+//            setFilesize(resource.getData().length);
         }
     }
 
@@ -144,9 +143,16 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                     //get temp dir
                     //save resource to tmp file
                     String extension = FilenameUtils.getExtension(resource.getFilename());
-                    File tempFile = File.createTempFile("en4j", "."+extension);
+                    File tempFile = File.createTempFile("en4j", "." + extension);
                     OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile));
-                    os.write(resource.getData());
+                    InputStream is = resource.getDataAsInputStream();
+                    // Transfer bytes from in to out
+                    byte[] buf = new byte[1024];
+                    int len;
+                    while ((len = is.read(buf)) > 0) {
+                        os.write(buf, 0, len);
+                    }
+                    is.close();
                     os.close();
                     Desktop dt = Desktop.getDesktop();
                     dt.open(tempFile);
