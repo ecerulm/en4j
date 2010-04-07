@@ -62,12 +62,12 @@ class NoteImpl implements Note {
     }
 
     public Reader getContentAsReader() {
-        PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            pstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
+            synchronized (Installer.selectContentById) {
+                Installer.selectContentById.setInt(1, id);
+                rs = Installer.selectContentById.executeQuery();
+            }
             if (rs.next()) {
                 final Reader characterStream = rs.getCharacterStream("CONTENT");
                 return characterStream;
@@ -81,12 +81,6 @@ class NoteImpl implements Note {
                 } catch (SQLException e) {
                 }
 
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
             }
         }
         return null;
