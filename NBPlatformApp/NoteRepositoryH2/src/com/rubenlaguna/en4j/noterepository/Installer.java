@@ -6,7 +6,6 @@ package com.rubenlaguna.en4j.noterepository;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
@@ -22,7 +21,6 @@ public class Installer extends ModuleInstall {
 
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
     public static Connection c = null;
-    public static PreparedStatement selectContentById=null;
 
     @Override
     public void restored() {
@@ -32,9 +30,6 @@ public class Installer extends ModuleInstall {
             c = DriverManager.getConnection(connectionURL, "", "");
 
             c.setAutoCommit(true);
-//             PreparedStatement pstmt = null;
-            selectContentById = c.prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?");
-
         } catch (Exception ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -92,11 +87,6 @@ public class Installer extends ModuleInstall {
 
     @Override
     public void close() {
-        try {
-            selectContentById.close();
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "exception caught:", ex);
-        }
         try {
             c.createStatement().execute("SHUTDOWN");
         } catch (SQLException e) {
