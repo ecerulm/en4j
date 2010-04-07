@@ -25,11 +25,13 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -242,6 +244,19 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     } catch (Exception ex) {
                         LOG.log(Level.WARNING, "couldn't index note " + note.getGuid(), ex);
                         return;
+                    } finally {
+                        if (document != null) {
+                            for (Field field : (List<Field>) document.getFields()) {
+                                final Reader reader = field.readerValue();
+                                if (reader != null) {
+                                    try {
+                                        reader.close();
+                                    } catch (IOException ex) {
+                                    }
+                                }
+                            }
+                        }
+                        //TODO close readers in document
                     }
                 } else {
                     return;
@@ -319,17 +334,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
         document.add(titleField);
         DocumentFragment node = parseNote(note);
-        //StringBuffer sb = new StringBuffer();
-        //sb.append(getText(node));
         String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
-            //LOG.info("indexing "+text);
             Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
             document.add(contentField);
         }
         String sourceUrl = note.getSourceurl();
         if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
-            //                    LOG.info("sourceUrl: \"" + sourceUrl + "\"");
             Field sourceField = new Field("source", sourceUrl, Field.Store.NO, Field.Index.ANALYZED);
             document.add(sourceField);
         }
@@ -357,8 +368,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
-                    final Reader docTikaReader = new Tika().parse(r.getDataAsInputStream(), metadata);
-                    document.add(new Field("all", docTikaReader));
+                    final InputStream dataAsInputStream = r.getDataAsInputStream();
+                    final Reader docTikaReader = new Tika().parse( dataAsInputStream, metadata);
+                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader,dataAsInputStream);
+                    document.add(new Field("all", resourceReader));
+
                 } catch (Exception ex) {
                     LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
                 }
