@@ -18,8 +18,8 @@ import java.util.logging.Logger;
 class ReaderThatEatsUpExceptions extends Reader {
 
     private static final Logger LOG = Logger.getLogger(ReaderThatEatsUpExceptions.class.getName());
-    private final Reader delegate;
-    private final InputStream is;
+    private Reader delegate;
+    private InputStream is;
 
     ReaderThatEatsUpExceptions(Reader docTikaReader, InputStream dataAsInputStream) {
         this.delegate = docTikaReader;
@@ -94,6 +94,8 @@ class ReaderThatEatsUpExceptions extends Reader {
             is.close();
         } catch (IOException e) {
         }
+        is = null;
         delegate.close();
+        delegate = null;
     }
 }
