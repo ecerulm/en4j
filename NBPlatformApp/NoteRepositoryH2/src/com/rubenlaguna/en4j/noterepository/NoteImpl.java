@@ -67,10 +67,11 @@ class NoteImpl implements Note {
             synchronized (Installer.selectContentById) {
                 Installer.selectContentById.setInt(1, id);
                 rs = Installer.selectContentById.executeQuery();
-            }
-            if (rs.next()) {
-                final Reader characterStream = rs.getCharacterStream("CONTENT");
-                return characterStream;
+
+                if (rs.next()) {
+                    final Reader characterStream = rs.getCharacterStream("CONTENT");
+                    return characterStream;
+                }
             }
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);
