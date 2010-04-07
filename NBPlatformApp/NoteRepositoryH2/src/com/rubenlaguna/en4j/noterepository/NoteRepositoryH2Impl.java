@@ -274,7 +274,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            LOG.info("searching resource with parent guid: " + guid + " and hash: " + hash);
+            LOG.fine("searching resource with parent guid: " + guid + " and hash: " + hash);
             pstmt = connection.prepareStatement("SELECT GUID FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
             pstmt.setString(1, guid);
             pstmt.setString(2, hash);

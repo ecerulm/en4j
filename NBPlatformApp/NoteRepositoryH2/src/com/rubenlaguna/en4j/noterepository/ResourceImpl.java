@@ -47,7 +47,7 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public byte[] getData() {
-        getLogger().info("resource guid:" + guid);
+        getLogger().fine("resource guid:" + guid);
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
@@ -109,7 +109,7 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public InputStream getDataAsInputStream() {
-        getLogger().info("resource guid:" + guid);
+        getLogger().fine("resource guid:" + guid);
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
