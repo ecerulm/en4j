@@ -33,7 +33,7 @@ class CustomAnalyzer extends Analyzer {
 
     @Override
     public TokenStream tokenStream(String fieldName, Reader reader) {
-        final TokenStream ts = new StandardAnalyzer(Version.LUCENE_CURRENT).tokenStream(fieldName, reader);
+        final TokenStream ts = new StandardAnalyzer(Version.LUCENE_30).tokenStream(fieldName, reader);
 
         return new CustomTokenFilter(ts);
         //throw new UnsupportedOperationException("Not supported yet.");

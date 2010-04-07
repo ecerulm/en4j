@@ -17,11 +17,12 @@
 package com.rubenlaguna.en4j.searchlucene;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import org.apache.lucene.analysis.Token;
+import java.util.Stack;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.util.AttributeSource;
 
 /**
  *
@@ -29,31 +30,54 @@ import org.apache.lucene.analysis.TokenStream;
  */
 class CustomTokenFilter extends TokenFilter {
 
-    private final List<Token> stack = new ArrayList<Token>();
+    public static final String TOKEN_TYPE_SYNONYM = "SYNONYM";
+    private Stack synonymStack;
+    //private SynonymEngine engine;
+    private TermAttribute termAttr;
+    private AttributeSource save;
 
     public CustomTokenFilter(TokenStream ts) {
         super(ts);
+        synonymStack = new Stack(); //#1
+        termAttr = (TermAttribute) addAttribute(TermAttribute.class);
+        save = ts.cloneAttributes();
     }
 
     @Override
-    public Token next() throws IOException {
-        if (!stack.isEmpty()) {
-            return stack.remove(0);
+    public boolean incrementToken() throws IOException {
+        if (synonymStack.size() > 0) {	//#2
+            State syn = (State) synonymStack.pop(); //#2
+            restoreState(syn);	//#2
+            return true;
         }
-        Token token = input.next();
-        if (null == token) {
-            return null;
-        }
-        if (token.term().contains(".")) {
-            String[] extraTokens = token.term().split("\\.");
-            for (int i = 0; i < extraTokens.length; i++) {
-                String extraToken = extraTokens[i];
-                final Token token1 = new Token(extraToken, token.startOffset(), token.endOffset(), "EXTRATOKEN");
-                token1.setPositionIncrement(0);
-                stack.add(token1);
 
-            }
+        if (!input.incrementToken()) {
+            return false;
         }
-        return token;
+        addAliasesToStack();
+        return true;
+
+    }
+
+    private void addAliasesToStack() throws IOException {
+        final String term = termAttr.term();
+        if (!term.contains(".")) {
+            return;
+        }
+        String[] synonyms = term.split("\\.");
+        if (synonyms == null) {
+            return;
+        }
+        State current = captureState();
+        for (int i = 0;
+                i < synonyms.length;
+                i++) {	//#7
+            save.restoreState(current);
+            AnalyzerUtils.setTerm(save, synonyms[i]);	//#7
+            AnalyzerUtils.setType(save, TOKEN_TYPE_SYNONYM); //#7
+            AnalyzerUtils.setPositionIncrement(save, 0);	//#8
+            synonymStack.push(save.captureState());	//#7
+
+        }
     }
 }

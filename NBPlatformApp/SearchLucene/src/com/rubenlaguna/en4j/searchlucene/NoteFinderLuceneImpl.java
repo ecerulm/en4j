@@ -31,7 +31,6 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -46,6 +45,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
@@ -246,7 +246,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                         return;
                     } finally {
                         if (document != null) {
-                            for (Field field : (List<Field>) document.getFields()) {
+                            for (Fieldable field : document.getFields()) {
                                 final Reader reader = field.readerValue();
                                 if (reader != null) {
                                     try {
