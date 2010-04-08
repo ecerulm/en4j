@@ -55,7 +55,8 @@ class ReaderThatEatsUpExceptions extends Reader {
         try {
             return delegate.read(cbuf);
         } catch (IOException ex) {
-            LOG.log(Level.WARNING, "exception caught:", ex);
+            //LOG.log(Level.WARNING, "exception caught:", ex);
+            LOG.log(Level.WARNING, "exception caught:"+ ex.getMessage());
             return -1;
         }
     }
