@@ -10,8 +10,6 @@ import java.io.PrintStream;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.KeywordAnalyzer;
-import org.apache.lucene.analysis.SimpleAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.CorruptIndexException;
@@ -19,8 +17,6 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.LockFactory;
-import org.apache.lucene.store.NoLockFactory;
 import org.apache.lucene.util.Version;
 import org.openide.util.Exceptions;
 
@@ -104,22 +100,21 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-        if (commits > 5) {
-            closeAndReopen();
-        }
+//        if (commits > 5) {
+//            closeAndReopen();
+//        }
 
     }
 
-    private void closeAndReopen() throws IOException {
-        available.acquireUninterruptibly(MAX_AVAILABLE);
-        LOG.info("the actual IndexWriter instance has been closed and replaced with a new instance");
-        indexWriterInstance.close();
-        indexWriterInstance = null;
-        commits = 0;
-        initWriter();
-        available.release(MAX_AVAILABLE);
-    }
-
+//    private void closeAndReopen() throws IOException {
+//        available.acquireUninterruptibly(MAX_AVAILABLE);
+//        LOG.info("the actual IndexWriter instance has been closed and replaced with a new instance");
+//        indexWriterInstance.close();
+//        indexWriterInstance = null;
+//        commits = 0;
+//        initWriter();
+//        available.release(MAX_AVAILABLE);
+//    }
     void optimize()
             throws CorruptIndexException, IOException {
         available.acquireUninterruptibly();
@@ -128,7 +123,7 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-        closeAndReopen();
+//        closeAndReopen();
     }
 
     void setInfoStream(PrintStream os) {
