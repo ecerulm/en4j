@@ -30,7 +30,7 @@ public class Installer extends ModuleInstall {
 
     @Override
     public void close() {
-        IndexWriterFactory.close();
+        IndexWriterWrapper.getInstance().close();
     }
 
 

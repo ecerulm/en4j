@@ -48,7 +48,6 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.Fieldable;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryParser.ParseException;
 import org.apache.lucene.queryParser.QueryParser;
@@ -56,6 +55,8 @@ import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
@@ -101,9 +102,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         nr = testNoteRepository;
         try {
             //make sure that there is an index that the readers can open
-            IndexWriterFactory.getIndexWriter().commit();
+            IndexWriterWrapper.getInstance().commit();
             Installer.mbean.setThreadPoolExecutor(RP);
-            reader = IndexReader.open(IndexWriterFactory.getIndexWriter().getDirectory(), true);
+//            Directory dir = FSDirectory.open(IndexWriterWrapper.getDirectory());
+            Directory dir = IndexWriterWrapper.getInstance().getLuceneDirectory();
+            reader = IndexReader.open(dir, true);
         } catch (CorruptIndexException ex) {
             Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
@@ -112,12 +115,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     public void setInfoStream(PrintStream os) {
-        IndexWriterFactory.getIndexWriter().setInfoStream(os);
+        IndexWriterWrapper.getInstance().setInfoStream(os);
     }
 
     public int getNumDocs() {
         try {
-            return IndexWriterFactory.getIndexWriter().numDocs() - IndexWriterFactory.getIndexWriter().numRamDocs();
+//            return IndexWriterWrapper.getInstance().numDocs() - IndexWriterWrapper.getInstance().numRamDocs();
+            return IndexWriterWrapper.getInstance().numDocs();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
@@ -136,7 +140,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 lastRun = System.currentTimeMillis();
                 pendingCommit = false;
                 LOG.info("committing lucene index now. (" + lastRun + ") " + (lastRun - previousRun) / 1000 + " secs from previous run");
-                IndexWriterFactory.getIndexWriter().commit();
+                IndexWriterWrapper.getInstance().commit();
                 this.pcs.firePropertyChange("index", true, false);
                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
             } else {
@@ -235,7 +239,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 if (null != note) {
                     try {
                         document = getLuceneDocument(note);
-                        IndexWriterFactory.getIndexWriter().updateDocument(new Term("id", n.getId().toString()), document);
+                        IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
                         if (!pendingCommit) {
                             pendingCommit = true;
                             LOG.info("scheduling COMMITER");
@@ -270,9 +274,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         LOG.info("about to start indexing");
         long start = System.currentTimeMillis();
         long start2 = start;
-        IndexWriter writer = null;
+        IndexWriterWrapper writer = null;
         try {
-            writer = IndexWriterFactory.getIndexWriter();
+            writer = IndexWriterWrapper.getInstance();
             writer.deleteAll();
             writer.commit();
             Collection<Note> notes = getAllNotes();
