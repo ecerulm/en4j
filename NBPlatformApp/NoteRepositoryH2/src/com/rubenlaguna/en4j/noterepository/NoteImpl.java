@@ -86,35 +86,7 @@ class NoteImpl implements Note {
     }
 
     public String getSourceurl() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String toReturn = rs.getString("SOURCEURL");
-                return toReturn;
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return "";
-
+        return DbPstmts.getInstance().getSourceurl(id);
     }
 
     public void setSourceurl(String sourceurl) {
