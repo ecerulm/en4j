@@ -4,9 +4,16 @@
  */
 package com.rubenlaguna.en4j.noterepository;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.Reader;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,447 +35,215 @@ public class DbPstmts {
     private static final Logger LOG = Logger.getLogger(DbPstmts.class.getName());
     private static DbPstmts theInstance = null;
     private static boolean closed = false;
-    PreparedStatement sourceurlPstmt;
-    PreparedStatement contentFromNotesPstmt;
-    PreparedStatement dataFromResourcesPstmt;
-    PreparedStatement guidFromNotesPstmt;
-    PreparedStatement recogFromResourcesPstmt;
-    PreparedStatement ownerguidFromResourcesPstmt;
-    PreparedStatement mimeFromResources;
-    PreparedStatement hashResourcesOwnerPstmt;
-    PreparedStatement usnFromNotesPstmt;
-    PreparedStatement filenameFromResourcesPstmt;
-    PreparedStatement hashFromResourcesPstmt;
-    PreparedStatement titleFromNotes;
+    PreparedStatementWrapper sourceurlPstmt;
+    PreparedStatementWrapper contentFromNotes;
+    PreparedStatementWrapper dataFromResourcesPstmt;
+    PreparedStatementWrapper guidFromNotesPstmt;
+    PreparedStatementWrapper recogFromResourcesPstmt;
+    PreparedStatementWrapper ownerguidFromResourcesPstmt;
+    PreparedStatementWrapper mimeFromResources;
+    PreparedStatementWrapper hashResourcesOwnerPstmt;
+    PreparedStatementWrapper usnFromNotesPstmt;
+    PreparedStatementWrapper filenameFromResourcesPstmt;
+    PreparedStatementWrapper hashFromResourcesPstmt;
+    PreparedStatementWrapper titleFromNotes;
 
     private DbPstmts() throws SQLException {
-        contentFromNotesPstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?");
-        sourceurlPstmt = getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?");
-        titleFromNotes = getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?");
-        usnFromNotesPstmt = getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?");
-        hashResourcesOwnerPstmt = getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?");
-        guidFromNotesPstmt = getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?");
-        dataFromResourcesPstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
-        dataFromResourcesPstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
-        mimeFromResources = getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?");
-        ownerguidFromResourcesPstmt = getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?");
-        recogFromResourcesPstmt = getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?");
-        filenameFromResourcesPstmt = getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?");
+        contentFromNotes = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                final Reader characterStream = rs.getCharacterStream("CONTENT");
+                return characterStream;
+            }
+        };
+
+        sourceurlPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                final String toReturn = rs.getString("SOURCEURL");
+                return toReturn;
+            }
+        };
+        titleFromNotes = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getString("TITLE");
+            }
+        };
+
+        usnFromNotesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getInt("USN");
+            }
+        };
+        hashResourcesOwnerPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                Collection<String> toReturn = new ArrayList<String>();
+                do {
+                    toReturn.add(rs.getString("HASH"));
+                } while (rs.next());
+                return toReturn;
+            }
+        };
+        guidFromNotesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getString("GUID");
+            }
+        };
+        dataFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                final Blob blob = rs.getBlob("DATA");
+                final InputStream is = blob.getBinaryStream();
+                return is;
+            }
+        };
+        mimeFromResources = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getString("MIME");
+            }
+        };
+
+        ownerguidFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getString("OWNERGUID");
+            }
+        };
+        recogFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                throw new UnsupportedOperationException("Not supported yet.");
+            }
+        };
+        filenameFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getString("FILENAME");
+            }
+        };
     }
 
     public Reader getContentAsReader(int id) {
-        ResultSet rs = null;
-        try {
-            synchronized (contentFromNotesPstmt) {
-                contentFromNotesPstmt.setInt(1, id);
-                rs = contentFromNotesPstmt.executeQuery();
-                if (rs.next()) {
-                    final Reader characterStream = rs.getCharacterStream("CONTENT");
-                    return characterStream;
-                }
-            }
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-        }
-        return null;
+        return (Reader) contentFromNotes.get(id);
     }
 
     public String getSourceurl(int id) {
-        ResultSet rs = null;
-        try {
-
-            synchronized (sourceurlPstmt) {
-                sourceurlPstmt.setInt(1, id);
-                rs = sourceurlPstmt.executeQuery();
-                if (rs.next()) {
-                    final String toReturn = rs.getString("SOURCEURL");
-                    return toReturn;
-                }
-            }
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-        }
-        return "";
+        return (String) sourceurlPstmt.get(id);
     }
 
     public String getTitle(int id) {
-
-        ResultSet rs = null;
-        try {
-            synchronized (titleFromNotes) {
-                titleFromNotes.setInt(1, id);
-                rs = titleFromNotes.executeQuery();
-                if (rs.next()) {
-                    final String toReturn = rs.getString("TITLE");
-                    return toReturn;
-                }
-            }
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-        return "";
+        return (String) titleFromNotes.get(id);
     }
 
     public int getUpdateSequenceNumber(int id) {
-        ResultSet rs = null;
-        try {
-            synchronized (usnFromNotesPstmt) {
-                usnFromNotesPstmt.setInt(1, id);
-                rs = usnFromNotesPstmt.executeQuery();
-                if (rs.next()) {
-                    final int toReturn = rs.getInt("USN");
-                    return toReturn;
-                }
-            }
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-        return -1;
+        return (Integer) usnFromNotesPstmt.get(id);
     }
 
     public Collection<String> getResources(String guid) {
-        List<String> toReturn = new ArrayList<String>();
-        ResultSet rs = null;
-        try {
-            synchronized (hashResourcesOwnerPstmt) {
-                hashResourcesOwnerPstmt.setString(1, guid);
-                rs = hashResourcesOwnerPstmt.executeQuery();
-                while (rs.next()) {
-                    final String hash = rs.getString("HASH");
-                    toReturn.add(hash);
-                }
-            }
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-        return toReturn;
+        return (Collection<String>) hashResourcesOwnerPstmt.get(guid);
     }
 
     public String getGuid(int id) {
-        ResultSet rs = null;
-        try {
-            synchronized (guidFromNotesPstmt) {
-                guidFromNotesPstmt.setInt(1, id);
-                rs = guidFromNotesPstmt.executeQuery();
-                if (rs.next()) {
-                    final String toReturn = rs.getString("GUID");
-                    return toReturn;
-                }
-            }
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-        return "";
+        return (String) guidFromNotesPstmt.get(id);
     }
 
     public String getDataHash(String resGuid) {
-
-        ResultSet rs = null;
-        try {
-            synchronized (hashFromResourcesPstmt) {
-                hashFromResourcesPstmt.setString(1, resGuid);
-                rs = hashFromResourcesPstmt.executeQuery();
-                if (rs.next()) {
-                    final String hash = rs.getString("HASH");
-                    return hash;
-                }
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-        }
-        return "";
+        return (String) hashFromResourcesPstmt.get(resGuid);
     }
 
     public InputStream getDataAsInputStream(String guid) {
-        getLogger().fine("resource guid:" + guid);
-        ResultSet rs = null;
-        try {
-            synchronized (dataFromResourcesPstmt) {
-                dataFromResourcesPstmt.setString(1, guid);
-                rs = dataFromResourcesPstmt.executeQuery();
-                if (rs.next()) {
-                    final Blob blob = rs.getBlob("DATA");
-                    final InputStream is = blob.getBinaryStream();
-                    return is;
-                }
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-        }
-
-        return null;
+        return (InputStream) dataFromResourcesPstmt.get(guid);
     }
 
     public byte[] getData(String resGuid) {
-        getLogger().fine("resource guid:" + resGuid);
-        ResultSet rs = null;
         try {
-
-            int bloblength = -1;
-            InputStream is = null;
-            synchronized (dataFromResourcesPstmt) {
-                dataFromResourcesPstmt.setString(1, resGuid);
-                rs = dataFromResourcesPstmt.executeQuery();
-
-                if (rs.next()) {
-                    final Blob blob = rs.getBlob("DATA");
-                    is = blob.getBinaryStream();
-                    bloblength = (int) blob.length();
-                }
+            BufferedInputStream is = new BufferedInputStream(getDataAsInputStream(resGuid));
+            ReadableByteChannel isc = Channels.newChannel(is);
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            WritableByteChannel osc = Channels.newChannel(os);
+            ByteBuffer bb = ByteBuffer.allocate(32000);
+            while (isc.read(bb) != -1) {
+                bb.flip();
+                osc.write(bb);
+                bb.clear();
             }
-            // Create the byte array to hold the data
-            final byte[] toReturn = new byte[bloblength];
-
-            // Read in the bytes
-            int offset = 0;
-            int numRead = 0;
-            try {
-                while (offset < toReturn.length
-                        && (numRead = is.read(toReturn, offset, toReturn.length - offset)) >= 0) {
-                    offset += numRead;
-                }
-
-                // Ensure all the bytes have been read in
-                if (offset < toReturn.length) {
-                    getLogger().warning("could not completely read data for resource guid:" + resGuid);
-                    //throw new IOException("Could not completely read file " + file.getName());
-                }
-            } catch (IOException e) {
-                getLogger().log(Level.WARNING, "caught exception:", e);
-            } finally {
-                // Close the input stream and return bytes
-                try {
-                    is.close();
-                } catch (IOException e) {
-                }
-
-            }
-            return toReturn;
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
+            return os.toByteArray();
+        } catch (IOException ex) {
+            Exceptions.printStackTrace(ex);
         }
-
         return null;
     }
 
     public String getFilename(String resGuid) {
-        ResultSet rs = null;
-        try {
-
-            synchronized (filenameFromResourcesPstmt) {
-                filenameFromResourcesPstmt.setString(1, resGuid);
-                rs = filenameFromResourcesPstmt.executeQuery();
-                if (rs.next()) {
-                    final String hash = rs.getString("FILENAME");
-                    return hash;
-                }
-            }
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-
-        return "";
+        return (String) filenameFromResourcesPstmt.get(resGuid);
     }
 
     public String getMime(String guid) {
-        ResultSet rs = null;
-        try {
-
-            synchronized (mimeFromResources) {
-                mimeFromResources.setString(1, guid);
-                rs = mimeFromResources.executeQuery();
-                if (rs.next()) {
-                    final String hash = rs.getString("MIME");
-                    return hash;
-                }
-            }
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-
-        return "";
-
+        return (String) mimeFromResources.get(guid);
     }
 
     public String getNoteguid(String resGuid) {
-        ResultSet rs = null;
-        try {
-            synchronized (ownerguidFromResourcesPstmt) {
-                ownerguidFromResourcesPstmt.setString(1, resGuid);
-                rs = ownerguidFromResourcesPstmt.executeQuery();
-                if (rs.next()) {
-                    final String hash = rs.getString("OWNERGUID");
-                    return hash;
-                }
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-
-        return "";
-
+        return (String) ownerguidFromResourcesPstmt.get(resGuid);
     }
 
     public byte[] getRecognition(String resGuid) {
-        ResultSet rs = null;
-        try {
-            synchronized (recogFromResourcesPstmt) {
-                recogFromResourcesPstmt.setString(1, resGuid);
-                rs = recogFromResourcesPstmt.executeQuery();
-                if (rs.next()) {
-                    final byte[] toReturn = rs.getBytes("RECOGNITION");
-                    return toReturn;
-                }
-            }
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-
-        }
-
-        return null;
+        return (byte[]) recogFromResourcesPstmt.get(resGuid);
     }
 
     public synchronized void close() {
         closed = true;
         theInstance = null;
-        closePStatement(contentFromNotesPstmt);
-        contentFromNotesPstmt = null;
-        closePStatement(sourceurlPstmt);
+//        closePStatement(contentFromNotesPstmt);
+        contentFromNotes.close();
+        contentFromNotes = null;
+
+        sourceurlPstmt.close();
         sourceurlPstmt = null;
-        closePStatement(dataFromResourcesPstmt);
+
+        dataFromResourcesPstmt.close();
         dataFromResourcesPstmt = null;
-        closePStatement(titleFromNotes);
+
+        titleFromNotes.close();
         titleFromNotes = null;
-        closePStatement(hashFromResourcesPstmt);
+
+        hashFromResourcesPstmt.close();
         hashFromResourcesPstmt = null;
-        closePStatement(filenameFromResourcesPstmt);
+
+        filenameFromResourcesPstmt.close();
         filenameFromResourcesPstmt = null;
-        closePStatement(guidFromNotesPstmt);
+
+        guidFromNotesPstmt.close();
         guidFromNotesPstmt = null;
-        closePStatement(mimeFromResources);
+
+        mimeFromResources.close();
         mimeFromResources = null;
-        closePStatement(ownerguidFromResourcesPstmt);
+
+        ownerguidFromResourcesPstmt.close();
         ownerguidFromResourcesPstmt = null;
-        closePStatement(recogFromResourcesPstmt);
+
+        recogFromResourcesPstmt.close();
         recogFromResourcesPstmt = null;
-        closePStatement(hashResourcesOwnerPstmt);
+
+        hashResourcesOwnerPstmt.close();
         hashResourcesOwnerPstmt = null;
-        closePStatement(usnFromNotesPstmt);
+
+        usnFromNotesPstmt.close();
         usnFromNotesPstmt = null;
     }
 
@@ -476,8 +251,6 @@ public class DbPstmts {
         if (pstmt != null) {
             try {
                 pstmt.close();
-
-
             } catch (SQLException e) {
             }
         }
@@ -485,27 +258,17 @@ public class DbPstmts {
 
     private Connection getConnection() {
         return Installer.c;
-
-
     }
 
     public synchronized static DbPstmts getInstance() {
         try {
             if (theInstance == null && !closed) {
                 theInstance = new DbPstmts();
-
-
             }
             return theInstance;
-
-
         } catch (SQLException ex) {
             Exceptions.printStackTrace(ex);
-
-
             return null;
-
-
         }
     }
 

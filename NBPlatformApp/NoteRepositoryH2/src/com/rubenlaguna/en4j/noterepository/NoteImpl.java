@@ -5,23 +5,17 @@
 package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
-import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Serializable;
 import java.nio.CharBuffer;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 /**
