@@ -22,30 +22,12 @@ public abstract class PreparedStatementWrapper {
         this.pstmt = ps;
     }
 
-    public Object get(final int id) {
-        Callable<Void> callable = new Callable<Void>() {
-            public Void call() throws Exception {
-                pstmt.setInt(1, id);
-                return null;
-            }
-        };
-        return getAbstract(callable);
-    }
-    public Object get(final String id) {
-        Callable<Void> callable = new Callable<Void>() {
-            public Void call() throws Exception {
-                pstmt.setString(1, id);
-                return null;
-            }
-        };
-        return getAbstract(callable);
-    }
 
-    private Object getAbstract(Callable<Void> callable) {
+    protected Object getAbstract(Object key) {
         ResultSet rs = null;
         try {
             synchronized (pstmt) {
-                callable.call();
+                setInputParametersOfThePreparedSt(pstmt,key);
                 rs = pstmt.executeQuery();
                 if (rs.next()) {
                     return getResultFromResulSet(rs);
@@ -75,4 +57,5 @@ public abstract class PreparedStatementWrapper {
     }
 
     protected abstract Object getResultFromResulSet(ResultSet rs) throws SQLException;
+    protected abstract void setInputParametersOfThePreparedSt(PreparedStatement pstmt,Object key) throws SQLException;
 }

@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -35,21 +36,21 @@ public class DbPstmts {
     private static final Logger LOG = Logger.getLogger(DbPstmts.class.getName());
     private static DbPstmts theInstance = null;
     private static boolean closed = false;
-    PreparedStatementWrapper sourceurlPstmt;
-    PreparedStatementWrapper contentFromNotes;
-    PreparedStatementWrapper dataFromResourcesPstmt;
-    PreparedStatementWrapper guidFromNotesPstmt;
-    PreparedStatementWrapper recogFromResourcesPstmt;
-    PreparedStatementWrapper ownerguidFromResourcesPstmt;
-    PreparedStatementWrapper mimeFromResources;
-    PreparedStatementWrapper hashResourcesOwnerPstmt;
-    PreparedStatementWrapper usnFromNotesPstmt;
-    PreparedStatementWrapper filenameFromResourcesPstmt;
-    PreparedStatementWrapper hashFromResourcesPstmt;
-    PreparedStatementWrapper titleFromNotes;
+    PreparedStatementWrapperInt sourceurlPstmt;
+    PreparedStatementWrapperInt contentFromNotes;
+    PreparedStatementWrapperString dataFromResourcesPstmt;
+    PreparedStatementWrapperInt guidFromNotesPstmt;
+    PreparedStatementWrapperString recogFromResourcesPstmt;
+    PreparedStatementWrapperString ownerguidFromResourcesPstmt;
+    PreparedStatementWrapperString mimeFromResources;
+    PreparedStatementWrapperString hashResourcesOwnerPstmt;
+    PreparedStatementWrapperInt usnFromNotesPstmt;
+    PreparedStatementWrapperString filenameFromResourcesPstmt;
+    PreparedStatementWrapperString hashFromResourcesPstmt;
+    PreparedStatementWrapperInt titleFromNotes;
 
     private DbPstmts() throws SQLException {
-        contentFromNotes = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
+        contentFromNotes = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -58,7 +59,7 @@ public class DbPstmts {
             }
         };
 
-        sourceurlPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?")) {
+        sourceurlPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -66,7 +67,7 @@ public class DbPstmts {
                 return toReturn;
             }
         };
-        titleFromNotes = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?")) {
+        titleFromNotes = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -74,14 +75,14 @@ public class DbPstmts {
             }
         };
 
-        usnFromNotesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?")) {
+        usnFromNotesPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getInt("USN");
             }
         };
-        hashResourcesOwnerPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?")) {
+        hashResourcesOwnerPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -92,14 +93,14 @@ public class DbPstmts {
                 return toReturn;
             }
         };
-        guidFromNotesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
+        guidFromNotesPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("GUID");
             }
         };
-        dataFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?")) {
+        dataFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -108,7 +109,7 @@ public class DbPstmts {
                 return is;
             }
         };
-        mimeFromResources = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
+        mimeFromResources = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -116,21 +117,21 @@ public class DbPstmts {
             }
         };
 
-        ownerguidFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?")) {
+        ownerguidFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("OWNERGUID");
             }
         };
-        recogFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?")) {
+        recogFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
-                throw new UnsupportedOperationException("Not supported yet.");
+            return rs.getBytes("RECOGNITION");
             }
         };
-        filenameFromResourcesPstmt = new PreparedStatementWrapper(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
+        filenameFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
 
             @Override
             protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
@@ -156,7 +157,11 @@ public class DbPstmts {
     }
 
     public Collection<String> getResources(String guid) {
-        return (Collection<String>) hashResourcesOwnerPstmt.get(guid);
+        final Collection<String> resources = (Collection<String>) hashResourcesOwnerPstmt.get(guid);
+        if(resources==null) {
+            return Collections.EMPTY_LIST;
+        }
+        return resources;
     }
 
     public String getGuid(int id) {
