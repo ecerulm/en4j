@@ -17,16 +17,27 @@
 package com.rubenlaguna.en4j.sync;
 
 import org.openide.modules.ModuleInstall;
+import java.lang.management.ManagementFactory;
+import javax.management.ObjectName;
+import javax.management.JMException;
+import org.openide.util.Exceptions;
 
 /**
  * Manages a module's lifecycle. Remember that an installer is optional and
  * often not needed at all.
  */
 public class Installer extends ModuleInstall {
+    final static SynchronizationMBeanImpl mbean = new SynchronizationMBeanImpl();
 
     @Override
     public void restored() {
         // By default, do nothing.
         // Put your startup code here.
+        try { // Register MBean in Platform MBeanServer
+            ManagementFactory.getPlatformMBeanServer().
+                    registerMBean(mbean,new ObjectName("com.rubenlaguna.en4j.sync:type=SynchronizationMBeanImpl"));
+        }catch(JMException ex) {
+            Exceptions.printStackTrace(ex);
+        }
     }
 }

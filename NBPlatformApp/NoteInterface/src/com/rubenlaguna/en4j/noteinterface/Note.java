@@ -23,37 +23,22 @@ import java.util.Date;
  *
  * @author ecerulm
  */
-public interface Note {
+public interface Note extends NoteReader {
 
-    String getContent();
-
+    Integer getId();
     void setContent(String content);
-
-    Date getCreated();
 
     void setCreated(Date created);
 
-    Integer getId();
-
     void setId(Integer id);
-
-    String getSourceurl();
 
     void setSourceurl(String sourceurl);
 
-    String getTitle();
-
     void setTitle(String title);
-
-    Date getUpdated();
 
     void setUpdated(Date updated);
 
-    int getUpdateSequenceNumber();
+    void setActive(boolean active);
 
-    Resource getResource(String hash);
-
-    Collection<Resource> getResources();
-
-    String getGuid();
+    void setDeleted(Date deleted);
 }

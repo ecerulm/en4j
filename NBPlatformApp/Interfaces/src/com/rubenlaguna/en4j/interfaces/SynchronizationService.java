@@ -16,11 +16,21 @@
  */
 package com.rubenlaguna.en4j.interfaces;
 
+import java.beans.PropertyChangeListener;
+
 /**
  *
  * @author ecerulm
  */
 public interface SynchronizationService {
 
+    final String PROP_PENDINGREMOTEUPDATENOTES = "PendingRemoteUpdateNotes";
+
     boolean sync();
+
+    public int getPendingRemoteUpdateNotes();
+
+    public void addPropertyChangeListener(PropertyChangeListener listener);
+
+    public void removePropertyChangeListener(PropertyChangeListener listener);
 }

@@ -18,10 +18,13 @@ package com.rubenlaguna.en4j.searchlucene;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
+import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.Token;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TermAttribute;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.util.AttributeSource;
 
 /**
  *
@@ -29,40 +32,44 @@ import org.apache.lucene.analysis.TokenStream;
  */
 public class AnalyzerUtils {
 
-    public static Token[] tokensFromAnalysis(Analyzer analyzer, String text) throws IOException {
-        TokenStream stream = analyzer.tokenStream("contents", new StringReader(text));
-        ArrayList tokenList = new ArrayList();
-        while (true) {
-            Token token = stream.next();
-            if (token == null) {
-                break;
-            }
-            tokenList.add(token);
-        }
-        return (Token[]) tokenList.toArray(new Token[0]);
+    private static final Logger LOG = Logger.getLogger(AnalyzerUtils.class.getName());
 
-    }
-
+//    public static Token[] tokensFromAnalysis(Analyzer analyzer, String text) throws IOException {
+//        TokenStream stream = analyzer.tokenStream("contents", new StringReader(text));
+//        ArrayList tokenList = new ArrayList();
+//        while (true) {
+//            Token token = stream.next();
+//            if (token == null) {
+//                break;
+//            }
+//            tokenList.add(token);
+//        }
+//        return (Token[]) tokenList.toArray(new Token[0]);
+//
+//    }
     public static void displayTokens(Analyzer analyzer, String text) throws IOException {
-        Token[] tokens = tokensFromAnalysis(analyzer, text);
-        for (int i = 0; i < tokens.length; i++) {
-            Token token = tokens[i];
-            System.out.print("[" + token.termText() + "] ");
+        displayTokens(analyzer.tokenStream("contents", new StringReader(text))); //A
+    }
+
+    public static void displayTokens(TokenStream stream) throws IOException {
+        TermAttribute term = (TermAttribute) stream.addAttribute(TermAttribute.class);
+        while (stream.incrementToken()) {
+            System.out.print("[" + term.term() + "] ");	//B
         }
     }
 
-    public static void displayTokensWithFullDetails(Analyzer analyzer, String text) throws IOException {
-        Token[] tokens = tokensFromAnalysis(analyzer, text);
-        int position = 0;
-        for (int i = 0; i < tokens.length; i++) {
-            Token token = tokens[i];
-            int increment = token.getPositionIncrement();
-            if (increment > 0) {
-                position = position + increment;
-                System.out.println();
-                System.out.print(position + ": ");
-            }
-            System.out.print("[" + token.termText() + ":" + token.startOffset() + "->" + token.endOffset() + ":" + token.type() + "] ");
-        }
+    public static void setPositionIncrement(AttributeSource source, int posIncr) {
+        PositionIncrementAttribute attr = (PositionIncrementAttribute) source.addAttribute(PositionIncrementAttribute.class);
+        attr.setPositionIncrement(posIncr);
+    }
+
+    public static void setTerm(AttributeSource source, String term) {
+        TermAttribute attr = (TermAttribute) source.addAttribute(TermAttribute.class);
+        attr.setTermBuffer(term);
+    }
+
+    public static void setType(AttributeSource source, String type) {
+        TypeAttribute attr = (TypeAttribute) source.addAttribute(TypeAttribute.class);
+        attr.setType(type);
     }
 }

@@ -16,11 +16,46 @@
  */
 package com.rubenlaguna.en4j.noteinterface;
 
+import java.io.InputStream;
+import java.util.Date;
+
 /**
  *
  * @author ecerulm
  */
 public interface Resource {
 
-    byte[] getData();
+//    byte[] getData();
+
+    InputStream getDataAsInputStream();
+
+    String getDataHash();
+
+    byte[] getAlternateData();
+
+    String getAlternateDataHash();
+
+    double getAltitude();
+
+    public double getLatitude();
+
+    public double getLongitude();
+
+    public boolean getPremiumAttachment();
+
+    String getCameraMake();
+
+    String getCameraModel();
+
+    String getFilename();
+
+    String getGuid();
+
+    String getMime();
+
+    String getNoteguid();
+
+    byte[] getRecognition();
+
+    Date getTimestamp();
 }

@@ -18,8 +18,12 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.awt.Image;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
@@ -68,25 +72,40 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         if ("en-media".equals(box.getElement().getNodeName())) {
             LOG.log(Level.INFO, "en-media detected");
 
-            if ("image/jpeg".equalsIgnoreCase(box.getElement().getAttribute("type"))) {
+            final String type = box.getElement().getAttribute("type");
+            String hash = box.getElement().getAttribute("hash");
+
+            if (isImage(type)) {
                 LOG.log(Level.INFO, "en-media type: image/jpeg");
-                String hash = box.getElement().getAttribute("hash");
                 LOG.log(Level.INFO, "en-media hash: " + hash);
 
                 toReturn = loadImage(context, hash);
+                if (null == toReturn) {
+                    toReturn = brokenImage(context, 100, 100);
+                }
                 //
                 //    toReturn = loadImage()
                 //            return toReturn;
-            } else {
+                //} else if("im") {
 
-                toReturn = brokenImage(context, 100, 100);
+            } else {
+                toReturn = unrecognizedResource(context, hash);
             }
         }
 
         if (null == toReturn) {
+//            LOG.log(Level.INFO, "delegating to next factory:" + box.getElement().getNodeName());
             toReturn = delegate.createReplacedElement(context, box, uac, cssWidth, cssHeight);
         }
 
+        return toReturn;
+    }
+
+    private boolean isImage(final String type) {
+        boolean toReturn = false;
+        toReturn = toReturn || "image/jpeg".equalsIgnoreCase(type);
+        toReturn = toReturn || "image/gif".equalsIgnoreCase(type);
+        toReturn = toReturn || "image/png".equalsIgnoreCase(type);
         return toReturn;
     }
 
@@ -117,13 +136,25 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //TODO: add a real implementation that returns an image
         ReplacedElement toReturn = null;
 
-        //JTextArea cc = new JTextArea();
-        //NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
-        byte[] imageData = getImage(hash);
-        ImageIcon icon = new ImageIcon(imageData);
+        InputStream is = getImage(hash);
+        Image image = null;
+        if (is == null) {
+            return brokenImage(context, 100, 100);
+        }
+        try {
+            image = ImageIO.read(is);
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "exception caught:", e);
+        } finally {
+            try {
+                is.close();
+            } catch (IOException e) {
+            }
+        }
+
+        ImageIcon icon = new ImageIcon(image);
+
         JLabel cc = new JLabel(icon);
-        //cc.setText("Missing implementation for en-media");
-        //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
 
         context.getCanvas().add(cc);
@@ -139,16 +170,50 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    private byte[] getImage(String hash) {
-        assert(null!=this.note);
+    private InputStream getImage(String hash) {
+        assert (null != this.note);
         final Resource resource = this.note.getResource(hash);
-        return resource.getData();
+        if (null == resource) {
+            return null;
+        }
+        return resource.getDataAsInputStream();
     }
+//    private byte[] getImage(String hash) {
+//        assert (null != this.note);
+//        final Resource resource = this.note.getResource(hash);
+//        if (null == resource) {
+//            return null;
+//        }
+//        return resource.getData();
+//    }
 
     void setNote(Note n) {
-        if (null == n){
+        if (null == n) {
             throw new IllegalArgumentException("Note cannot be null");
         }
-        this.note=n;
+        this.note = n;
+    }
+
+    private ReplacedElement unrecognizedResource(LayoutContext context, String hash) {
+        ReplacedElement toReturn = null;
+
+
+        final Resource resource = this.note.getResource(hash);
+        UnrecognizedResourceJPanel cc = new UnrecognizedResourceJPanel(resource);
+
+        //cc.setText("Missing implementation for en-media");
+        //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
+        cc.setSize(cc.getPreferredSize());
+
+        context.getCanvas().add(cc);
+
+        toReturn = new SwingReplacedElement(cc) {
+
+            public boolean isRequiresInteractivePaint() {
+                return false;
+            }
+        };
+
+        return toReturn;
     }
 }

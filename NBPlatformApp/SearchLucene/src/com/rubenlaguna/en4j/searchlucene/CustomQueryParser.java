@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.searchlucene;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.util.Version;
 
 /**
  *
@@ -26,7 +27,7 @@ import org.apache.lucene.queryParser.QueryParser;
 class CustomQueryParser extends QueryParser {
 
     public CustomQueryParser(String string, Analyzer analyzer) {
-        super(string, analyzer);
+        super(Version.LUCENE_30, string, analyzer);
     }
 //
 //    @Override

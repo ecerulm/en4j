@@ -15,12 +15,27 @@ import java.util.Date;
  * @author ecerulm
  */
 class AbstractNote implements Note {
+    private int id = 0;
+    private String content = "";
+    private String title = "";
 
     public AbstractNote() {
     }
 
+    public AbstractNote(int id, String title, String content) {
+        this.id = id;
+        this.title = title;
+        this.content = content;
+    }
+
     public String getContent() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        StringBuffer sb = new StringBuffer();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF - 8\"?>");
+        sb.append("<!DOCTYPE en-note SYSTEM \"http://xml.evernote.com/pub/enml.dtd\">");
+        sb.append("        <en-note>");
+        sb.append(content);
+        sb.append("</en-note>");
+        return sb.toString();
     }
 
     public void setContent(String content) {
@@ -36,11 +51,11 @@ class AbstractNote implements Note {
     }
 
     public Integer getId() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return id;
     }
 
     public void setId(Integer id) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.id = id;
     }
 
     public String getSourceurl() {
@@ -52,11 +67,11 @@ class AbstractNote implements Note {
     }
 
     public String getTitle() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return title;
     }
 
     public void setTitle(String title) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        this.title=title;
     }
 
     public Date getUpdated() {
@@ -68,7 +83,7 @@ class AbstractNote implements Note {
     }
 
     public Resource getResource(String hash) {
-        throw new UnsupportedOperationException("Not supported yet."+hash);
+        throw new UnsupportedOperationException("Not supported yet." + hash);
     }
 
     public Collection<Resource> getResources() {

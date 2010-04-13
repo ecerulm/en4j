@@ -18,6 +18,8 @@ package com.rubenlaguna.en4j.sync;
 
 import com.evernote.edam.type.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author ecerulm
  */
-class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
+class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.NoteReader {
 
     private final Note adaptee;
     private final Logger LOG = Logger.getLogger(NoteAdapter.class.getName());
@@ -38,10 +40,11 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
         this.adaptee = note;
     }
 
-    public String getContent() {
-//        LOG.info("adaptee ="+adaptee);
-//        LOG.info("adaptee.getContent() ="+adaptee.getContent());
-        return adaptee.getContent();
+//    public String getContent() {
+//        return adaptee.getContent();
+//    }
+    public Reader getContentAsReader() {
+        return new StringReader(adaptee.getContent());
     }
 
     public void setContent(String content) {
@@ -82,7 +85,7 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
     }
 
     public Date getUpdated() {
-        return new Date(adaptee.getUpdated() * 1000L);
+        return new Date(adaptee.getUpdated());
     }
 
     public void setUpdated(Date updated) {
@@ -104,12 +107,7 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
             while (resourcesIterator.hasNext()) {
                 final com.evernote.edam.type.Resource resource = resourcesIterator.next();
 
-                Resource resourceToReturn = new Resource() {
-
-                    public byte[] getData() {
-                        return resource.getData().getBody();
-                    }
-                };
+                Resource resourceToReturn = new ResourceAdapter(resource);
                 toReturn.add(resourceToReturn);
             }
         }
@@ -118,5 +116,24 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.Note {
 
     public String getGuid() {
         return adaptee.getGuid();
+    }
+
+    public boolean isActive() {
+        return adaptee.isActive();
+    }
+
+    public void setActive(boolean active) {
+        adaptee.setActive(active);
+    }
+
+    public Date getDeleted() {
+        if (adaptee.isSetDeleted()) {
+            return new Date(adaptee.getDeleted());
+        }
+        return null;
+    }
+
+    public void setDeleted(Date date) {
+        adaptee.setDeleted(date.getTime());
     }
 }

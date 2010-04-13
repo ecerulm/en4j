@@ -57,4 +57,12 @@ class TestNoteRepository implements NoteRepository {
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public Note get(int id, boolean withContents) {
+        return get(id);
+    }
+
+    public Note getByGuid(String guid, boolean withContents) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

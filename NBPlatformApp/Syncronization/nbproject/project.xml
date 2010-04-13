@@ -39,6 +39,15 @@
                     </run-dependency>
                 </dependency>
                 <dependency>
+                    <code-name-base>org.jdesktop.beansbinding</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <release-version>1</release-version>
+                        <specification-version>1.5.1.121</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>org.jdesktop.layout</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -54,6 +63,14 @@
                     <run-dependency>
                         <release-version>1</release-version>
                         <specification-version>1.16.1</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
+                    <code-name-base>org.openide.actions</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <specification-version>6.12.1.1</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>
@@ -82,6 +99,10 @@
                 </dependency>
             </module-dependencies>
             <public-packages/>
+            <class-path-extension>
+                <runtime-relative-path>ext/jgram.jar</runtime-relative-path>
+                <binary-origin>release/modules/ext/jgram.jar</binary-origin>
+            </class-path-extension>
         </data>
     </configuration>
 </project>
