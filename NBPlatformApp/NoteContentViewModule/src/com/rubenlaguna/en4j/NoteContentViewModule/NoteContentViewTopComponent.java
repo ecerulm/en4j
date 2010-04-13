@@ -18,10 +18,16 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import java.awt.Desktop;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,8 +43,14 @@ import org.openide.util.Lookup;
 import org.openide.util.LookupListener;
 import org.openide.util.Utilities;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.xhtmlrenderer.render.Box;
 import org.xhtmlrenderer.simple.XHTMLPanel;
 import org.xhtmlrenderer.simple.extend.XhtmlNamespaceHandler;
+import org.xhtmlrenderer.swing.BasicPanel;
+import org.xhtmlrenderer.swing.FSMouseListener;
+import org.xhtmlrenderer.swing.MouseTracker;
 import org.xhtmlrenderer.swing.SwingReplacedElementFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -49,8 +61,8 @@ import org.xml.sax.SAXException;
 @ConvertAsProperties(dtd = "-//com.rubenlaguna.en4j.NoteContentViewModule//NoteContentView//EN",
 autostore = false)
 public final class NoteContentViewTopComponent extends TopComponent implements LookupListener {
-    private static final Logger LOG = Logger.getLogger(NoteContentViewTopComponent.class.getName());
 
+    private static final Logger LOG = Logger.getLogger(NoteContentViewTopComponent.class.getName());
     private static NoteContentViewTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
@@ -66,9 +78,79 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
         panel = new XHTMLPanel();
+        //panel.getListeners(MouseListener.class);
+        MouseListener[] mls = (MouseListener[]) (panel.getListeners(MouseListener.class));
+        for (MouseListener mouseListener : mls) {
+            LOG.info("removing " + mouseListener);
+            if (mouseListener instanceof MouseTracker) {
+                final MouseTracker mouseTracker = (MouseTracker) mouseListener;
+                List<FSMouseListener> fsmlList = mouseTracker.getListeners();
+                for (FSMouseListener fsml : fsmlList) {
+                    LOG.info("removing FSMouseListener: " + fsml);
+                    mouseTracker.removeListener(fsml);
+                }
+            }
+            panel.removeMouseListener(mouseListener);
+        }
+        panel.addMouseTrackingListener(new FSMouseListener() {
+
+            public void onMouseOver(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOver");
+            }
+
+            public void onMouseOut(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOut");
+            }
+
+            public void onMouseUp(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseUp");
+                if (box == null || box.getElement() == null) {
+                    return;
+                }
+
+                String uri = findLink(panel, box.getElement());
+                LOG.fine("onMouseUp: uri: " + uri);
+
+                if (uri != null) {
+                    try {
+                        Desktop.getDesktop().browse(new URI(uri));
+                    } catch (IOException ex) {
+                        Exceptions.printStackTrace(ex);
+                    } catch (URISyntaxException ex) {
+                        Exceptions.printStackTrace(ex);
+                    }
+                }
+            }
+
+            private String findLink(BasicPanel panel, Element e) {
+                String uri = null;
+
+                for (Node node = e; node.getNodeType() == Node.ELEMENT_NODE; node = node.getParentNode()) {
+                    uri = panel.getSharedContext().getNamespaceHandler().getLinkUri((Element) node);
+
+                    if (uri != null) {
+                        break;
+                    }
+                }
+
+                return uri;
+            }
+
+            public void onMousePressed(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMousePressed");
+            }
+
+            public void onMouseDragged(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMouseDragged");
+            }
+
+            public void reset() {
+                LOG.fine("reset");
+            }
+        });
+
         panel.getSharedContext().setReplacedElementFactory(cef);
         jScrollPane2.setViewportView(panel);
-
     }
 
     /** This method is called from within the constructor to
@@ -117,6 +199,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     public void resultChanged(LookupEvent ev) {
         try {
             Collection<? extends Note> notes = result.allInstances();
+
             if (!notes.isEmpty()) {
                 //get the id only because the contents are lazy loaded and
                 //the entity is already detached.
@@ -125,9 +208,6 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 //get(id) will gives us a fully loaded entity
                 Note n = Lookup.getDefault().lookup(NoteRepository.class).get(id);
                 cef.setNote(n);
-                //jLabel1.setText(n.getContent());
-                //jTextArea1.setText(n.getContent());
-
 
                 // Create a builder factory
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -138,19 +218,19 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
                 // Create the builder and parse the file
                 Reader content = n.getContentAsReader();
-                if (null!=content) {
+                if (null != content) {
                     try {
-                    Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
-                    panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                        Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
+                        panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
                     } catch (NullPointerException ex) {
-                        LOG.warning("NPE when trying to process: "+content);
+                        LOG.warning("NPE when trying to process: " + content);
                         Exceptions.printStackTrace(ex);
                     }
                 } else {
-                    LOG.warning("empty contents for note "+n.getGuid());
+                    LOG.warning("empty contents for note " + n.getGuid());
                 }
-
             }
+
         } catch (SAXException e) {
             // A parsing error occurred; the xml input is not valid
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
@@ -158,7 +238,6 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
         } catch (IOException e) {
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
-
         }
 
     }
@@ -174,6 +253,8 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
             // Create the builder and parse the file
             Document doc = factory.newDocumentBuilder().parse(new File(filename));
+
+
             return doc;
         } catch (SAXException e) {
             // A parsing error occurred; the xml input is not valid
@@ -189,15 +270,14 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     public static synchronized NoteContentViewTopComponent findInstance() {
         TopComponent win = WindowManager.getDefault().findTopComponent(PREFERRED_ID);
         if (win == null) {
-            Logger.getLogger(NoteContentViewTopComponent.class.getName()).warning(
-                    "Cannot find " + PREFERRED_ID + " component. It will not be located properly in the window system.");
+            Logger.getLogger(NoteContentViewTopComponent.class.getName()).warning("Cannot find " + PREFERRED_ID + " component. It will not be located properly in the window system.");
             return getDefault();
         }
+
         if (win instanceof NoteContentViewTopComponent) {
             return (NoteContentViewTopComponent) win;
         }
-        Logger.getLogger(NoteContentViewTopComponent.class.getName()).warning(
-                "There seem to be multiple components with the '" + PREFERRED_ID
+        LOG.warning("There seem to be multiple components with the '" + PREFERRED_ID
                 + "' ID. That is a potential source of errors and unexpected behavior.");
         return getDefault();
     }
@@ -225,12 +305,12 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         // better to version settings since initial version as advocated at
         // http://wiki.apidesign.org/wiki/PropertyFiles
         p.setProperty("version", "1.0");
-        // TODO store your settings
     }
 
     Object readProperties(java.util.Properties p) {
         NoteContentViewTopComponent singleton = NoteContentViewTopComponent.getDefault();
         singleton.readPropertiesImpl(p);
+
         return singleton;
     }
 
