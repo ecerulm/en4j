@@ -5,4 +5,7 @@
 <project name="NBPlatformApp" basedir=".">
     <description>Builds the module suite NBPlatformApp.</description>
     <import file="nbproject/build-impl.xml"/>
+    <target name="build-launchers" depends="suite.build-launchers">
+        <replace file="build/launcher/etc/${app.name}.conf" token="/dev" value="/${app.version}"/>
+    </target>
 </project>
