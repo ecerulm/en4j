@@ -12,6 +12,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.modules.ModuleInstall;
 import org.openide.util.Exceptions;
+import java.lang.management.ManagementFactory;
+import javax.management.ObjectName;
+import javax.management.JMException;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryH2Data;
 
 /**
  * Manages a module's lifecycle. Remember that an installer is optional and
@@ -21,6 +25,7 @@ public class Installer extends ModuleInstall {
 
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
     public static Connection c = null;
+    public static final NoteRepositoryH2Data mbean = new NoteRepositoryH2Data();
 
     @Override
     public void restored() {
@@ -82,6 +87,12 @@ public class Installer extends ModuleInstall {
             }
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "exception ", e);
+        }
+        try { // Register MBean in Platform MBeanServer
+            ManagementFactory.getPlatformMBeanServer().
+                    registerMBean(mbean,new ObjectName("com.rubenlaguna.en4j.noterepository:type=NoteRepositoryH2Data"));
+        }catch(JMException ex) {
+            // TODO handle exception
         }
     }
 
