@@ -21,6 +21,11 @@ public interface SearchLuceneMBeanImplMBean {
      * Get number of threads actively indexing
      */
     public int getActiveThreads();
+
+    /**
+     * Get Average time to complete a search in ms
+     */
+    public double getAverageSearchTime();
 }
 
 

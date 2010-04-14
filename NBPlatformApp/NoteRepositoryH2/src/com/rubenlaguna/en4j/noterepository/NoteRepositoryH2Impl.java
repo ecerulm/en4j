@@ -63,6 +63,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Collection<Note> getAllNotes() {
+        long start = System.currentTimeMillis();
         List<Note> toReturn = new ArrayList<Note>();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
@@ -90,6 +91,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 }
             }
         }
+        long delta = System.currentTimeMillis() - start;
+        Installer.mbean.sampleGetAllNotes(delta);
         return toReturn;
     }
 
@@ -98,6 +101,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Note get(int id) {
+        long start = System.currentTimeMillis();
         final Note cached = (Note) softrefMapById.get(id);
         if (null != cached) {
             LOG.fine("cache hit note id:" + id);
@@ -105,6 +109,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         }
         final Note toReturn = new NoteImpl(id);
         softrefMapById.put(id, toReturn);
+        long delta = System.currentTimeMillis() - start;
+        Installer.mbean.sampleGetNote(delta);
         return toReturn;
     }
 
@@ -113,6 +119,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public Note getByGuid(String guid, boolean withContents) {
+        long start = System.currentTimeMillis();
         final Note cached = (Note) softrefMapByGuid.get(guid);
         if (null != cached) {
             LOG.fine("cache hit note guid:" + guid);
@@ -134,6 +141,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             final int id = rs.getInt("ID");
             final Note toReturn = get(id);
             softrefMapByGuid.put(guid, toReturn);
+            long delta = System.currentTimeMillis() - start;
+            Installer.mbean.sampleGetNote(delta);
             return toReturn;
         } catch (SQLException sQLException) {
             Exceptions.printStackTrace(sQLException);

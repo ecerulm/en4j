@@ -224,6 +224,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         }
         long delta = System.currentTimeMillis() - start;
+        Installer.mbean.sampleSearchTime(delta);
         LOG.info("find took " + delta / 1000.0 + " secs. " + toReturn.size() + " results found");
         return toReturn;
     }

@@ -7,6 +7,7 @@ package com.rubenlaguna.en4j.searchlucene;
 
 import java.util.Queue;
 import java.util.concurrent.ThreadPoolExecutor;
+import org.apache.commons.math.stat.descriptive.SynchronizedDescriptiveStatistics;
 import org.apache.lucene.document.Document;
 
 /**
@@ -17,6 +18,8 @@ import org.apache.lucene.document.Document;
 public class SearchLuceneMBeanImpl implements SearchLuceneMBeanImplMBean {
 
     private ThreadPoolExecutor threadPoolExecutor;
+
+    private SynchronizedDescriptiveStatistics searchTime = new SynchronizedDescriptiveStatistics(10);
 
     public SearchLuceneMBeanImpl() {
     }
@@ -43,6 +46,17 @@ public class SearchLuceneMBeanImpl implements SearchLuceneMBeanImplMBean {
 
     void setThreadPoolExecutor(ThreadPoolExecutor RP) {
         this.threadPoolExecutor = RP;
+    }
+
+    /**
+     * Get Average time to complete a search in ms
+     */
+    public double getAverageSearchTime() {
+        return searchTime.getMean();
+    }
+
+    public void sampleSearchTime(long i) {
+        searchTime.addValue(i);
     }
 }
 
