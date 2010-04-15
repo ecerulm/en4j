@@ -99,6 +99,7 @@ public class Installer extends ModuleInstall {
     @Override
     public void close() {
         try {
+            DbPstmts.getInstance().close();
             c.createStatement().execute("SHUTDOWN");
         } catch (SQLException e) {
             LOG.log(Level.WARNING, "exception caught while doing db shutdown", e);
