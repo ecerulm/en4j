@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
@@ -108,12 +109,14 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                     return;
                 }
 
-                String uri = findLink(panel, box.getElement());
-                LOG.fine("onMouseUp: uri: " + uri);
+                String uriString = findLink(panel, box.getElement());
+                LOG.fine("onMouseUp: uri: " + uriString);
 
-                if (uri != null) {
+                if (uriString != null) {
                     try {
-                        Desktop.getDesktop().browse(new URI(uri));
+                        URL url = new URL(uriString);
+                        URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
+                        Desktop.getDesktop().browse(uri);
                     } catch (IOException ex) {
                         Exceptions.printStackTrace(ex);
                     } catch (URISyntaxException ex) {
