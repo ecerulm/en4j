@@ -36,56 +36,56 @@ public class DbPstmts {
     private static final Logger LOG = Logger.getLogger(DbPstmts.class.getName());
     private static DbPstmts theInstance = null;
     private static boolean closed = false;
-    PreparedStatementWrapperInt sourceurlPstmt;
-    PreparedStatementWrapperInt contentFromNotes;
-    PreparedStatementWrapperString dataFromResourcesPstmt;
-    PreparedStatementWrapperInt guidFromNotesPstmt;
-    PreparedStatementWrapperString recogFromResourcesPstmt;
-    PreparedStatementWrapperString ownerguidFromResourcesPstmt;
-    PreparedStatementWrapperString mimeFromResources;
-    PreparedStatementWrapperString hashResourcesOwnerPstmt;
-    PreparedStatementWrapperInt usnFromNotesPstmt;
-    PreparedStatementWrapperString filenameFromResourcesPstmt;
-    PreparedStatementWrapperString hashFromResourcesPstmt;
-    PreparedStatementWrapperInt titleFromNotes;
+    PreparedStatementWrapper<Integer, String> sourceurlPstmt;
+    PreparedStatementWrapper<Integer, Reader> contentFromNotes;
+    PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
+    PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
+    PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
+    PreparedStatementWrapper<String, String> ownerguidFromResourcesPstmt;
+    PreparedStatementWrapper<String, String> mimeFromResources;
+    PreparedStatementWrapper<String, Collection<String>> hashResourcesOwnerPstmt;
+    PreparedStatementWrapper<Integer, Integer> usnFromNotesPstmt;
+    PreparedStatementWrapper<String, String> filenameFromResourcesPstmt;
+    PreparedStatementWrapper<String, String> hashFromResourcesPstmt;
+    PreparedStatementWrapper<Integer, String> titleFromNotes;
 
     private DbPstmts() throws SQLException {
-        contentFromNotes = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
+        contentFromNotes = new PreparedStatementWrapper<Integer, Reader>(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected Reader getResultFromResulSet(ResultSet rs) throws SQLException {
                 final Reader characterStream = rs.getCharacterStream("CONTENT");
                 return characterStream;
             }
         };
 
-        sourceurlPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?")) {
+        sourceurlPstmt = new PreparedStatementWrapper<Integer, String>(getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 final String toReturn = rs.getString("SOURCEURL");
                 return toReturn;
             }
         };
-        titleFromNotes = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?")) {
+        titleFromNotes = new PreparedStatementWrapper<Integer, String>(getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("TITLE");
             }
         };
 
-        usnFromNotesPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?")) {
+        usnFromNotesPstmt = new PreparedStatementWrapper<Integer, Integer>(getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected Integer getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getInt("USN");
             }
         };
-        hashResourcesOwnerPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?")) {
+        hashResourcesOwnerPstmt = new PreparedStatementWrapper<String, Collection<String>>(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected Collection<String> getResultFromResulSet(ResultSet rs) throws SQLException {
                 Collection<String> toReturn = new ArrayList<String>();
                 do {
                     toReturn.add(rs.getString("HASH"));
@@ -93,87 +93,87 @@ public class DbPstmts {
                 return toReturn;
             }
         };
-        guidFromNotesPstmt = new PreparedStatementWrapperInt(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
+        guidFromNotesPstmt = new PreparedStatementWrapper<Integer, String>(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("GUID");
             }
         };
-        dataFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?")) {
+        dataFromResourcesPstmt = new PreparedStatementWrapper<String, InputStream>(getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected InputStream getResultFromResulSet(ResultSet rs) throws SQLException {
                 final Blob blob = rs.getBlob("DATA");
                 final InputStream is = blob.getBinaryStream();
                 return is;
             }
         };
-        mimeFromResources = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
+        mimeFromResources = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("MIME");
             }
         };
 
-        ownerguidFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?")) {
+        ownerguidFromResourcesPstmt = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("OWNERGUID");
             }
         };
-        recogFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?")) {
+        recogFromResourcesPstmt = new PreparedStatementWrapper<String, byte[]>(getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
-            return rs.getBytes("RECOGNITION");
+            protected byte[] getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getBytes("RECOGNITION");
             }
         };
-        filenameFromResourcesPstmt = new PreparedStatementWrapperString(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
+        filenameFromResourcesPstmt = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
 
             @Override
-            protected Object getResultFromResulSet(ResultSet rs) throws SQLException {
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("FILENAME");
             }
         };
     }
 
     public Reader getContentAsReader(int id) {
-        return (Reader) contentFromNotes.get(id);
+        return contentFromNotes.get(id);
     }
 
     public String getSourceurl(int id) {
-        return (String) sourceurlPstmt.get(id);
+        return sourceurlPstmt.get(id);
     }
 
     public String getTitle(int id) {
-        return (String) titleFromNotes.get(id);
+        return titleFromNotes.get(id);
     }
 
     public int getUpdateSequenceNumber(int id) {
-        return (Integer) usnFromNotesPstmt.get(id);
+        return usnFromNotesPstmt.get(id);
     }
 
     public Collection<String> getResources(String guid) {
-        final Collection<String> resources = (Collection<String>) hashResourcesOwnerPstmt.get(guid);
-        if(resources==null) {
+        final Collection<String> resources = hashResourcesOwnerPstmt.get(guid);
+        if (resources == null) {
             return Collections.EMPTY_LIST;
         }
         return resources;
     }
 
     public String getGuid(int id) {
-        return (String) guidFromNotesPstmt.get(id);
+        return guidFromNotesPstmt.get(id);
     }
 
     public String getDataHash(String resGuid) {
-        return (String) hashFromResourcesPstmt.get(resGuid);
+        return hashFromResourcesPstmt.get(resGuid);
     }
 
     public InputStream getDataAsInputStream(String guid) {
-        return (InputStream) dataFromResourcesPstmt.get(guid);
+        return dataFromResourcesPstmt.get(guid);
     }
 
     public byte[] getData(String resGuid) {
@@ -196,19 +196,19 @@ public class DbPstmts {
     }
 
     public String getFilename(String resGuid) {
-        return (String) filenameFromResourcesPstmt.get(resGuid);
+        return filenameFromResourcesPstmt.get(resGuid);
     }
 
     public String getMime(String guid) {
-        return (String) mimeFromResources.get(guid);
+        return mimeFromResources.get(guid);
     }
 
     public String getNoteguid(String resGuid) {
-        return (String) ownerguidFromResourcesPstmt.get(resGuid);
+        return ownerguidFromResourcesPstmt.get(resGuid);
     }
 
     public byte[] getRecognition(String resGuid) {
-        return (byte[]) recogFromResourcesPstmt.get(resGuid);
+        return recogFromResourcesPstmt.get(resGuid);
     }
 
     public synchronized void close() {
