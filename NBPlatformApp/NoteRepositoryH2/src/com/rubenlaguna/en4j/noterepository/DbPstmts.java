@@ -277,20 +277,23 @@ public class DbPstmts {
         }
     }
 
-    private void closePStatement(PreparedStatement pstmt) {
-        if (pstmt != null) {
-            try {
-                pstmt.close();
-            } catch (SQLException e) {
-            }
-        }
-    }
+//    private void closePStatement(PreparedStatement pstmt) {
+//        if (pstmt != null) {
+//            try {
+//                pstmt.close();
+//            } catch (SQLException e) {
+//            }
+//        }
+//    }
 
     private Connection getConnection() {
         return Installer.c;
     }
 
     public synchronized static DbPstmts getInstance() {
+        if (closed) {
+            throw new IllegalStateException("DbPstmts already closed.");
+        }
         try {
             if (theInstance == null && !closed) {
                 theInstance = new DbPstmts();

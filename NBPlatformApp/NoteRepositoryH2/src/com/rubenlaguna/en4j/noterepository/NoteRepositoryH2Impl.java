@@ -69,6 +69,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
+
             pstmt = connection.prepareStatement("SELECT ID FROM NOTES WHERE ISACTIVE = ?");
             pstmt.setBoolean(1, true);
             rs = pstmt.executeQuery();
@@ -77,7 +78,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 toReturn.add(get(id));
             }
         } catch (SQLException ex) {
-            Exceptions.printStackTrace(ex);
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
         } finally {
             if (rs != null) {
                 try {
@@ -156,8 +158,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             long delta = System.currentTimeMillis() - start;
             Installer.mbean.sampleGetNote(delta);
             return toReturn;
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
             if (rs != null) {
@@ -232,8 +235,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return false;
             }
             return true;
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
             if (pstmt != null) {
@@ -274,7 +278,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
             return true;
         } catch (SQLException ex) {
-            Exceptions.printStackTrace(ex);
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
             if (null != insertStmt) {
@@ -316,8 +321,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return true;
             }
             return false;
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception while trying to insert resource " + resource.getGuid(), sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
             if (null != deleteStmt) {
@@ -342,7 +348,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("found resource (guid:"+guid+",hash:"+hash+") in the cache but it seems to be corrupted (no guid)");
+                LOG.warning("found resource (guid:" + guid + ",hash:" + hash + ") in the cache but it seems to be corrupted (no guid)");
                 resSoftMapByOwnerGuidAndHash.remove(guid + hash);
             }
         }
@@ -363,8 +369,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByOwnerGuidAndHash.put(guid + hash, toReturn);
             return toReturn;
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
             if (null != rs) {
@@ -386,10 +393,10 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         final Resource cached = (Resource) resSoftMapByGuid.get(resguid);
         if (null != cached) {
             LOG.fine("cache hit resourceguid:" + resguid);
-            if (cached.getGuid()!=null) {
+            if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("found resource (guid:"+resguid+") in the cache but it seems to be corrupted");
+                LOG.warning("found resource (guid:" + resguid + ") in the cache but it seems to be corrupted");
                 resSoftMapByGuid.remove(resguid);
             }
         }
@@ -408,8 +415,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByGuid.put(resguid, toReturn);
             return toReturn;
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
             if (null != rs) {
@@ -438,8 +446,9 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return true;
             }
             return false;
-        } catch (SQLException sQLException) {
-            LOG.log(Level.WARNING, "exception while trying to delete resource " + guid, sQLException);
+        } catch (SQLException ex) {
+            LOG.log(Level.WARNING, "exception while trying to delete resource " + guid, ex);
+            LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
             if (null != deleteStmt) {

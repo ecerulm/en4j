@@ -40,4 +40,6 @@ public interface NoteFinder {
     void addPropertyChangeListener(PropertyChangeListener listener);
 
     void removePropertyChangeListener(PropertyChangeListener listener);
+
+    void close();
 }

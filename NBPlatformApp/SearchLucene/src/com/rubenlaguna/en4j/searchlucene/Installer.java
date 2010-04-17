@@ -4,11 +4,13 @@
  */
 package com.rubenlaguna.en4j.searchlucene;
 
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import org.openide.modules.ModuleInstall;
 import java.lang.management.ManagementFactory;
 import javax.management.ObjectName;
 import javax.management.JMException;
 import org.openide.util.Exceptions;
+import org.openide.util.Lookup;
 
 /**
  * Manages a module's lifecycle. Remember that an installer is optional and
@@ -30,6 +32,7 @@ public class Installer extends ModuleInstall {
 
     @Override
     public void close() {
+        Lookup.getDefault().lookup(NoteFinder.class).close();
         IndexWriterWrapper.getInstance().close();
     }
 
