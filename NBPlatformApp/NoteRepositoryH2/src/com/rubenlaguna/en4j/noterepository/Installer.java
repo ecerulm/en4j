@@ -79,6 +79,7 @@ public class Installer extends ModuleInstall {
                         + "FILENAME VARCHAR, "
                         + "MIME VARCHAR, "
                         + "RECOGNITION BINARY, "
+                        + "USN INT NOT NULL, "
                         + "CONSTRAINT UNQ_GUID_RES UNIQUE (GUID))");
                 c.createStatement().execute("CREATE INDEX I_RSOURCS_OWNER ON RESOURCES (OWNERGUID)");
                 c.createStatement().execute("CREATE INDEX I_NOTES_GUID ON NOTES (GUID)");

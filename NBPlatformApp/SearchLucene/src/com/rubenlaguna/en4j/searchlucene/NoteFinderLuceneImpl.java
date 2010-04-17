@@ -200,7 +200,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
-                    LOG.info("doc id " + stringValue + " matches the search.");
+                    LOG.fine("doc id " + stringValue + " matches the search.");
                     toReturn.add(nr.get(docId, false));
                 }
 
@@ -234,20 +234,25 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         RP.submit(new Runnable() {
 
             public void run() {
+
                 LOG.fine("Generating a lucene document from note (" + n.getTitle() + ")");
                 Note note = getProperNote(n);
                 Document document = null;
                 if (null != note) {
                     try {
-                        document = getLuceneDocument(note);
-                        IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
-                        if (!pendingCommit) {
-                            pendingCommit = true;
-                            LOG.info("scheduling COMMITER");
-                            COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                        if (n.isActive()) {
+                            document = getLuceneDocument(note);
+                            IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
+                            if (!pendingCommit) {
+                                pendingCommit = true;
+                                LOG.info("scheduling COMMITER");
+                                COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                            }
+                        } else {
+                            IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", n.getId().toString()));
                         }
                     } catch (Exception ex) {
-                        LOG.log(Level.WARNING, "couldn't index note " + note.getGuid(), ex);
+                        LOG.log(Level.WARNING, "couldn't index note " + note.getTitle(), ex);
                         return;
                     } finally {
                         if (document != null) {
@@ -336,8 +341,16 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         Document document = new Document();
         Field idField = new Field("id", note.getId().toString(), Field.Store.YES, Field.Index.NOT_ANALYZED);
         document.add(idField);
-        Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
-        document.add(titleField);
+
+        if (note.getGuid() != null) {
+            Field guidField = new Field("guid", note.getGuid(), Field.Store.YES, Field.Index.NOT_ANALYZED);
+            document.add(guidField);
+        }
+
+        if (note.getTitle() != null) {
+            Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
+            document.add(titleField);
+        }
         DocumentFragment node = parseNote(note);
         String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
@@ -374,8 +387,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
                     final InputStream dataAsInputStream = r.getDataAsInputStream();
-                    final Reader docTikaReader = new Tika().parse( dataAsInputStream, metadata);
-                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader,dataAsInputStream);
+                    final Reader docTikaReader = new Tika().parse(dataAsInputStream, metadata);
+                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader, dataAsInputStream);
                     document.add(new Field("all", resourceReader));
 
                 } catch (Exception ex) {
@@ -441,7 +454,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private Note getProperNote(Note noteWithoutContents) {
 //        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         final Integer id = noteWithoutContents.getId();
-        return nr.get(id);
+        final Note noteFromDatabase = nr.get(id);
+        if (noteFromDatabase.getGuid() == null) {
+            LOG.warning("How come entry (id:" + id + ") entry has no guid?");
+        }
+        return noteFromDatabase;
     }
 
     private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
@@ -457,6 +474,29 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.removePropertyChangeListener(listener);
+    }
+
+    public void remove(Note n) {
+        removeByGuid(n.getGuid());
+    }
+
+    public void removeByGuid(final String noteguid) {
+        RP.submit(new Runnable() {
+
+            public void run() {
+                try {
+                    LOG.info("removing from index guid:" + noteguid);
+                    IndexWriterWrapper.getInstance().deleteDocuments(new Term("guid", noteguid));
+                    if (!pendingCommit) {
+                        pendingCommit = true;
+                        LOG.info("scheduling COMMITER");
+                        COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                    }
+                } catch (IOException ex) {
+                    LOG.log(Level.WARNING, "caught exception:", ex);
+                }
+            }
+        });
     }
 }
 

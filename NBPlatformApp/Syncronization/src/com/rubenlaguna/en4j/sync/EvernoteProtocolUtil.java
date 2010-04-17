@@ -9,6 +9,7 @@ import com.evernote.edam.error.EDAMUserException;
 import com.evernote.edam.notestore.NoteStore;
 import com.evernote.edam.notestore.SyncChunk;
 import com.evernote.edam.type.Note;
+import com.evernote.edam.type.Resource;
 import com.evernote.edam.type.User;
 import com.evernote.edam.userstore.AuthenticationResult;
 import com.evernote.edam.userstore.UserStore;
@@ -35,7 +36,7 @@ import org.openide.util.NbPreferences;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class EvernoteProtocolUtil implements EDAMIf {
+class EvernoteProtocolUtil  {
 
     private final Logger LOG = Logger.getLogger(EvernoteProtocolUtil.class.getName());
 //    private final String userStoreUrl = "https://sandbox.evernote.com/edam/user";
@@ -184,7 +185,6 @@ class EvernoteProtocolUtil implements EDAMIf {
         expirationTime.set(authStartTime + authValidityPeriod);
     }
 
-    @Override
     public boolean checkVersion() {
         try {
             return getUserStore().checkVersion("en4j (evernote for java)", com.evernote.edam.userstore.Constants.EDAM_VERSION_MAJOR, com.evernote.edam.userstore.Constants.EDAM_VERSION_MINOR);
@@ -194,15 +194,12 @@ class EvernoteProtocolUtil implements EDAMIf {
         return false;
     }
 
-    @Override
-    public Collection<NoteInfo> getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) {
-        try {
-            SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
-            updateCount.set(sc.getUpdateCount());
-            Collection<NoteInfo> toReturn = new ArrayList<NoteInfo>();
+    public Collection<ElemInfo> getNotesFrom(SyncChunk sc) {
+
+            Collection<ElemInfo> toReturn = new ArrayList<ElemInfo>();
             if (sc.getNotes() != null) {
                 for (Note note : sc.getNotes()) {
-                    NoteInfo ni = new NoteInfo();
+                    ElemInfo ni = new ElemInfo();
                     ni.guid = note.getGuid();
                     ni.usn = note.getUpdateSequenceNum();
                     toReturn.add(ni);
@@ -211,22 +208,32 @@ class EvernoteProtocolUtil implements EDAMIf {
                 LOG.info("sc.getNotes() is null");
             }
             return toReturn;
+    }
+    public SyncChunk getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) {
+        try {
+            SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
+            updateCount.set(sc.getUpdateCount());
+            return sc;
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception caught:", ex);
         }
-        return Collections.EMPTY_LIST;
+        return null;
     }
 
-    @Override
     public int getUpdateCount() {
         return updateCount.get();
     }
 
-    @Override
     public com.rubenlaguna.en4j.noteinterface.NoteReader getNote(String noteGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
         Note n = getValidNoteStore().getNote(getValidAuthToken(), noteGuid, true, true, true, true);
         NoteAdapter na = new NoteAdapter(n);
         return na;
+    }
+    public com.rubenlaguna.en4j.noteinterface.Resource getResource(String resGuid, boolean b, boolean b0, boolean b1, boolean b2) throws Exception {
+        Resource r = getValidNoteStore().getResource(getValidAuthToken(), resGuid, true, true, true, true);
+//        NoteAdapter na = new NoteAdapter(n);
+        ResourceAdapter ra = new ResourceAdapter(r);
+        return ra;
     }
 }
 
