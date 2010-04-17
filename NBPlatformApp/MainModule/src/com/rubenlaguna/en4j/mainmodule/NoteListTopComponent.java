@@ -353,12 +353,12 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             //TODO clear this, move ic.set outside the if else block 
             if (value != null) {
-                Logger.getLogger(getName()).log(Level.WARNING, "selection changed: " + p.getValue(jTable1).toString());
+                Logger.getLogger(getName()).log(Level.FINE, "selection changed: " + p.getValue(jTable1).toString());
                 ic.set(Collections.singleton(value), null);
 
             } else {
                 ic.set(Collections.emptySet(), null);
-                Logger.getLogger(getName()).log(Level.WARNING, "selection changed: nothing selected");
+                Logger.getLogger(getName()).log(Level.FINE, "selection changed: nothing selected");
             }
         }
     }
