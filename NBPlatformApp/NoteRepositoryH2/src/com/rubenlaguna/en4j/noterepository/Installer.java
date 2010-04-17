@@ -102,6 +102,8 @@ public class Installer extends ModuleInstall {
         try {
             DbPstmts.getInstance().close();
             c.createStatement().execute("SHUTDOWN");
+            c.close();
+            c=null;
         } catch (SQLException e) {
             LOG.log(Level.WARNING, "exception caught while doing db shutdown", e);
         }
