@@ -58,4 +58,6 @@ public interface Resource {
     byte[] getRecognition();
 
     Date getTimestamp();
+
+    int getUpdateSequenceNumber();
 }

@@ -119,4 +119,8 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
             throw new RuntimeException(ex);
         }
     }
+
+    public int getUpdateSequenceNumber() {
+        return resource.getUpdateSequenceNum();
+    }
 }

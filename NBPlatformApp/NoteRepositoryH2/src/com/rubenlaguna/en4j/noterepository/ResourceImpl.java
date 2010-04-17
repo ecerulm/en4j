@@ -98,4 +98,8 @@ class ResourceImpl implements Resource, Serializable {
     private Logger getLogger() {
         return Logger.getLogger(ResourceImpl.class.getName());
     }
+
+    public int getUpdateSequenceNumber() {
+        return DbPstmts.getInstance().getUpdateSequenceNumberForResource(guid);
+    }
 }

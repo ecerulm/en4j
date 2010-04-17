@@ -16,6 +16,8 @@
  */
 package com.rubenlaguna.en4j.sync;
 
+import com.evernote.edam.notestore.SyncChunk;
+import com.evernote.edam.type.Resource;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -48,11 +51,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private int PendingRemoteUpdateNotes = 0;
     private static final int MAX_QUEUED_NOTES = 25;
     private final ThreadPoolExecutor RP = new ThreadPoolExecutor(2, 2, 10, TimeUnit.MINUTES, new ArrayBlockingQueue<Runnable>(MAX_QUEUED_NOTES * 2), new ThreadPoolExecutor.CallerRunsPolicy());
-    //private final ExecutorService RPDB = Executors.newSingleThreadExecutor();
     protected boolean syncFailed = false;
     public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
-    private final EDAMIf util;
+    private final EvernoteProtocolUtil util;
 
     public SynchronizationServiceImpl() {
         com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
@@ -61,7 +63,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         System.out.println("fakeEDAM =" + fakeEDAM);
 
         if (fakeEDAM != null) {
-            util = new FakeEDAM(fakeEDAM);
+            throw new UnsupportedOperationException("no fakeEDAM");
         } else {
             util = EvernoteProtocolUtil.getInstance();
         }
@@ -91,27 +93,18 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 if (isFirstSync) {
                     LOG.info("This is still the first sync.");
                 }
-//                SyncChunk sc = util.getValidNoteStore().getSyncChunk(util.getValidAuthToken(), highestUSN, MAX_QUEUED_NOTES, isFirstSync);
-//                LOG.info("SyncChunk retrieved");
-
-//                int pendingUpdates = sc.getUpdateCount() - highestUSN;
-                Collection<NoteInfo> sc = util.getSyncChunk(highestUSN, MAX_QUEUED_NOTES, isFirstSync);
+                final SyncChunk syncChunk = util.getSyncChunk(highestUSN, MAX_QUEUED_NOTES, isFirstSync);
                 int pendingUpdates = util.getUpdateCount() - highestUSN;
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
-                final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
-                if (sc.size() > 0) {
-                    final Iterator<NoteInfo> notesIterator = sc.iterator();
-                    retrieveNotesAsync(notesIterator, tasks);
-                    if (!waitForAllTaskToComplete(tasks)) {
-                        for (Future<Boolean> future : tasks) {
-                            future.cancel(true);
-                        }
-                        errorDetected = true;
-                        setSyncFailed(true);
-                    } else {
-                        int husn = getHighestUsnInCollection(sc);
-                        setUSN(husn);
+                if (syncChunk.getChunkHighUSN() > highestUSN) {
+                    final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
+                    tasks.addAll(createAndSubmitAddNoteTasks(syncChunk));
+                    tasks.addAll(createAndSubmitAddResourceTasks(syncChunk));
+                    tasks.addAll(createAndSubmitAddExpungedNoteTasks(syncChunk));
+
+                    if (!waitAndUpdateUsn(tasks, syncChunk.getChunkHighUSN())) {
+                        return false;
                     }
                 } else {
                     LOG.info("No notes to download");
@@ -126,35 +119,83 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         }
     }
 
-    private int getHighestUsnInCollection(Collection<NoteInfo> sc) {
-        int husn = 0;
-        for (NoteInfo noteInfo : sc) {
-            if (noteInfo.usn > husn) {
-                husn = noteInfo.usn;
+    public List<Future<Boolean>> createAndSubmitAddResourceTasks(final SyncChunk syncChunk) {
+        final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
+        if (syncChunk.isSetResources()) {
+            int husn = 0;
+            for (Resource res : syncChunk.getResources()) {
+                if (res.getUpdateSequenceNum() > husn) {
+                    husn = res.getUpdateSequenceNum();
+                }
+                ElemInfo resInfo = new ElemInfo();
+                resInfo.guid = res.getGuid();
+                resInfo.usn = res.getUpdateSequenceNum();
+                Callable<Boolean> callable = new RetrieveAndAddResourceTask(resInfo, util);
+                final Future<Boolean> task = RP.submit(callable);
+                tasks.add(task);
             }
         }
-        return husn;
+        return tasks;
     }
 
-    private void retrieveNotesAsync(final Iterator<NoteInfo> notesIterator, final List<Future<Boolean>> tasks) {
-        while (notesIterator.hasNext()) {
-            final NoteInfo note = notesIterator.next();
-            Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
-            //TODO: java.util.concurrent.RejectedExecutionException
-            final Future<Boolean> task = RP.submit(callable);
-            tasks.add(task);
+    private List<Future<Boolean>> createAndSubmitAddNoteTasks(final SyncChunk syncChunk) {
+        final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
+        Collection<ElemInfo> sc = util.getNotesFrom(syncChunk);
+        if (sc.size() > 0) {
+            for (ElemInfo note : sc) {
+                Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
+                final Future<Boolean> task = RP.submit(callable);
+                tasks.add(task);
+            }
         }
+        return tasks;
+    }
+
+    private List<Future<Boolean>> createAndSubmitAddExpungedNoteTasks(final SyncChunk syncChunk) {
+        final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
+        if (syncChunk.isSetExpungedNotes()) {
+            for (final String noteguid : syncChunk.getExpungedNotes()) {
+                Callable<Boolean> callable = new Callable<Boolean>() {
+                    public Boolean call() throws Exception {
+                        Lookup.getDefault().lookup(NoteRepository.class).deleteNoteByGuid(noteguid);
+                        return true;
+                    }
+                };
+                final Future<Boolean> task = RP.submit(callable);
+                tasks.add(task);
+            }
+        }
+        return tasks;
+    }
+
+    /**
+     *
+     * @param tasks
+     * @param husn
+     * @return true if all task were completed sucessfully, false otherwise
+     */
+    private boolean waitAndUpdateUsn(final List<Future<Boolean>> tasks, int husn) {
+        if (!waitForAllTaskToComplete(tasks)) {
+            for (Future<Boolean> future : tasks) {
+                future.cancel(true);
+            }
+            setSyncFailed(true);
+            return false;
+        } else {
+            setUSN(husn);
+        }
+        return true;
     }
 
     private boolean waitForAllTaskToComplete(final List<Future<Boolean>> tasks) {
         long start = System.currentTimeMillis();
         final int total = tasks.size();
-        LOG.info("wait for " + total + " notes to download.");
+        LOG.info("wait for " + total + " download tasks.");
         try {
             int i = 0;
             for (Future<Boolean> future : tasks) {
                 i++;
-                LOG.info("get note (" + i + "/" + total + ") of future " + future);
+                LOG.info("get  (" + i + "/" + total + ") from " + future);
                 boolean suceeded = future.get(1, TimeUnit.DAYS);
                 if (!suceeded) {
                     return false;
@@ -234,12 +275,12 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
     private int getHighestUSN() {
         int highestUSN = NbPreferences.forModule(SynchronizationServiceImpl.class).getInt(HIGHESTUSN, 0);
-        LOG.info("Higest USN is " + highestUSN);
+        LOG.fine("Highest USN is " + highestUSN);
         return highestUSN;
     }
 
     private void setUSN(int chunkHighUSN) {
-        LOG.info("setUSN: getHighestUSN=" + getHighestUSN() + " chunkHighUSN=" + chunkHighUSN);
+        LOG.fine("setUSN: getHighestUSN=" + getHighestUSN() + " chunkHighUSN=" + chunkHighUSN);
         if (chunkHighUSN > getHighestUSN()) {
             synchronized (this) {
                 if (chunkHighUSN > getHighestUSN()) {
@@ -256,9 +297,9 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
     private final String noteGuid;
     private final int usn;
-    private final EDAMIf util;
+    private final EvernoteProtocolUtil util;
 
-    RetrieveAndAddNoteTask(NoteInfo note, EDAMIf util) {
+    RetrieveAndAddNoteTask(ElemInfo note, EvernoteProtocolUtil util) {
         this.noteGuid = note.guid;
         this.usn = note.usn;
         this.util = util;
@@ -280,7 +321,6 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
             long delta = System.currentTimeMillis() - start;
             final String guid = note.getGuid();
             LOG.info("It took " + delta + " ms" + " to download note " + guid);
-//            final NoteAdapter noteAdapter = new NoteAdapter(note);
             return addToDb(note);
         } else {
             return true;
@@ -307,8 +347,78 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     }
 
     private boolean isUpToDate() {
-//        return false;
         final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         return nr.isNoteUpToDate(noteGuid, usn);
+    }
+}
+
+class RetrieveAndAddResourceTask implements Callable<Boolean> {
+
+    private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
+    private final String resGuid;
+    private final int usn;
+    private final EvernoteProtocolUtil util;
+
+    RetrieveAndAddResourceTask(ElemInfo res, EvernoteProtocolUtil util) {
+        this.resGuid = res.guid;
+        this.usn = res.usn;
+        this.util = util;
+    }
+
+    @Override
+    public Boolean call() throws Exception {
+        long start = System.currentTimeMillis();
+        if (!isUpToDate()) {
+
+            LOG.fine("Start downloading res " + resGuid);
+            //EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
+            com.rubenlaguna.en4j.noteinterface.Resource res = null;
+            try {
+                res = util.getResource(resGuid, true, true, true, true);
+            } catch (Exception ex) {
+                LOG.log(Level.WARNING, "Couldn't retrieve resource " + resGuid, ex);
+                return null;
+            }
+            final String guid = res.getGuid();
+            long delta = System.currentTimeMillis() - start;
+            LOG.info("It took " + delta + " ms" + " to download res " + guid);
+            final String noteguid = res.getNoteguid();
+            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(noteguid, false);
+            if (byGuid == null) {
+                LOG.info("The parent note is missing from the database download it too");
+                ElemInfo ei = new ElemInfo();
+                ei.guid = noteguid;
+                ei.usn = Integer.MAX_VALUE;
+                new RetrieveAndAddNoteTask(ei, util).call();
+            }
+            return addToDb(res);
+        } else {
+            return true;
+        }
+    }
+
+    private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Resource res) {
+        final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        boolean suceeded = nr.add(res);
+        if (suceeded) {
+            final String guid = res.getNoteguid();
+            final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
+            if (null == byGuid) {
+                LOG.warning("the resource was not added properly to the db we can't find the parent note (" + guid + ")");
+                return false;
+            }
+            nf.index(byGuid); //non blocking
+            return true;
+        } else {
+            LOG.log(Level.WARNING, "Fail to add resoruce \"" + res.getGuid() + "\" to database");
+            return false;
+        }
+    }
+
+    private boolean isUpToDate() {
+        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        return nr.isResourceUpToDate(resGuid, usn);
     }
 }

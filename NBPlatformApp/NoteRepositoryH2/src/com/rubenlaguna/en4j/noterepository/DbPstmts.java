@@ -41,6 +41,7 @@ public class DbPstmts {
     PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
     PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
     PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
+    PreparedStatementWrapper<String, Integer> usnFromResourcesGuidPstmt;
     PreparedStatementWrapper<String, String> ownerguidFromResourcesPstmt;
     PreparedStatementWrapper<String, String> mimeFromResources;
     PreparedStatementWrapper<String, Collection<String>> hashResourcesOwnerPstmt;
@@ -131,6 +132,13 @@ public class DbPstmts {
                 return rs.getBytes("RECOGNITION");
             }
         };
+        usnFromResourcesGuidPstmt = new PreparedStatementWrapper<String, Integer>(getConnection().prepareStatement("SELECT USN FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Integer getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getInt("USN");
+            }
+        };
         filenameFromResourcesPstmt = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?")) {
 
             @Override
@@ -211,45 +219,50 @@ public class DbPstmts {
         return recogFromResourcesPstmt.get(resGuid);
     }
 
+    int getUpdateSequenceNumberForResource(String resGuid) {
+        return usnFromResourcesGuidPstmt.get(resGuid);
+    }
+
     public synchronized void close() {
         closed = true;
         theInstance = null;
-//        closePStatement(contentFromNotesPstmt);
-        contentFromNotes.close();
-        contentFromNotes = null;
 
-        sourceurlPstmt.close();
-        sourceurlPstmt = null;
+        if (!closed) {
+            contentFromNotes.close();
+            contentFromNotes = null;
+            sourceurlPstmt.close();
+            sourceurlPstmt = null;
 
-        dataFromResourcesPstmt.close();
-        dataFromResourcesPstmt = null;
+            dataFromResourcesPstmt.close();
+            dataFromResourcesPstmt = null;
 
-        titleFromNotes.close();
-        titleFromNotes = null;
+            titleFromNotes.close();
+            titleFromNotes = null;
 
-        hashFromResourcesPstmt.close();
-        hashFromResourcesPstmt = null;
+            hashFromResourcesPstmt.close();
+            hashFromResourcesPstmt = null;
 
-        filenameFromResourcesPstmt.close();
-        filenameFromResourcesPstmt = null;
+            filenameFromResourcesPstmt.close();
+            filenameFromResourcesPstmt = null;
 
-        guidFromNotesPstmt.close();
-        guidFromNotesPstmt = null;
+            guidFromNotesPstmt.close();
+            guidFromNotesPstmt = null;
 
-        mimeFromResources.close();
-        mimeFromResources = null;
+            mimeFromResources.close();
+            mimeFromResources = null;
 
-        ownerguidFromResourcesPstmt.close();
-        ownerguidFromResourcesPstmt = null;
+            ownerguidFromResourcesPstmt.close();
+            ownerguidFromResourcesPstmt = null;
 
-        recogFromResourcesPstmt.close();
-        recogFromResourcesPstmt = null;
+            recogFromResourcesPstmt.close();
+            recogFromResourcesPstmt = null;
 
-        hashResourcesOwnerPstmt.close();
-        hashResourcesOwnerPstmt = null;
+            hashResourcesOwnerPstmt.close();
+            hashResourcesOwnerPstmt = null;
 
-        usnFromNotesPstmt.close();
-        usnFromNotesPstmt = null;
+            usnFromNotesPstmt.close();
+            usnFromNotesPstmt = null;
+        }
     }
 
     private void closePStatement(PreparedStatement pstmt) {

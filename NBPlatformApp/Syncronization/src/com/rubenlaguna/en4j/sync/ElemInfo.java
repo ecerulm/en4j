@@ -9,7 +9,7 @@ package com.rubenlaguna.en4j.sync;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class NoteInfo {
+class ElemInfo {
     public String guid = null;
     public int usn;
 }

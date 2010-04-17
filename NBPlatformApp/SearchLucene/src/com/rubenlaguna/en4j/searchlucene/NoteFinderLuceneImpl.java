@@ -200,7 +200,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
-                    LOG.info("doc id " + stringValue + " matches the search.");
+                    LOG.fine("doc id " + stringValue + " matches the search.");
                     toReturn.add(nr.get(docId, false));
                 }
 
@@ -336,8 +336,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         Document document = new Document();
         Field idField = new Field("id", note.getId().toString(), Field.Store.YES, Field.Index.NOT_ANALYZED);
         document.add(idField);
-        Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
-        document.add(titleField);
+        if (note.getTitle() != null) {
+            Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
+            document.add(titleField);
+        }
         DocumentFragment node = parseNote(note);
         String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
@@ -374,8 +376,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
                     final InputStream dataAsInputStream = r.getDataAsInputStream();
-                    final Reader docTikaReader = new Tika().parse( dataAsInputStream, metadata);
-                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader,dataAsInputStream);
+                    final Reader docTikaReader = new Tika().parse(dataAsInputStream, metadata);
+                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader, dataAsInputStream);
                     document.add(new Field("all", resourceReader));
 
                 } catch (Exception ex) {
