@@ -144,6 +144,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                     //save resource to tmp file
                     String extension = FilenameUtils.getExtension(resource.getFilename());
                     File tempFile = File.createTempFile("en4j", "." + extension);
+                    tempFile.deleteOnExit();
                     OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile));
                     InputStream is = resource.getDataAsInputStream();
                     // Transfer bytes from in to out
