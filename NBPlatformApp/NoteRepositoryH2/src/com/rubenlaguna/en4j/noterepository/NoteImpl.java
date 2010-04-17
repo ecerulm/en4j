@@ -108,7 +108,7 @@ class NoteImpl implements Note {
     }
 
     public boolean isActive() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().isActive(id);
     }
 
     public void setActive(boolean active) {

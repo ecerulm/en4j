@@ -69,7 +69,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            pstmt = connection.prepareStatement("SELECT ID FROM NOTES");
+            pstmt = connection.prepareStatement("SELECT ID FROM NOTES WHERE ISACTIVE = ?");
+            pstmt.setBoolean(1, true);
             rs = pstmt.executeQuery();
             while (rs.next()) {
                 final int id = rs.getInt("ID");
@@ -106,7 +107,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         final Note cached = (Note) softrefMapById.get(id);
         if (null != cached) {
             LOG.fine("cache hit note id:" + id);
-            return cached;
+            if (cached.getGuid() != null) {
+                return cached;
+            } else {
+                LOG.warning("we got something from the cache (id:" + id + ")but seems to be corrupted (no guid)");
+                softrefMapById.remove(id);
+            }
         }
         final Note toReturn = new NoteImpl(id);
         softrefMapById.put(id, toReturn);
@@ -124,7 +130,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         final Note cached = (Note) softrefMapByGuid.get(guid);
         if (null != cached) {
             LOG.fine("cache hit note guid:" + guid);
-            return cached;
+            if (cached.getGuid() != null) {
+                return cached;
+            } else {
+                LOG.warning("we got something from the cache (guid:" + guid + ")but seems to be corrupted (no guid)");
+                softrefMapByGuid.remove(guid);
+            }
         }
 
         PreparedStatement pstmt = null;
@@ -200,13 +211,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     @Override
     public synchronized boolean deleteNoteByGuid(String noteguid) {
         Note note = getByGuid(noteguid, true);
-        for(Resource r : note.getResources()) {
+        for (Resource r : note.getResources()) {
             deleteResourceByGuid(r.getGuid());
         }
         //Frst remove it from caches
         final Note cached = (Note) softrefMapByGuid.get(noteguid);
         if (null != cached) {
-            LOG.fine("cache hit note guid:" + noteguid);
             softrefMapById.remove(cached.getId());
         }
         softrefMapByGuid.remove(noteguid);
@@ -329,7 +339,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         final Resource cached = (Resource) resSoftMapByOwnerGuidAndHash.get(guid + hash);
         if (null != cached) {
             LOG.fine("cache hit resource parent guid:" + guid + " hash:" + hash);
-            return cached;
+            if (cached.getGuid() != null) {
+                return cached;
+            } else {
+                LOG.warning("found resource (guid:"+guid+",hash:"+hash+") in the cache but it seems to be corrupted (no guid)");
+                resSoftMapByOwnerGuidAndHash.remove(guid + hash);
+            }
         }
 
         PreparedStatement pstmt = null;
@@ -370,14 +385,19 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     private Resource getResourceByGuid(String resguid) {
         final Resource cached = (Resource) resSoftMapByGuid.get(resguid);
         if (null != cached) {
-            LOG.fine("cache hit resourceguid:" + resguid );
-            return cached;
+            LOG.fine("cache hit resourceguid:" + resguid);
+            if (cached.getGuid()!=null) {
+                return cached;
+            } else {
+                LOG.warning("found resource (guid:"+resguid+") in the cache but it seems to be corrupted");
+                resSoftMapByGuid.remove(resguid);
+            }
         }
 
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            LOG.fine("searching resource with guid: " + resguid );
+            LOG.fine("searching resource with guid: " + resguid);
             pstmt = connection.prepareStatement("SELECT GUID FROM RESOURCES WHERE GUID=?");
             pstmt.setString(1, resguid);
             rs = pstmt.executeQuery();

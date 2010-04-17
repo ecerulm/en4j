@@ -49,6 +49,7 @@ public class DbPstmts {
     PreparedStatementWrapper<String, String> filenameFromResourcesPstmt;
     PreparedStatementWrapper<String, String> hashFromResourcesPstmt;
     PreparedStatementWrapper<Integer, String> titleFromNotes;
+    PreparedStatementWrapper<Integer, Boolean> isNoteActiveFromId;
 
     private DbPstmts() throws SQLException {
         contentFromNotes = new PreparedStatementWrapper<Integer, Reader>(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
@@ -146,6 +147,13 @@ public class DbPstmts {
                 return rs.getString("FILENAME");
             }
         };
+        isNoteActiveFromId = new PreparedStatementWrapper<Integer, Boolean>(getConnection().prepareStatement("SELECT ISACTIVE FROM NOTES WHERE ID=?")) {
+
+            @Override
+            protected Boolean getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getBoolean("ISACTIVE");
+            }
+        };
     }
 
     public Reader getContentAsReader(int id) {
@@ -221,6 +229,10 @@ public class DbPstmts {
 
     int getUpdateSequenceNumberForResource(String resGuid) {
         return usnFromResourcesGuidPstmt.get(resGuid);
+    }
+
+    boolean isActive(int id) {
+        return isNoteActiveFromId.get(id);
     }
 
     public synchronized void close() {

@@ -92,6 +92,15 @@ class IndexWriterWrapper {
         }
     }
 
+    void deleteDocuments(Term term) throws IOException {
+        available.acquireUninterruptibly();
+        try {
+            indexWriterInstance.deleteDocuments(term);
+        } finally {
+            available.release();
+        }
+    }
+
     void commit() throws CorruptIndexException, IOException {
         available.acquireUninterruptibly();
         try {

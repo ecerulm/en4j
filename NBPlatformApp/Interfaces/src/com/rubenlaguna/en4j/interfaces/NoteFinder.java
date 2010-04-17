@@ -31,6 +31,10 @@ public interface NoteFinder {
 
     void index(Note n);
 
+    void remove(Note n);
+
+    void removeByGuid(String noteguid);
+
     void rebuildIndex(ProgressHandle ph);
 
     void addPropertyChangeListener(PropertyChangeListener listener);

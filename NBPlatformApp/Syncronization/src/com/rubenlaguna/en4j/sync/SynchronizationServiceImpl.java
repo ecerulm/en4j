@@ -157,6 +157,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             for (final String noteguid : syncChunk.getExpungedNotes()) {
                 Callable<Boolean> callable = new Callable<Boolean>() {
                     public Boolean call() throws Exception {
+                        Lookup.getDefault().lookup(NoteFinder.class).removeByGuid(noteguid);
                         Lookup.getDefault().lookup(NoteRepository.class).deleteNoteByGuid(noteguid);
                         return true;
                     }
