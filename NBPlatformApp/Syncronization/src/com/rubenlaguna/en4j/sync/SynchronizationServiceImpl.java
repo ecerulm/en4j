@@ -291,6 +291,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             }
         }
     }
+
+    public void close() {
+        RP.shutdownNow();
+    }
 }
 
 class RetrieveAndAddNoteTask implements Callable<Boolean> {

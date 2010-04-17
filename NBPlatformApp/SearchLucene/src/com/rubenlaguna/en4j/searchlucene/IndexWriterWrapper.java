@@ -109,21 +109,9 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-//        if (commits > 5) {
-//            closeAndReopen();
-//        }
 
     }
 
-//    private void closeAndReopen() throws IOException {
-//        available.acquireUninterruptibly(MAX_AVAILABLE);
-//        LOG.info("the actual IndexWriter instance has been closed and replaced with a new instance");
-//        indexWriterInstance.close();
-//        indexWriterInstance = null;
-//        commits = 0;
-//        initWriter();
-//        available.release(MAX_AVAILABLE);
-//    }
     void optimize()
             throws CorruptIndexException, IOException {
         available.acquireUninterruptibly();
@@ -132,7 +120,6 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-//        closeAndReopen();
     }
 
     void setInfoStream(PrintStream os) {

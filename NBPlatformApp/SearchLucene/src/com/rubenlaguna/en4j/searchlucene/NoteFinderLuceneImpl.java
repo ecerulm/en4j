@@ -56,7 +56,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
@@ -104,7 +103,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             //make sure that there is an index that the readers can open
             IndexWriterWrapper.getInstance().commit();
             Installer.mbean.setThreadPoolExecutor(RP);
-//            Directory dir = FSDirectory.open(IndexWriterWrapper.getDirectory());
             Directory dir = IndexWriterWrapper.getInstance().getLuceneDirectory();
             reader = IndexReader.open(dir, true);
         } catch (CorruptIndexException ex) {
@@ -120,7 +118,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public int getNumDocs() {
         try {
-//            return IndexWriterWrapper.getInstance().numDocs() - IndexWriterWrapper.getInstance().numRamDocs();
             return IndexWriterWrapper.getInstance().numDocs();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
@@ -157,7 +154,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
         long start = System.currentTimeMillis();
         searchText = searchText.trim();
-//        String patternStr = "(?:\\w)\\s+";
         String patternStr = "\\s+";
         String replaceStr = "* ";
         Pattern pattern = Pattern.compile(patternStr);
@@ -234,7 +230,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         RP.submit(new Runnable() {
 
             public void run() {
-
                 LOG.fine("Generating a lucene document from note (" + n.getTitle() + ")");
                 Note note = getProperNote(n);
                 Document document = null;
@@ -251,6 +246,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                         } else {
                             IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", n.getId().toString()));
                         }
+                    } catch (IllegalStateException ex) {
+                        //indexer is closed. probably the whole app is closing
+                        return;
                     } catch (Exception ex) {
                         LOG.log(Level.WARNING, "couldn't index note " + note.getTitle(), ex);
                         return;
@@ -328,6 +326,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             this.pcs.firePropertyChange("index", true, false);
             long delta = System.currentTimeMillis() - start2;
             LOG.info("Index optimized.It took " + delta / 1000.0 + " secs.");
+        } catch (IllegalStateException ex) {
+            LOG.info("rebuild index failed. is the app closing?");
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception", ex);
             Exceptions.printStackTrace(ex);
@@ -452,7 +452,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private Note getProperNote(Note noteWithoutContents) {
-//        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         final Integer id = noteWithoutContents.getId();
         final Note noteFromDatabase = nr.get(id);
         if (noteFromDatabase.getGuid() == null) {
@@ -497,6 +496,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 }
             }
         });
+    }
+
+    public void close() {
+        RP.shutdownNow();
     }
 }
 
