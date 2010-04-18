@@ -456,7 +456,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Note noteFromDatabase = nr.get(id);
         if (noteFromDatabase.getGuid() == null) {
             LOG.warning("How come entry (id:" + id + ") entry has no guid?");
+            //better return null than some corrupted entry
+            return null;
         }
+
         return noteFromDatabase;
     }
 

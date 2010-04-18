@@ -77,8 +77,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 final int id = rs.getInt("ID");
                 toReturn.add(get(id));
             }
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
         } finally {
             if (rs != null) {
@@ -117,6 +117,10 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
         }
         final Note toReturn = new NoteImpl(id);
+        if (toReturn.getGuid() == null) {
+            LOG.info("Better return null than a non existing entry");
+            return null;
+        }
         softrefMapById.put(id, toReturn);
         long delta = System.currentTimeMillis() - start;
         Installer.mbean.sampleGetNote(delta);
@@ -158,8 +162,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             long delta = System.currentTimeMillis() - start;
             Installer.mbean.sampleGetNote(delta);
             return toReturn;
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -235,8 +239,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return false;
             }
             return true;
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
@@ -277,7 +281,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return false;
             }
             return true;
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
@@ -321,8 +325,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return true;
             }
             return false;
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
@@ -369,8 +373,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByOwnerGuidAndHash.put(guid + hash, toReturn);
             return toReturn;
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -415,8 +419,8 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByGuid.put(resguid, toReturn);
             return toReturn;
-        } catch (SQLException ex) {
-            LOG.log(Level.WARNING, "caught exception:"+ ex.getMessage());
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -446,7 +450,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 return true;
             }
             return false;
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             LOG.log(Level.WARNING, "exception while trying to delete resource " + guid, ex);
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
