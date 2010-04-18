@@ -151,6 +151,9 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
             } catch (IOException e) {
             }
         }
+        if (image == null) {
+            return brokenImage(context, 100, 100);
+        }
 
         ImageIcon icon = new ImageIcon(image);
 
