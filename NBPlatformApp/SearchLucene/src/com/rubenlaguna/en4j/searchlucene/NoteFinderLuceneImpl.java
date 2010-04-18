@@ -244,7 +244,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
                             }
                         } else {
-                            IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", n.getId().toString()));
+                            LOG.info("delete note (id:"+n.getId()+") from index");
+                            remove(n);
                         }
                     } catch (IllegalStateException ex) {
                         //indexer is closed. probably the whole app is closing
@@ -479,16 +480,40 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     public void remove(Note n) {
+        removeById(n.getId());
         removeByGuid(n.getGuid());
     }
 
+
+
     public void removeByGuid(final String noteguid) {
+        if (noteguid == null) {
+            return;
+        }
         RP.submit(new Runnable() {
 
             public void run() {
                 try {
                     LOG.info("removing from index guid:" + noteguid);
                     IndexWriterWrapper.getInstance().deleteDocuments(new Term("guid", noteguid));
+                    if (!pendingCommit) {
+                        pendingCommit = true;
+                        LOG.info("scheduling COMMITER");
+                        COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                    }
+                } catch (IOException ex) {
+                    LOG.log(Level.WARNING, "caught exception:", ex);
+                }
+            }
+        });
+    }
+    public void removeById(final int id) {
+        RP.submit(new Runnable() {
+
+            public void run() {
+                try {
+                    LOG.info("removing from index id:" + id);
+                    IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", Integer.toString(id)));
                     if (!pendingCommit) {
                         pendingCommit = true;
                         LOG.info("scheduling COMMITER");

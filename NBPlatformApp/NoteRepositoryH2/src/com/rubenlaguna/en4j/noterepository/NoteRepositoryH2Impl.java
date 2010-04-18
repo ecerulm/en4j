@@ -16,6 +16,7 @@
  */
 package com.rubenlaguna.en4j.noterepository;
 
+import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.NoteReader;
@@ -35,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
+import org.openide.util.Lookup;
 //import com.rubenlaguna.en4j.hsqldbnoterep.Installer;
 
 /**
@@ -119,6 +121,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         final Note toReturn = new NoteImpl(id);
         if (toReturn.getGuid() == null) {
             LOG.info("Better return null than a non existing entry");
+            Lookup.getDefault().lookup(NoteFinder.class).remove(toReturn);
             return null;
         }
         softrefMapById.put(id, toReturn);
