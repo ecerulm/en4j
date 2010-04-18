@@ -17,6 +17,7 @@
 package com.rubenlaguna.en4j.interfaces;
 
 import java.beans.PropertyChangeListener;
+import java.util.concurrent.Future;
 
 /**
  *
@@ -27,6 +28,8 @@ public interface SynchronizationService {
     final String PROP_PENDINGREMOTEUPDATENOTES = "PendingRemoteUpdateNotes";
 
     boolean sync();
+
+    Future<Boolean> downloadNote(String noteguid);
 
     public int getPendingRemoteUpdateNotes();
 

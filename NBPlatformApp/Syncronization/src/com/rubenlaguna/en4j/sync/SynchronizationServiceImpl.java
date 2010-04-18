@@ -159,6 +159,15 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         return tasks;
     }
 
+    public Future<Boolean> downloadNote(String noteguid) {
+        ElemInfo note = new ElemInfo();
+        note.guid = noteguid;
+        note.usn = Integer.MAX_VALUE;
+        Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
+        final Future<Boolean> task = RP.submit(callable);
+        return task;
+    }
+
     private List<Future<Boolean>> createAndSubmitAddExpungedNoteTasks(final SyncChunk syncChunk) {
         final List<Future<Boolean>> tasks = new ArrayList<Future<Boolean>>();
         if (syncChunk.isSetExpungedNotes()) {

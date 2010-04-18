@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
+import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
@@ -114,7 +115,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("we got something from the cache (id:" + id + ")but seems to be corrupted (no guid)");
+                LOG.warning("we got something from the cache (id:" + id + ") but seems to be corrupted (no guid)");
                 softrefMapById.remove(id);
             }
         }
@@ -370,6 +371,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             rs = pstmt.executeQuery();
             if (!rs.next()) {
                 LOG.info("There is no entry in the db  with guid: " + guid);
+                Lookup.getDefault().lookup(SynchronizationService.class).downloadNote(guid);
                 return null;
             }
             final String resguid = rs.getString("GUID");
