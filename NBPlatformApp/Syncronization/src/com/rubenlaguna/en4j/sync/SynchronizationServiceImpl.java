@@ -55,6 +55,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     public static final String PROP_SYNCFAILED = "syncFailed";
     private PropertyChangeSupport propertyChangeSupport = new PropertyChangeSupport(this);
     private final EvernoteProtocolUtil util;
+    private final Semaphore sem = new Semaphore(1);
 
     public SynchronizationServiceImpl() {
         com.rubenlaguna.en4j.sync.Installer.mbean.setThreadPoolExecutor(RP);
@@ -71,8 +72,13 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
     @Override
     public boolean sync() { // Set up the UserStore and check that we can talk to the server
-        setPendingRemoteUpdateNotes(-1);
+        boolean success = sem.tryAcquire();
+        if (!success) {
+            LOG.info("There is another sync running.");
+            return false;
+        }
         try {
+            setPendingRemoteUpdateNotes(-1);
             setSyncFailed(false);
             boolean versionOk = util.checkVersion();
             if (!versionOk) {
@@ -116,6 +122,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         } catch (Exception ex) {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
+        } finally {
+            sem.release();
         }
     }
 
@@ -156,6 +164,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         if (syncChunk.isSetExpungedNotes()) {
             for (final String noteguid : syncChunk.getExpungedNotes()) {
                 Callable<Boolean> callable = new Callable<Boolean>() {
+
                     public Boolean call() throws Exception {
                         Lookup.getDefault().lookup(NoteFinder.class).removeByGuid(noteguid);
                         Lookup.getDefault().lookup(NoteRepository.class).deleteNoteByGuid(noteguid);
