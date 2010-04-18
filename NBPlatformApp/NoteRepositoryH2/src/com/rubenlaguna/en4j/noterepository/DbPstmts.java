@@ -8,7 +8,6 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
@@ -16,14 +15,12 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.sql.Blob;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.logging.Level;
+import java.util.HashSet;
 import java.util.logging.Logger;
 import org.openide.util.Exceptions;
 
@@ -177,7 +174,29 @@ public class DbPstmts {
         if (resources == null) {
             return Collections.EMPTY_LIST;
         }
-        return resources;
+        final Collection<String> toReturn = new HashSet<String>(resources.size());
+        for (String hash : resources) {
+            toReturn.add(padded(hash));
+        }
+        return toReturn;
+    }
+
+    private String padded(String hash) {
+        if (hash.length() == 32) {
+            return hash;
+        }
+        if (hash.length() < 32) {
+            //if we (incorrectly stored the hash without the left paddind we will add it now
+            StringBuffer sb = new StringBuffer();
+            for (int i = hash.length(); i < 32; i++) {
+                sb.append("0");
+            }
+            sb.append(hash);
+            final String paddedHash = sb.toString();
+            LOG.warning("padding hash to " + paddedHash + " length:" + paddedHash.length());
+            return paddedHash;
+        }
+        return hash;
     }
 
     public String getGuid(int id) {
@@ -185,7 +204,10 @@ public class DbPstmts {
     }
 
     public String getDataHash(String resGuid) {
-        return hashFromResourcesPstmt.get(resGuid);
+        final String hash = hashFromResourcesPstmt.get(resGuid);
+
+        
+        return padded(hash);
     }
 
     public InputStream getDataAsInputStream(String guid) {
@@ -285,7 +307,6 @@ public class DbPstmts {
 //            }
 //        }
 //    }
-
     private Connection getConnection() {
         return Installer.c;
     }

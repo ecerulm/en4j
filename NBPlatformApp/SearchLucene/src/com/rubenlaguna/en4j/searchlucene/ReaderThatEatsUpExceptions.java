@@ -45,7 +45,7 @@ class ReaderThatEatsUpExceptions extends Reader {
         try {
             return delegate.read(cbuf, off, len);
         } catch (IOException ex) {
-            LOG.log(Level.WARNING, "exception caught:"+ex.getMessage());
+            LOG.log(Level.WARNING, "exception caught:" + ex.getMessage());
             return -1;
         }
     }
@@ -56,7 +56,7 @@ class ReaderThatEatsUpExceptions extends Reader {
             return delegate.read(cbuf);
         } catch (IOException ex) {
             //LOG.log(Level.WARNING, "exception caught:", ex);
-            LOG.log(Level.WARNING, "exception caught:"+ ex.getMessage());
+            LOG.log(Level.WARNING, "exception caught:" + ex.getMessage());
             return -1;
         }
     }
@@ -66,7 +66,7 @@ class ReaderThatEatsUpExceptions extends Reader {
         try {
             return delegate.read();
         } catch (IOException ex) {
-            LOG.log(Level.WARNING, "exception caught:"+ ex.getMessage());
+            LOG.log(Level.WARNING, "exception caught:" + ex.getMessage());
             return -1;
         }
     }
@@ -76,7 +76,7 @@ class ReaderThatEatsUpExceptions extends Reader {
         try {
             return delegate.read(target);
         } catch (IOException ex) {
-            LOG.log(Level.WARNING, "exception caught:"+ex.getMessage());
+            LOG.log(Level.WARNING, "exception caught:" + ex.getMessage());
             return -1;
         }
     }
@@ -92,7 +92,9 @@ class ReaderThatEatsUpExceptions extends Reader {
 
     public void close() throws IOException {
         try {
-            is.close();
+            if (is != null) {
+                is.close();
+            }
         } catch (IOException e) {
         }
         is = null;

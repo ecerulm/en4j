@@ -57,12 +57,15 @@ public abstract class PreparedStatementWrapper<T,E> {
 
     protected abstract E getResultFromResulSet(ResultSet rs) throws SQLException;
     protected  void setInputParametersOfThePreparedSt(PreparedStatement pstmt,T key) throws SQLException {
+        if (key == null) {
+            throw new IllegalArgumentException("key can't be null");
+        }
         if (key instanceof Integer) {
             pstmt.setInt(1, (Integer)key);
         } else if (key instanceof String) {
             pstmt.setString(1, (String) key);
         } else {
-            throw new IllegalArgumentException("only keys of type Integer or String are supported");
+            throw new IllegalArgumentException("only keys of type Integer or String are supported. key = "+key);
         }
     }
 }
