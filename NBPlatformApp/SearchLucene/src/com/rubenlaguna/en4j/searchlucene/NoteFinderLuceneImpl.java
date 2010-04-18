@@ -144,7 +144,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 LOG.info("skipping commit. Nothing to commit to the index");
             }
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "exception while commiting changes to the index", ex);
+            LOG.log(Level.WARNING, "exception while commiting changes to the index", ex.getMessage());
+            LOG.log(Level.FINE, "exception while commiting changes to the index", ex);
         }
     }
 
@@ -235,7 +236,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 Document document = null;
                 if (null != note) {
                     try {
-                        if (n.isActive()) {
+                        if (note.isActive()) {
                             document = getLuceneDocument(note);
                             IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
                             if (!pendingCommit) {
@@ -244,7 +245,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
                             }
                         } else {
-                            LOG.info("delete note (id:"+n.getId()+") from index");
+                            LOG.info("delete note (id:" + n.getId() + ") from index");
                             remove(n);
                         }
                     } catch (IllegalStateException ex) {
@@ -330,8 +331,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IllegalStateException ex) {
             LOG.info("rebuild index failed. is the app closing?");
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "exception", ex);
-            Exceptions.printStackTrace(ex);
+            LOG.log(Level.WARNING, "exception", ex.getMessage());
+            LOG.log(Level.FINE, "exception", ex);
         }
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
@@ -368,6 +369,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
         for (Resource r : note.getResources()) {
+            if (r==null) {
+                LOG.warning("How come getResources returns some null resources?");
+                continue;
+            }
             LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
             if (r.getRecognition() != null) {
                 LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
@@ -376,7 +381,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 LOG.fine("recognitionText: " + recognitionText);
                 allText.append(" ").append(recognitionText);
             } else {
-                if (r.getMime().contains("image")) {
+
+                if (r.getMime() != null && r.getMime().contains("image")) {
                     LOG.fine("no recognition for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
                 }
             }
@@ -455,7 +461,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private Note getProperNote(Note noteWithoutContents) {
         final Integer id = noteWithoutContents.getId();
         final Note noteFromDatabase = nr.get(id);
-        if (noteFromDatabase.getGuid() == null) {
+        if (noteFromDatabase.getGuid() == null || noteFromDatabase.getTitle() == null) {
             LOG.warning("How come entry (id:" + id + ") entry has no guid?");
             //better return null than some corrupted entry
             return null;
@@ -484,8 +490,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         removeByGuid(n.getGuid());
     }
 
-
-
     public void removeByGuid(final String noteguid) {
         if (noteguid == null) {
             return;
@@ -507,6 +511,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             }
         });
     }
+
     public void removeById(final int id) {
         RP.submit(new Runnable() {
 

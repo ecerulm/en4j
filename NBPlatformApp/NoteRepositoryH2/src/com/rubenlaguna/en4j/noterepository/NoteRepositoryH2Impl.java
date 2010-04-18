@@ -349,7 +349,21 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         }
     }
 
-    public Resource getResource(String guid, String hash) {
+    public Resource getResource(final String guid, final String hash) {
+
+        if (guid == null) {
+            throw new IllegalArgumentException("guid can't be null");
+        }
+        if (hash == null) {
+            throw new IllegalArgumentException("hash can't be null");
+        }
+        if (hash.length() != 32) {
+            throw new IllegalArgumentException("hashes are 32 bytes long. This was " + hash + " (" + hash.length() + ").");
+        }
+        if (guid.length() != 36) {
+            throw new IllegalArgumentException("GUIDs are 36 bytes long. This was " + guid);
+        }
+
         final Resource cached = (Resource) resSoftMapByOwnerGuidAndHash.get(guid + hash);
         if (null != cached) {
             LOG.fine("cache hit resource parent guid:" + guid + " hash:" + hash);
@@ -370,7 +384,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             pstmt.setString(2, hash);
             rs = pstmt.executeQuery();
             if (!rs.next()) {
-                LOG.info("There is no entry in the db  with guid: " + guid);
+                LOG.info("There is no resource in the db  with parentguid: " + guid + " and hash:" + hash + ". Redownloading the whole note.");
                 Lookup.getDefault().lookup(SynchronizationService.class).downloadNote(guid);
                 return null;
             }

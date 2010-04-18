@@ -11,6 +11,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.logging.Logger;
 
 /**
  *
@@ -18,6 +19,7 @@ import java.util.Date;
  */
 class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
+    private final static Logger LOG = Logger.getLogger(ResourceAdapter.class.getName());
     private final com.evernote.edam.type.Resource resource;
 
     public ResourceAdapter(com.evernote.edam.type.Resource resource) {
@@ -113,7 +115,13 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
         try {
             MessageDigest md5 = MessageDigest.getInstance("MD5");
             BigInteger hash = new BigInteger(1, md5.digest(data));
-            String hashword = hash.toString(16);
+//            String hashword = hash.toString(16);
+            String hashword = String.format("%032x", hash);
+
+            LOG.info("generated hash = " + hashword);
+            if (hashword.length() != 32) {
+                throw new RuntimeException("generated incorrect hash " + hashword + " length:" + hashword.length());
+            }
             return hashword;
         } catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);

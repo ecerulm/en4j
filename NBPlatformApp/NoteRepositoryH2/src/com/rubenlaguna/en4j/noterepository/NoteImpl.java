@@ -10,10 +10,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.CharBuffer;
 import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.util.Lookup;
@@ -124,13 +125,35 @@ class NoteImpl implements Note {
     }
 
     public Resource getResource(String hash) {
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(getGuid(), hash);
+        final String guid = getGuid();
+        if (null == guid) {
+            return null;
+        }
+        if (hash.length()<32) {
+            getLogger().warning("Hash should be 32 char long. Left padding it with zeros");
+            StringBuffer sb = new StringBuffer();
+            for(int i =hash.length();i<32;i++) {
+                sb.append("0");
+            }
+            sb.append(hash);
+            final String paddedHash = sb.toString();
+            getLogger().warning("changed from "+hash+" ("+hash.length()+") to "+paddedHash+" ("+paddedHash.length()+")");
+            getResource(paddedHash);
+        }
+        if (hash.length() != 32) {
+            throw new IllegalArgumentException("hash has to be 32 bytes long. this "+hash+" was "+hash.length());
+        }
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource( guid, hash);
     }
 
     @Override
     public Collection<Resource> getResources() {
-        List<Resource> toReturn = new ArrayList<Resource>();
-        Collection<String> resHashes = DbPstmts.getInstance().getResources(getGuid());
+        Set<Resource> toReturn = new HashSet<Resource>();
+        final String guid = getGuid();
+        if (null == guid) {
+            return Collections.EMPTY_LIST;
+        }
+        Collection<String> resHashes = DbPstmts.getInstance().getResources(guid);
         for (String hash : resHashes) {
             toReturn.add(getResource(hash));
         }
