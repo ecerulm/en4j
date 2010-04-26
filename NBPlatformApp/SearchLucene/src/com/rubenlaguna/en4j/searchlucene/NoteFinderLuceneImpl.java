@@ -219,6 +219,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
+        } catch (IllegalStateException ex) {
+            LOG.info("caught "+ex.getMessage()+". Most likely the app is shutting down");
         }
         long delta = System.currentTimeMillis() - start;
         Installer.mbean.sampleSearchTime(delta);
