@@ -51,7 +51,7 @@ class ENMLNamespaceHandler implements NamespaceHandler {
     public String getNonCssStyling(Element e) {
         String toReturn = delegate.getNonCssStyling(e);
         if ("en-media".equalsIgnoreCase(e.getNodeName())) {
-            toReturn = "display: block;";
+            toReturn = "display: inline-block;";
         }
         //LOG.info("style for ("+e.getNodeName()+") is ("+toReturn+")");
         return toReturn;
