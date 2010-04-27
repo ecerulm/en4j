@@ -4,9 +4,24 @@
 <!-- If you delete this file and reopen the project it will be recreated. -->
 <project name="NBPlatformApp" basedir=".">
     <description>Builds the module suite NBPlatformApp/EN4J.</description>
+    <exec outputproperty="app.version" executable="git">
+        <arg line="describe --always --dirty" />
+    </exec>
+
     <import file="nbproject/build-impl.xml"/>
+
     <target name="build-launchers" depends="suite.build-launchers">
-        <replace file="build/launcher/etc/${app.name}.conf" token="/dev" value="/${app.version}"/>
+        <exec outputproperty="app.verdir" executable="git">
+            <arg line="describe --always " />
+            <redirector>
+                <outputfilterchain>
+                    <tokenfilter>
+                        <replaceregex pattern="([^-]*).*" replace="\1" flags="g"/>
+                    </tokenfilter>
+                </outputfilterchain>
+            </redirector>
+        </exec>
+        <replace file="build/launcher/etc/${app.name}.conf" token="/dev" value="/${app.verdir}"/>
         <replace file="build/launcher/etc/${app.name}.conf" token="-J-Xms24m -J-Xmx64m" value="${run.args.extra}"/>
     </target>
 
