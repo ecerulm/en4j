@@ -79,81 +79,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
         panel = new XHTMLPanel();
-        //panel.getListeners(MouseListener.class);
-        MouseListener[] mls = (MouseListener[]) (panel.getListeners(MouseListener.class));
-        for (MouseListener mouseListener : mls) {
-            LOG.info("removing " + mouseListener);
-            if (mouseListener instanceof MouseTracker) {
-                final MouseTracker mouseTracker = (MouseTracker) mouseListener;
-                List<FSMouseListener> fsmlList = mouseTracker.getListeners();
-                for (FSMouseListener fsml : fsmlList) {
-                    LOG.info("removing FSMouseListener: " + fsml);
-                    mouseTracker.removeListener(fsml);
-                }
-            }
-            panel.removeMouseListener(mouseListener);
-        }
-        panel.addMouseTrackingListener(new FSMouseListener() {
-
-            public void onMouseOver(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseOver");
-            }
-
-            public void onMouseOut(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseOut");
-            }
-
-            public void onMouseUp(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseUp");
-                if (box == null || box.getElement() == null) {
-                    return;
-                }
-
-                String uriString = findLink(panel, box.getElement());
-                LOG.fine("onMouseUp: uri: " + uriString);
-
-                if (uriString != null) {
-                    try {
-                        URL url = new URL(uriString);
-                        URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
-                        Desktop.getDesktop().browse(uri);
-                    } catch (IOException ex) {
-                        Exceptions.printStackTrace(ex);
-                    } catch (URISyntaxException ex) {
-                        Exceptions.printStackTrace(ex);
-                    }
-                }
-            }
-
-            private String findLink(BasicPanel panel, Element e) {
-                String uri = null;
-
-                for (Node node = e; node.getNodeType() == Node.ELEMENT_NODE; node = node.getParentNode()) {
-                    uri = panel.getSharedContext().getNamespaceHandler().getLinkUri((Element) node);
-
-                    if (uri != null) {
-                        break;
-                    }
-                }
-
-                return uri;
-            }
-
-            public void onMousePressed(BasicPanel pnl, MouseEvent me) {
-                LOG.fine("onMousePressed");
-            }
-
-            public void onMouseDragged(BasicPanel pnl, MouseEvent me) {
-                LOG.fine("onMouseDragged");
-            }
-
-            public void reset() {
-                LOG.fine("reset");
-            }
-        });
-
         panel.getSharedContext().setReplacedElementFactory(cef);
         jScrollPane2.setViewportView(panel);
+        putClientProperty(PROP_CLOSING_DISABLED, true);
     }
 
     /** This method is called from within the constructor to
@@ -293,6 +221,77 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
+               MouseListener[] mls = (MouseListener[]) (panel.getListeners(MouseListener.class));
+        for (MouseListener mouseListener : mls) {
+            LOG.info("removing " + mouseListener);
+            if (mouseListener instanceof MouseTracker) {
+                final MouseTracker mouseTracker = (MouseTracker) mouseListener;
+                List<FSMouseListener> fsmlList = mouseTracker.getListeners();
+                for (FSMouseListener fsml : fsmlList) {
+                    LOG.info("removing FSMouseListener: " + fsml);
+                    mouseTracker.removeListener(fsml);
+                }
+            }
+            panel.removeMouseListener(mouseListener);
+        }
+        panel.addMouseTrackingListener(new FSMouseListener() {
+
+            public void onMouseOver(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOver");
+            }
+
+            public void onMouseOut(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOut");
+            }
+
+            public void onMouseUp(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseUp");
+                if (box == null || box.getElement() == null) {
+                    return;
+                }
+
+                String uriString = findLink(panel, box.getElement());
+                LOG.fine("onMouseUp: uri: " + uriString);
+
+                if (uriString != null) {
+                    try {
+                        URL url = new URL(uriString);
+                        URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
+                        Desktop.getDesktop().browse(uri);
+                    } catch (IOException ex) {
+                        Exceptions.printStackTrace(ex);
+                    } catch (URISyntaxException ex) {
+                        Exceptions.printStackTrace(ex);
+                    }
+                }
+            }
+
+            private String findLink(BasicPanel panel, Element e) {
+                String uri = null;
+
+                for (Node node = e; node.getNodeType() == Node.ELEMENT_NODE; node = node.getParentNode()) {
+                    uri = panel.getSharedContext().getNamespaceHandler().getLinkUri((Element) node);
+
+                    if (uri != null) {
+                        break;
+                    }
+                }
+
+                return uri;
+            }
+
+            public void onMousePressed(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMousePressed");
+            }
+
+            public void onMouseDragged(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMouseDragged");
+            }
+
+            public void reset() {
+                LOG.fine("reset");
+            }
+        });
         Lookup.Template<Note> tpl = new Lookup.Template<Note>(Note.class);
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);

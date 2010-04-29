@@ -78,6 +78,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         setToolTipText(NbBundle.getMessage(NoteListTopComponent.class, "HINT_NoteListTopComponent"));
         associateLookup(new AbstractLookup(ic));
         jTable1.getSelectionModel().addListSelectionListener(this);
+        putClientProperty(PROP_CLOSING_DISABLED, true);
 
     }
 
