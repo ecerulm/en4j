@@ -83,7 +83,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     public void refresh() {
-        LOG.info("refresh notelist " + new SimpleDateFormat("h:mm:ss a").format(new Date()));
+        LOG.fine("refresh notelist " + new SimpleDateFormat("h:mm:ss a").format(new Date()));
         performSearch();
     }
 
@@ -176,10 +176,10 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             @Override
             public void run() {
                 final String text = searchstring;
-                LOG.info("searching in lucene...");
+                LOG.fine("searching in lucene...");
                 Collection<Note> prelList = null;
                 if (text.trim().isEmpty() || text.equals(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"))) {
-                    LOG.info("no need to search the search box is empty " + text + " from thread " + Thread.currentThread().getName());
+                    LOG.fine("no need to search the search box is empty " + text + " from thread " + Thread.currentThread().getName());
                     prelList = getList();
                 } else {
                     NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
@@ -192,7 +192,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
                         @Override
                         public void run() {
-                            LOG.info("Refreshing the list in the EDT");
+                            LOG.fine("Refreshing the list in the EDT");
                             list1.clear();
                             list1.addAll(list);
                         }
@@ -204,7 +204,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         };
 
         currentSearchTask = RP.post(r, 500);
-        LOG.info("currentSearchtask posted");
+        LOG.fine("currentSearchtask posted");
     }
 
     private void searchTextFieldFocusGained(java.awt.event.FocusEvent evt) {//GEN-FIRST:event_searchTextFieldFocusGained
