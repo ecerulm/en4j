@@ -61,6 +61,7 @@
     <folder name="Toolbars">
         <folder name="File_hidden"/>
         <folder name="UndoRedo_hidden"/>
+        <folder name="Clipboard_hidden"/>
 
     </folder>
 </filesystem>
