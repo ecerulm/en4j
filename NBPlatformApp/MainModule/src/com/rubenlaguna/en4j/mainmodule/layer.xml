@@ -58,4 +58,9 @@
 
         </folder>
     </folder>
+    <folder name="Toolbars">
+        <folder name="File_hidden"/>
+        <folder name="UndoRedo_hidden"/>
+
+    </folder>
 </filesystem>
