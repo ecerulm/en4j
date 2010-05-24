@@ -46,10 +46,12 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
         });
         sservice = getSyncService();
 
-        JComponent pulsatingLogo=new PulsatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
-        logoPanel.add(pulsatingLogo,BorderLayout.CENTER);
+        JComponent animatedLogo=new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
+//        JComponent rotatingLogo=new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
+        logoPanel.add(animatedLogo,BorderLayout.CENTER);
         //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/sync.png"))); // NOI18N
-        
+
+        //TODO superimpose an error exclamation
         sservice.addPropertyChangeListener(new PropertyChangeListener() {
 
             public void propertyChange(PropertyChangeEvent evt) {
