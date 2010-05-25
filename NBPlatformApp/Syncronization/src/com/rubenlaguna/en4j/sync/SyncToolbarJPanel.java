@@ -33,7 +33,6 @@ import org.openide.util.Lookup;
 public class SyncToolbarJPanel extends javax.swing.JPanel {
 
     private final SynchronizationService sservice;
-    private final RotatingLogo animatedLogo = new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
 
     /** Creates new form SyncToolbarJPanel */
     public SyncToolbarJPanel() {
@@ -47,8 +46,6 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
         });
         sservice = getSyncService();
 
-        logoPanel.add(animatedLogo, BorderLayout.CENTER);
-        //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/sync.png"))); // NOI18N
 
         //TODO superimpose an error exclamation
         sservice.addPropertyChangeListener(new PropertyChangeListener() {
@@ -81,30 +78,40 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
 
         syncServiceBean1 = new com.rubenlaguna.en4j.sync.SyncServiceBean();
         syncLabel = new javax.swing.JLabel();
-        logoPanel = new javax.swing.JPanel();
 
         setMaximumSize(new java.awt.Dimension(142, 70));
-        setPreferredSize(null);
-        setLayout(new java.awt.BorderLayout());
 
         syncLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         syncLabel.setText(org.openide.util.NbBundle.getMessage(SyncToolbarJPanel.class, "SyncToolbarJPanel.syncLabel.text")); // NOI18N
-        add(syncLabel, java.awt.BorderLayout.CENTER);
 
-        logoPanel.setLayout(new java.awt.BorderLayout());
-        add(logoPanel, java.awt.BorderLayout.WEST);
+        org.jdesktop.layout.GroupLayout layout = new org.jdesktop.layout.GroupLayout(this);
+        this.setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(layout.createSequentialGroup()
+                .add(rotatingLogo1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(org.jdesktop.layout.LayoutStyle.RELATED)
+                .add(syncLabel, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, 67, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(org.jdesktop.layout.GroupLayout.LEADING)
+            .add(layout.createParallelGroup(org.jdesktop.layout.GroupLayout.CENTER)
+                .add(syncLabel)
+                .add(rotatingLogo1, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE, org.jdesktop.layout.GroupLayout.DEFAULT_SIZE, org.jdesktop.layout.GroupLayout.PREFERRED_SIZE))
+        );
     }// </editor-fold>//GEN-END:initComponents
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    javax.swing.JPanel logoPanel;
+    static final com.rubenlaguna.en4j.sync.RotatingLogo rotatingLogo1 = new com.rubenlaguna.en4j.sync.RotatingLogo();
     javax.swing.JLabel syncLabel;
     com.rubenlaguna.en4j.sync.SyncServiceBean syncServiceBean1;
     // End of variables declaration//GEN-END:variables
 
     void startAnimator() {
-        animatedLogo.startAnimator();
+        rotatingLogo1.startAnimator();
     }
 
     void stopAnimator() {
-        animatedLogo.stopAnimator();
+        rotatingLogo1.stopAnimator();
     }
 }

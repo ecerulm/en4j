@@ -21,20 +21,17 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
+import java.io.Serializable;
 import java.util.logging.Logger;
 import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
 import org.jdesktop.animation.timing.Animator;
-import org.jdesktop.animation.timing.TimingTarget;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
-import org.openide.util.Exceptions;
 
 /**
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-public class RotatingLogo extends JComponent {
+public class RotatingLogo extends JComponent implements Serializable {
 
     private static final Logger LOG = Logger.getLogger(RotatingLogo.class.getName());
     private BufferedImage image;
@@ -42,6 +39,10 @@ public class RotatingLogo extends JComponent {
     private PropertySetter setter = new PropertySetter(this, "rotateFactor", 0.0f, 1.0f);
     private Animator animator = new Animator(5000, Float.POSITIVE_INFINITY, Animator.RepeatBehavior.LOOP, setter);
 
+
+    public RotatingLogo() {
+        this("/com/rubenlaguna/en4j/sync/sync.png");
+    }
     public RotatingLogo(String imageName) {
         try {
             image = GraphicsUtilities.loadCompatibleImage(
@@ -58,7 +59,7 @@ public class RotatingLogo extends JComponent {
 
     public void setRotateFactor(final double fraction) {
         rotateFactor = fraction;
-//        LOG.info("this = "+this+" rotateFactor = " + getRotateFactor() + " isEDT =" + SwingUtilities.isEventDispatchThread());
+//        LOG.info("this = "+this.hashCode()+" rotateFactor = " + getRotateFactor() );
         repaint();
     }
 
@@ -70,8 +71,7 @@ public class RotatingLogo extends JComponent {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-//        LOG.info("this = "+this+" paint rotateFactor = " + getRotateFactor() + " isEDT =" + SwingUtilities.isEventDispatchThread());
-//        LOG.info("paint rotateFactor = " + getRotateFactor());
+//        LOG.info("this = "+this.hashCode()+" paint rotateFactor = " + getRotateFactor() );
         int x = (getWidth() - image.getWidth()) / 2;
         int y = (getHeight() - image.getHeight()) / 2;
 
@@ -83,10 +83,12 @@ public class RotatingLogo extends JComponent {
     }
 
     public void startAnimator() {
+        LOG.info("startAnimator");
         animator.start();
     }
 
     public void stopAnimator() {
+        LOG.info("stopAnimator");
         animator.stop();
         setRotateFactor(0.0f);
     }
