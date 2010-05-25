@@ -20,13 +20,15 @@ import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.SwingUtilities;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
 import org.openide.util.actions.Presenter;
 
-public final class SyncAction implements ActionListener,Presenter.Toolbar {
+public final class SyncAction implements ActionListener, Presenter.Toolbar {
 
     private final RequestProcessor RP = new RequestProcessor("sync task", 1, true);
+    private final static SyncToolbarJPanel toolbarPresenter = new SyncToolbarJPanel();
 
     public void actionPerformed(ActionEvent e) {
         // TODO implement action body
@@ -35,14 +37,15 @@ public final class SyncAction implements ActionListener,Presenter.Toolbar {
         Runnable task = new Runnable() {
 
             public void run() {
+                toolbarPresenter.startAnimator();
                 sservice.sync();
+                toolbarPresenter.stopAnimator();
             }
         };
         RP.post(task);
     }
 
     public Component getToolbarPresenter() {
-        return new SyncToolbarJPanel();
+        return toolbarPresenter;
     }
-
 }
