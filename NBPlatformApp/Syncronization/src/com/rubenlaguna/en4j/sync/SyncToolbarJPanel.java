@@ -33,6 +33,7 @@ import org.openide.util.Lookup;
 public class SyncToolbarJPanel extends javax.swing.JPanel {
 
     private final SynchronizationService sservice;
+    private final RotatingLogo animatedLogo = new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
 
     /** Creates new form SyncToolbarJPanel */
     public SyncToolbarJPanel() {
@@ -46,9 +47,7 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
         });
         sservice = getSyncService();
 
-        JComponent animatedLogo=new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
-//        JComponent rotatingLogo=new RotatingLogo("/com/rubenlaguna/en4j/sync/sync.png");
-        logoPanel.add(animatedLogo,BorderLayout.CENTER);
+        logoPanel.add(animatedLogo, BorderLayout.CENTER);
         //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/sync.png"))); // NOI18N
 
         //TODO superimpose an error exclamation
@@ -57,7 +56,7 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
             public void propertyChange(PropertyChangeEvent evt) {
                 if (evt.getPropertyName().equals(SynchronizationServiceImpl.PROP_SYNCFAILED)) {
 
-                    if(evt.getNewValue().equals(Boolean.TRUE)) {
+                    if (evt.getNewValue().equals(Boolean.TRUE)) {
                         //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/fatal_error.png"))); // NOI18N
                     } else {
                         //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/sync.png"))); // NOI18N
@@ -100,4 +99,12 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
     javax.swing.JLabel syncLabel;
     com.rubenlaguna.en4j.sync.SyncServiceBean syncServiceBean1;
     // End of variables declaration//GEN-END:variables
+
+    void startAnimator() {
+        animatedLogo.startAnimator();
+    }
+
+    void stopAnimator() {
+        animatedLogo.stopAnimator();
+    }
 }

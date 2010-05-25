@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.sync;
 
@@ -9,11 +21,14 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.logging.Logger;
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 import org.jdesktop.animation.timing.Animator;
 import org.jdesktop.animation.timing.TimingTarget;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
+import org.openide.util.Exceptions;
 
 /**
  *
@@ -24,16 +39,9 @@ public class RotatingLogo extends JComponent {
     private static final Logger LOG = Logger.getLogger(RotatingLogo.class.getName());
     private BufferedImage image;
     private double rotateFactor = 0.0f;
+    private PropertySetter setter = new PropertySetter(this, "rotateFactor", 0.0f, 1.0f);
+    private Animator animator = new Animator(5000, Float.POSITIVE_INFINITY, Animator.RepeatBehavior.LOOP, setter);
 
-    public double getRotateFactor() {
-        return rotateFactor;
-    }
-
-    public void setRotateFactor(double rotateFactor) {
-        this.rotateFactor = rotateFactor;
-        LOG.info("rotateFactor = " + rotateFactor);
-        repaint();
-    }
     public RotatingLogo(String imageName) {
         try {
             image = GraphicsUtilities.loadCompatibleImage(
@@ -42,7 +50,16 @@ public class RotatingLogo extends JComponent {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-        startAnimator();
+    }
+
+    public double getRotateFactor() {
+        return rotateFactor;
+    }
+
+    public void setRotateFactor(final double fraction) {
+        rotateFactor = fraction;
+//        LOG.info("this = "+this+" rotateFactor = " + getRotateFactor() + " isEDT =" + SwingUtilities.isEventDispatchThread());
+        repaint();
     }
 
     @Override
@@ -52,6 +69,9 @@ public class RotatingLogo extends JComponent {
 
     @Override
     protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+//        LOG.info("this = "+this+" paint rotateFactor = " + getRotateFactor() + " isEDT =" + SwingUtilities.isEventDispatchThread());
+//        LOG.info("paint rotateFactor = " + getRotateFactor());
         int x = (getWidth() - image.getWidth()) / 2;
         int y = (getHeight() - image.getHeight()) / 2;
 
@@ -62,9 +82,12 @@ public class RotatingLogo extends JComponent {
         g2d.drawImage(image, 0, 0, null);
     }
 
-    private void startAnimator() {
-        PropertySetter setter = new PropertySetter(this, "rotateFactor", 0.0f, 1.0f);
-        Animator animator = new Animator(5000,Float.POSITIVE_INFINITY, Animator.RepeatBehavior.LOOP, setter);
+    public void startAnimator() {
         animator.start();
+    }
+
+    public void stopAnimator() {
+        animator.stop();
+        setRotateFactor(0.0f);
     }
 }
