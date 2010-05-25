@@ -17,13 +17,11 @@
 package com.rubenlaguna.en4j.sync;
 
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
-import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import javax.swing.JComponent;
 import org.openide.util.Lookup;
 
 /**
@@ -37,7 +35,8 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
     /** Creates new form SyncToolbarJPanel */
     public SyncToolbarJPanel() {
         initComponents();
-        syncLabel.addMouseListener(new MouseAdapter() {
+
+        addMouseListener(new MouseAdapter() {
 
             @Override
             public void mouseClicked(MouseEvent e) {
