@@ -103,10 +103,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 final SyncChunk syncChunk = util.getSyncChunk(highestUSN, MAX_QUEUED_NOTES, isFirstSync);
                 int pendingUpdates = util.getUpdateCount() - highestUSN;
                 if (initialPendingUpdates == -1) {
-                    initialPendingUpdates=pendingUpdates;
+                    initialPendingUpdates = pendingUpdates;
                 }
-                final int percentage = (int) ((1.0 - ((float) pendingUpdates / initialPendingUpdates))*100);
-                StatusDisplayer.getDefault().setStatusText("Downloading notes ("+percentage+" %)");
+                final int percentage = (int) ((1.0 - ((float) pendingUpdates / initialPendingUpdates)) * 100);
+                StatusDisplayer.getDefault().setStatusText("Downloading notes (" + percentage + " %)");
 
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
