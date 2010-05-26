@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import javax.swing.JComponent;
 import org.jdesktop.animation.timing.Animator;
 import org.jdesktop.animation.timing.interpolation.PropertySetter;
+import org.openide.util.Exceptions;
 
 /**
  *
@@ -38,18 +39,19 @@ public class RotatingLogo extends JComponent implements Serializable {
     private double rotateFactor = 0.0f;
     private PropertySetter setter = new PropertySetter(this, "rotateFactor", 0.0f, 1.0f);
     private Animator animator = new Animator(5000, Float.POSITIVE_INFINITY, Animator.RepeatBehavior.LOOP, setter);
-
+    private boolean failed;
+    private BufferedImage errorImage;
 
     public RotatingLogo() {
         this("/com/rubenlaguna/en4j/sync/sync.png");
     }
+
     public RotatingLogo(String imageName) {
         try {
-            image = GraphicsUtilities.loadCompatibleImage(
-                    getClass().getResource(imageName));
-            LOG.info("image loaded");
+            image = GraphicsUtilities.loadCompatibleImage(getClass().getResource(imageName));
+            errorImage = GraphicsUtilities.loadCompatibleImage(getClass().getResource("/com/rubenlaguna/en4j/sync/fatal_error.png"));
         } catch (IOException ex) {
-            ex.printStackTrace();
+            Exceptions.printStackTrace(ex);
         }
     }
 
@@ -72,14 +74,20 @@ public class RotatingLogo extends JComponent implements Serializable {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 //        LOG.info("this = "+this.hashCode()+" paint rotateFactor = " + getRotateFactor() );
-        int x = (getWidth() - image.getWidth()) / 2;
-        int y = (getHeight() - image.getHeight()) / 2;
+//        int x = (getWidth() - image.getWidth()) / 2;
+//        int y = (getHeight() - image.getHeight()) / 2;
 
         Graphics2D g2d = (Graphics2D) g.create();
-        g2d.rotate(rotateFactor * 2.0 * Math.PI,
-                image.getWidth() / 2.0,
-                image.getHeight() / 2.0);
+        if (!failed) {
+            g2d.rotate(rotateFactor * 2.0 * Math.PI,
+                    image.getWidth() / 2.0,
+                    image.getHeight() / 2.0);
+        }
         g2d.drawImage(image, 0, 0, null);
+        if (failed) {
+            g2d.drawImage(errorImage, getWidth() - errorImage.getWidth(), getHeight() - errorImage.getHeight(), null);
+        }
+
     }
 
     public void startAnimator() {
@@ -91,5 +99,13 @@ public class RotatingLogo extends JComponent implements Serializable {
         LOG.info("stopAnimator");
         animator.stop();
         setRotateFactor(0.0f);
+    }
+
+    void setFailed(boolean b) {
+        this.failed = b;
+        if (failed) {
+            stopAnimator();
+        }
+        repaint();
     }
 }

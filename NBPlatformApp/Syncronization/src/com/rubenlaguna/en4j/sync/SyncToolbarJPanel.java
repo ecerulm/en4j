@@ -53,9 +53,9 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
                 if (evt.getPropertyName().equals(SynchronizationServiceImpl.PROP_SYNCFAILED)) {
 
                     if (evt.getNewValue().equals(Boolean.TRUE)) {
-                        //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/fatal_error.png"))); // NOI18N
+                        rotatingLogo1.setFailed(true);
                     } else {
-                        //iconLabel.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/sync/sync.png"))); // NOI18N
+                        rotatingLogo1.setFailed(false);
                     }
                 }
             }

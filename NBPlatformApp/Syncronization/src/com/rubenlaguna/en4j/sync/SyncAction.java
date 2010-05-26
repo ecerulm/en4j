@@ -42,16 +42,19 @@ public final class SyncAction implements ActionListener, Presenter.Toolbar {
 
             public void run() {
                 DateTime startTime = new DateTime();
-                StatusDisplayer.getDefault().setStatusText("Sync started at "+startTime.toString("HH:mm"));
+                StatusDisplayer.getDefault().setStatusText("Sync started at " + startTime.toString("HH:mm"));
                 toolbarPresenter.startAnimator();
                 sservice.sync();
                 toolbarPresenter.stopAnimator();
-                DateTime finishTime = new DateTime();
-                Duration dur = new Duration(startTime, finishTime);
-                Minutes minutes = dur.toPeriod().toStandardMinutes();
-                Seconds seconds = dur.toPeriod().minus(minutes).toStandardSeconds();
-                StatusDisplayer.getDefault().setStatusText("sync finished at "+finishTime.toString("HH:mm")+". Sync took "+minutes.getMinutes()+" minutes and " + seconds.getSeconds() + " seconds.");
-
+                if (sservice.isSyncFailed()) {
+                    StatusDisplayer.getDefault().setStatusText("Sync failed.");
+                } else {
+                    DateTime finishTime = new DateTime();
+                    Duration dur = new Duration(startTime, finishTime);
+                    Minutes minutes = dur.toPeriod().toStandardMinutes();
+                    Seconds seconds = dur.toPeriod().minus(minutes).toStandardSeconds();
+                    StatusDisplayer.getDefault().setStatusText("sync finished at " + finishTime.toString("HH:mm") + ". Sync took " + minutes.getMinutes() + " minutes and " + seconds.getSeconds() + " seconds.");
+                }
             }
         };
         RP.post(task);
