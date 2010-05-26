@@ -20,7 +20,11 @@ import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import javax.swing.SwingUtilities;
+import org.joda.time.Duration;
+import org.joda.time.DateTime;
+import org.joda.time.Minutes;
+import org.joda.time.Seconds;
+import org.openide.awt.StatusDisplayer;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
 import org.openide.util.actions.Presenter;
@@ -37,9 +41,17 @@ public final class SyncAction implements ActionListener, Presenter.Toolbar {
         Runnable task = new Runnable() {
 
             public void run() {
+                DateTime startTime = new DateTime();
+                StatusDisplayer.getDefault().setStatusText("Sync started at "+startTime.toString("HH:mm"));
                 toolbarPresenter.startAnimator();
                 sservice.sync();
                 toolbarPresenter.stopAnimator();
+                DateTime finishTime = new DateTime();
+                Duration dur = new Duration(startTime, finishTime);
+                Minutes minutes = dur.toPeriod().toStandardMinutes();
+                Seconds seconds = dur.toPeriod().minus(minutes).toStandardSeconds();
+                StatusDisplayer.getDefault().setStatusText("sync finished at "+finishTime.toString("HH:mm")+". Sync took "+minutes.getMinutes()+" minutes and " + seconds.getSeconds() + " seconds.");
+
             }
         };
         RP.post(task);

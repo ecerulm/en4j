@@ -221,9 +221,13 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
     @Override
     public synchronized boolean deleteNoteByGuid(String noteguid) {
-        Note note = getByGuid(noteguid, true);
-        for (Resource r : note.getResources()) {
-            deleteResourceByGuid(r.getGuid());
+        {
+            final Note note = getByGuid(noteguid, true);
+            if (null != note) {
+                for (Resource r : note.getResources()) {
+                    deleteResourceByGuid(r.getGuid());
+                }
+            }
         }
         //Frst remove it from caches
         final Note cached = (Note) softrefMapByGuid.get(noteguid);
