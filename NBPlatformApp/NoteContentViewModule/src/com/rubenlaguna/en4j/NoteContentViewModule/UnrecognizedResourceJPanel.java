@@ -47,7 +47,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         if (null != resource) {
             setFilename(resource.getFilename());
             setMime(resource.getMime());
-//            setFilesize(resource.getData().length);
+            setFilesize(resource.getDataLength());
         }
     }
 

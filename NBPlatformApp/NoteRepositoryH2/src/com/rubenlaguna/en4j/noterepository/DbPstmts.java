@@ -48,6 +48,7 @@ public class DbPstmts {
     PreparedStatementWrapper<Integer, String> sourceurlPstmt;
     PreparedStatementWrapper<Integer, Reader> contentFromNotes;
     PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
+    PreparedStatementWrapper<String, Integer> dataLengthFromResourcesPstmt;
     PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
     PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
     PreparedStatementWrapper<String, Integer> usnFromResourcesGuidPstmt;
@@ -118,6 +119,15 @@ public class DbPstmts {
                 final Blob blob = rs.getBlob("DATA");
                 final InputStream is = blob.getBinaryStream();
                 return is;
+            }
+        };
+        dataLengthFromResourcesPstmt = new PreparedStatementWrapper<String, Integer>(getConnection().prepareStatement("SELECT LENGTH(DATA) FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected Integer getResultFromResulSet(ResultSet rs) throws SQLException {
+                final int toReturn = rs.getInt(1);
+//                final InputStream is = blob.getBinaryStream();
+                return toReturn;
             }
         };
         mimeFromResources = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?")) {
@@ -244,6 +254,10 @@ public class DbPstmts {
         }
         return null;
     }
+    
+    public int getDataLength(String guid) {
+        return dataLengthFromResourcesPstmt.get(guid);
+    }
 
     public String getFilename(String resGuid) {
         return filenameFromResourcesPstmt.get(resGuid);
@@ -281,6 +295,9 @@ public class DbPstmts {
 
             dataFromResourcesPstmt.close();
             dataFromResourcesPstmt = null;
+
+            dataLengthFromResourcesPstmt.close();
+            dataLengthFromResourcesPstmt = null;
 
             titleFromNotes.close();
             titleFromNotes = null;
@@ -342,4 +359,5 @@ public class DbPstmts {
         return LOG;
 
     }
+
 }

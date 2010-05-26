@@ -46,6 +46,10 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
         return data.getBody();
     }
 
+    public int getDataLength() {
+        return resource.getData().getSize();
+    }
+
     @Override
     public InputStream getDataAsInputStream() {
         return new ByteArrayInputStream(getData());
