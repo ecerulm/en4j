@@ -26,7 +26,6 @@ import java.beans.PropertyChangeSupport;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
@@ -36,6 +35,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.openide.awt.StatusDisplayer;
 import org.openide.util.Lookup;
 import org.openide.util.NbPreferences;
 
@@ -90,6 +90,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 //            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
             boolean errorDetected = false;
             boolean moreNotesToDownload = true;
+            int initialPendingUpdates = -1;
             do {
                 int highestUSN = getHighestUSN();
                 LOG.info("highest updateSequenceNumber in the database = " + highestUSN);
@@ -101,6 +102,12 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                 }
                 final SyncChunk syncChunk = util.getSyncChunk(highestUSN, MAX_QUEUED_NOTES, isFirstSync);
                 int pendingUpdates = util.getUpdateCount() - highestUSN;
+                if (initialPendingUpdates == -1) {
+                    initialPendingUpdates=pendingUpdates;
+                }
+                final int percentage = (int) ((1.0 - ((float) pendingUpdates / initialPendingUpdates))*100);
+                StatusDisplayer.getDefault().setStatusText("Downloading notes ("+percentage+" %)");
+
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
                 if (syncChunk.getChunkHighUSN() > highestUSN) {
