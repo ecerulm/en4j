@@ -55,6 +55,10 @@ class ResourceImpl implements Resource, Serializable {
         return DbPstmts.getInstance().getData(guid);
     }
 
+    public int getDataLength() {
+        return DbPstmts.getInstance().getDataLength(guid);
+    }
+
     public InputStream getDataAsInputStream() {
         return DbPstmts.getInstance().getDataAsInputStream(guid);
     }

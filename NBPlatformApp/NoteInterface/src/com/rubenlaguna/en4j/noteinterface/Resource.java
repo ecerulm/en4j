@@ -60,4 +60,6 @@ public interface Resource {
     Date getTimestamp();
 
     int getUpdateSequenceNumber();
+
+    public int getDataLength();
 }
