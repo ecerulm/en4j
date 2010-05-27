@@ -19,6 +19,7 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.awt.Desktop;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -31,6 +32,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.AbstractAction;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.openide.util.Exceptions;
@@ -52,9 +54,11 @@ import org.xhtmlrenderer.simple.extend.XhtmlNamespaceHandler;
 import org.xhtmlrenderer.swing.BasicPanel;
 import org.xhtmlrenderer.swing.FSMouseListener;
 import org.xhtmlrenderer.swing.MouseTracker;
+import org.xhtmlrenderer.swing.SelectionHighlighter;
 import org.xhtmlrenderer.swing.SwingReplacedElementFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.openide.actions.CopyAction;
 
 /**
  * Top component which displays something.
@@ -69,7 +73,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
     private static final String PREFERRED_ID = "NoteContentViewTopComponent";
     private Lookup.Result<Note> result = null;
-    private XHTMLPanel panel = null;
+    private XHTMLPanel xhtmlPanel = null;
     private final ENMLReplacedElementFactory cef;
 
     public NoteContentViewTopComponent() {
@@ -78,9 +82,13 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         setToolTipText(NbBundle.getMessage(NoteContentViewTopComponent.class, "HINT_NoteContentViewTopComponent"));
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
-        panel = new XHTMLPanel();
-        panel.getSharedContext().setReplacedElementFactory(cef);
-        jScrollPane2.setViewportView(panel);
+        xhtmlPanel = new XHTMLPanel();
+        xhtmlPanel.getSharedContext().setReplacedElementFactory(cef);
+
+
+
+
+        jScrollPane2.setViewportView(xhtmlPanel);
         putClientProperty(PROP_CLOSING_DISABLED, true);
     }
 
@@ -152,7 +160,11 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 if (null != content) {
                     try {
                         Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
-                        panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                        xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+//                        final SelectionHighlighter caret = new SelectionHighlighter();
+//                        caret.install(xhtmlPanel);
+//                        caret.selectAll();
+
                     } catch (NullPointerException ex) {
                         LOG.warning("NPE when trying to process: " + content);
                         Exceptions.printStackTrace(ex);
@@ -221,7 +233,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
-               MouseListener[] mls = (MouseListener[]) (panel.getListeners(MouseListener.class));
+        MouseListener[] mls = (MouseListener[]) (xhtmlPanel.getListeners(MouseListener.class));
         for (MouseListener mouseListener : mls) {
             LOG.info("removing " + mouseListener);
             if (mouseListener instanceof MouseTracker) {
@@ -232,9 +244,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                     mouseTracker.removeListener(fsml);
                 }
             }
-            panel.removeMouseListener(mouseListener);
+            xhtmlPanel.removeMouseListener(mouseListener);
         }
-        panel.addMouseTrackingListener(new FSMouseListener() {
+        xhtmlPanel.addMouseTrackingListener(new FSMouseListener() {
 
             public void onMouseOver(BasicPanel pnl, Box box) {
                 LOG.fine("onMouseOver");
@@ -250,7 +262,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                     return;
                 }
 
-                String uriString = findLink(panel, box.getElement());
+                String uriString = findLink(xhtmlPanel, box.getElement());
                 LOG.fine("onMouseUp: uri: " + uriString);
 
                 if (uriString != null) {
@@ -296,6 +308,16 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);
         resultChanged(null);
+        final SelectionHighlighter caret = new SelectionHighlighter();
+        caret.install(xhtmlPanel);
+        caret.selectAll();
+        final SelectionHighlighter.CopyAction copyAction = new SelectionHighlighter.CopyAction();
+        copyAction.install(caret);
+
+
+        CopyAction ra = CopyAction.get(CopyAction.class);
+        getActionMap().put(ra.getActionMapKey(), copyAction);
+
     }
 
     @Override
