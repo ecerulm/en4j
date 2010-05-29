@@ -38,9 +38,6 @@
   </Layout>
   <SubComponents>
     <Container class="javax.swing.JLayeredPane" name="jLayeredPane1">
-      <Events>
-        <EventHandler event="ancestorResized" listener="java.awt.event.HierarchyBoundsListener" parameters="java.awt.event.HierarchyEvent" handler="jLayeredPane1AncestorResized"/>
-      </Events>
       <AuxValues>
         <AuxValue name="JavaCodeGenerator_CreateCodePost" type="java.lang.String" value="jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));"/>
       </AuxValues>

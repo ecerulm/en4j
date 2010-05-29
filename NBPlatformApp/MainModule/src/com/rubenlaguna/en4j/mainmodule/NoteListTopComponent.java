@@ -68,6 +68,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private RequestProcessor.Task currentSearchTask = null;
     private RequestProcessor.Task currentRefreshTask = null;
     private String searchstring = "";
+    private final CustomGlassPane customGlassPane = new CustomGlassPane();
 
     public NoteListTopComponent() {
         LOG.info("creating NoteListTopComponen " + this.toString());
@@ -78,7 +79,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jTable1.getSelectionModel().addListSelectionListener(this);
         putClientProperty(PROP_CLOSING_DISABLED, true);
 //        jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
-
+        customGlassPane.setVisible(false);
+        jLayeredPane1.add(customGlassPane, (Integer) (jLayeredPane1.DEFAULT_LAYER + 50));
     }
 
     public void refresh() {
@@ -103,14 +105,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jButton1 = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
-
-        jLayeredPane1.addHierarchyBoundsListener(new java.awt.event.HierarchyBoundsListener() {
-            public void ancestorMoved(java.awt.event.HierarchyEvent evt) {
-            }
-            public void ancestorResized(java.awt.event.HierarchyEvent evt) {
-                jLayeredPane1AncestorResized(evt);
-            }
-        });
 
         jPanel1.setOpaque(false);
 
@@ -201,6 +195,12 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             public void run() {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        customGlassPane.setVisible(true);
+                    }
+                });
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
                 Collection<Note> prelList = null;
@@ -221,6 +221,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                             LOG.fine("Refreshing the list in the EDT");
                             list1.clear();
                             list1.addAll(list);
+                            customGlassPane.setVisible(false);
                         }
                     });
                 } catch (InterruptedException ex) {
@@ -248,11 +249,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"));
         }
     }//GEN-LAST:event_searchTextFieldFocusLost
-
-    private void jLayeredPane1AncestorResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_jLayeredPane1AncestorResized
-        LOG.info("jLayeredPanel resize:" + jLayeredPane1.getSize());
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jLayeredPane1AncestorResized
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JLayeredPane jLayeredPane1;
@@ -293,10 +289,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 "There seem to be multiple components with the '" + PREFERRED_ID
                 + "' ID. That is a potential source of errors and unexpected behavior.");
         return getDefault();
-    }
-
-    Rectangle getJPanel1Bounds() {
-        return jLayeredPane1.getBounds();
     }
 
     @Override
