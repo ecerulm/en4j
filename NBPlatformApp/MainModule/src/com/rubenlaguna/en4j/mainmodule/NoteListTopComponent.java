@@ -29,7 +29,9 @@ import javax.swing.event.ListSelectionListener;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Property;
 import org.jdesktop.observablecollections.ObservableCollections;
+import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
+import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ImageUtilities;
@@ -40,7 +42,6 @@ import org.openide.util.lookup.InstanceContent;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
-import java.awt.Rectangle;
 import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -59,7 +60,7 @@ autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
 
     private Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
-    private static final RequestProcessor RP = new RequestProcessor("refresh tasks", 1);
+    private static final RequestProcessor RP = new RequestProcessor("search tasks", 2);
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
@@ -102,11 +103,30 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jLayeredPane1 = new javax.swing.JLayeredPane();
         jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
         jPanel1 = new javax.swing.JPanel();
-        jButton1 = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
+        jButton1 = new javax.swing.JButton();
 
         jPanel1.setOpaque(false);
+        jPanel1.setLayout(new java.awt.BorderLayout());
+
+        jTable1.setColumnSelectionAllowed(true);
+
+        org.jdesktop.swingbinding.JTableBinding jTableBinding = org.jdesktop.swingbinding.SwingBindings.createJTableBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, list1, jTable1);
+        org.jdesktop.swingbinding.JTableBinding.ColumnBinding columnBinding = jTableBinding.addColumnBinding(org.jdesktop.beansbinding.ELProperty.create("${title}"));
+        columnBinding.setColumnName("Title");
+        columnBinding.setColumnClass(String.class);
+        columnBinding.setEditable(false);
+        bindingGroup.addBinding(jTableBinding);
+        jTableBinding.bind();
+        jScrollPane1.setViewportView(jTable1);
+        jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
+
+        jPanel1.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+
+        jPanel1.setBounds(0, 0, -1, -1);
+        jLayeredPane1.add(jPanel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text")); // NOI18N
         searchTextField.addFocusListener(new java.awt.event.FocusAdapter() {
@@ -125,57 +145,30 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             }
         });
 
-        jTable1.setColumnSelectionAllowed(true);
-
-        org.jdesktop.swingbinding.JTableBinding jTableBinding = org.jdesktop.swingbinding.SwingBindings.createJTableBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, list1, jTable1);
-        org.jdesktop.swingbinding.JTableBinding.ColumnBinding columnBinding = jTableBinding.addColumnBinding(org.jdesktop.beansbinding.ELProperty.create("${title}"));
-        columnBinding.setColumnName("Title");
-        columnBinding.setColumnClass(String.class);
-        columnBinding.setEditable(false);
-        bindingGroup.addBinding(jTableBinding);
-        jTableBinding.bind();
-        jScrollPane1.setViewportView(jTable1);
-        jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(8, 8, 8)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 412, Short.MAX_VALUE))
-                    .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 286, Short.MAX_VALUE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 125, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap())
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-
-        jPanel1.setBounds(0, 0, -1, -1);
-        jLayeredPane1.add(jPanel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
-
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 454, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLayeredPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 469, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 375, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jButton1)))
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 285, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton1))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 286, Short.MAX_VALUE)
+                .addContainerGap())
         );
 
         bindingGroup.bind();
@@ -195,12 +188,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             public void run() {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        customGlassPane.setVisible(true);
-                    }
-                });
+
+                final Task dimTask = postDimTask();
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
                 Collection<Note> prelList = null;
@@ -214,6 +203,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 }
                 final Collection<Note> list = prelList;
                 try {
+                    dimTask.cancel();
                     SwingUtilities.invokeAndWait(new Runnable() {
 
                         @Override
@@ -227,6 +217,24 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 } catch (InterruptedException ex) {
                 } catch (InvocationTargetException ex) {
                 }
+            }
+
+            private Task postDimTask() {
+                Runnable dimListRunnable = new Runnable() {
+
+                    @Override
+                    public void run() {
+                        SwingUtilities.invokeLater(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                customGlassPane.setVisible(true);
+                            }
+                        });
+                    }
+                };
+                final Task dimTask = RP.post(dimListRunnable, 500);
+                return dimTask;
             }
         };
 
