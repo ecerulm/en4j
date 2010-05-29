@@ -21,7 +21,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
@@ -48,8 +47,8 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import javax.swing.JTable;
+import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
 import javax.swing.event.DocumentListener;
 import org.openide.util.RequestProcessor;
 
@@ -61,7 +60,7 @@ autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
 
     private Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
-    private static final RequestProcessor RP = new RequestProcessor("refresh tasks", 1);
+    private static final RequestProcessor RP = new RequestProcessor("search tasks", 2);
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
@@ -70,6 +69,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private RequestProcessor.Task currentSearchTask = null;
     private RequestProcessor.Task currentRefreshTask = null;
     private String searchstring = "";
+    private final CustomGlassPane customGlassPane = new CustomGlassPane();
 
     public NoteListTopComponent() {
         LOG.info("creating NoteListTopComponen " + this.toString());
@@ -79,7 +79,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         associateLookup(new AbstractLookup(ic));
         jTable1.getSelectionModel().addListSelectionListener(this);
         putClientProperty(PROP_CLOSING_DISABLED, true);
-
+//        jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
+        customGlassPane.setVisible(false);
+        jLayeredPane1.add(customGlassPane, (Integer) (jLayeredPane1.DEFAULT_LAYER + 50));
     }
 
     public void refresh() {
@@ -98,9 +100,15 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
         list1 = getList();
+        jLayeredPane1 = new javax.swing.JLayeredPane();
+        jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
+        jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jButton1 = new javax.swing.JButton();
+
+        jPanel1.setOpaque(false);
+        jPanel1.setLayout(new java.awt.BorderLayout());
 
         jTable1.setColumnSelectionAllowed(true);
 
@@ -114,6 +122,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jScrollPane1.setViewportView(jTable1);
         jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
+
+        jPanel1.add(jScrollPane1, java.awt.BorderLayout.CENTER);
+
+        jPanel1.setBounds(0, 0, -1, -1);
+        jLayeredPane1.add(jPanel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text")); // NOI18N
         searchTextField.addFocusListener(new java.awt.event.FocusAdapter() {
@@ -139,9 +152,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 391, Short.MAX_VALUE)
+                    .addComponent(jLayeredPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 469, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 320, Short.MAX_VALUE)
+                        .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 375, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(jButton1)))
                 .addContainerGap())
@@ -154,7 +167,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton1))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 256, Short.MAX_VALUE)
+                .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 286, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -175,6 +188,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             public void run() {
+
+                final Task dimTask = postDimTask();
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
                 Collection<Note> prelList = null;
@@ -188,6 +203,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 }
                 final Collection<Note> list = prelList;
                 try {
+                    dimTask.cancel();
                     SwingUtilities.invokeAndWait(new Runnable() {
 
                         @Override
@@ -195,11 +211,30 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                             LOG.fine("Refreshing the list in the EDT");
                             list1.clear();
                             list1.addAll(list);
+                            customGlassPane.setVisible(false);
                         }
                     });
                 } catch (InterruptedException ex) {
                 } catch (InvocationTargetException ex) {
                 }
+            }
+
+            private Task postDimTask() {
+                Runnable dimListRunnable = new Runnable() {
+
+                    @Override
+                    public void run() {
+                        SwingUtilities.invokeLater(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                customGlassPane.setVisible(true);
+                            }
+                        });
+                    }
+                };
+                final Task dimTask = RP.post(dimListRunnable, 500);
+                return dimTask;
             }
         };
 
@@ -224,6 +259,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }//GEN-LAST:event_searchTextFieldFocusLost
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
+    private javax.swing.JLayeredPane jLayeredPane1;
+    private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
     private java.util.List<Note> list1;
