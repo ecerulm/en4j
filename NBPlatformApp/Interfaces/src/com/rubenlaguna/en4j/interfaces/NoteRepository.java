@@ -53,6 +53,8 @@ public interface NoteRepository {
 
     boolean add(Resource r);
 
+    int size();
+
 //    int getHighestUSN();
     void addPropertyChangeListener(PropertyChangeListener listener);
 

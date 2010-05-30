@@ -146,32 +146,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
                 //get(id) will gives us a fully loaded entity
                 Note n = Lookup.getDefault().lookup(NoteRepository.class).get(id);
-                cef.setNote(n);
-
-                // Create a builder factory
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                factory.setValidating(false);
-                //factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-                factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-                factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
-
-                // Create the builder and parse the file
-                Reader content = n.getContentAsReader();
-                if (null != content) {
-                    try {
-                        Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
-                        xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
-//                        final SelectionHighlighter caret = new SelectionHighlighter();
-//                        caret.install(xhtmlPanel);
-//                        caret.selectAll();
-
-                    } catch (NullPointerException ex) {
-                        LOG.warning("NPE when trying to process: " + content);
-                        Exceptions.printStackTrace(ex);
-                    }
-                } else {
-                    LOG.warning("empty contents for note " + n.getGuid());
-                }
+                parseAndSetNote(n);
             }
 
         } catch (SAXException e) {
@@ -181,6 +156,36 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
         } catch (IOException e) {
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
+        }
+
+    }
+
+    private void parseAndSetNote(Note n) throws ParserConfigurationException, SAXException, IOException {
+        cef.setNote(n);
+
+        // Create a builder factory
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(false);
+        //factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
+
+        // Create the builder and parse the file
+        Reader content = n.getContentAsReader();
+        if (null != content) {
+            try {
+                Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
+                if (xhtmlPanel.getDocument()==null) {
+                    //only do it once, before the first document is set
+                    installSelectionHighligherAndCopyHandler();
+                }
+                xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+            } catch (NullPointerException ex) {
+                LOG.warning("NPE when trying to process: " + content);
+                Exceptions.printStackTrace(ex);
+            }
+        } else {
+            LOG.warning("empty contents for note " + n.getGuid());
         }
 
     }
@@ -308,16 +313,18 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);
         resultChanged(null);
+
+    }
+
+    private void installSelectionHighligherAndCopyHandler() {
         final SelectionHighlighter caret = new SelectionHighlighter();
         caret.install(xhtmlPanel);
-        caret.selectAll();
+        //caret.selectAll();
         final SelectionHighlighter.CopyAction copyAction = new SelectionHighlighter.CopyAction();
         copyAction.install(caret);
 
-
         CopyAction ra = CopyAction.get(CopyAction.class);
         getActionMap().put(ra.getActionMapKey(), copyAction);
-
     }
 
     @Override

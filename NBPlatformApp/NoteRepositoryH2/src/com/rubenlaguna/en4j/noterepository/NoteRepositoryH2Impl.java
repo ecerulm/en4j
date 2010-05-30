@@ -486,4 +486,42 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
         }
     }
+
+    public int size() {
+//          long start = System.currentTimeMillis();
+//        List<Note> toReturn = new ArrayList<Note>();
+
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        int toReturn =0;
+        try {
+
+            pstmt = connection.prepareStatement("SELECT COUNT(ID) FROM NOTES WHERE ISACTIVE = ?");
+            pstmt.setBoolean(1, true);
+            rs = pstmt.executeQuery();
+            while (rs.next()) {
+                toReturn = rs.getInt(1);
+            }
+        } catch (Exception ex) {
+            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.FINE, "caught exception:", ex);
+        } finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                } catch (SQLException e) {
+                }
+
+            }
+            if (pstmt != null) {
+                try {
+                    pstmt.close();
+                } catch (SQLException e) {
+                }
+            }
+        }
+//        long delta = System.currentTimeMillis() - start;
+//        Installer.mbean.sampleGetAllNotes(delta);
+        return toReturn;
+    }
 }
