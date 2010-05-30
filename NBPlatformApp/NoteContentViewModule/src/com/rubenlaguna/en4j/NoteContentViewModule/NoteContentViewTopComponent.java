@@ -19,7 +19,6 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
 import java.awt.Desktop;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -32,7 +31,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.AbstractAction;
+import javax.swing.SwingUtilities;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.openide.util.Exceptions;
@@ -75,6 +74,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     private Lookup.Result<Note> result = null;
     private XHTMLPanel xhtmlPanel = null;
     private final ENMLReplacedElementFactory cef;
+    private Note lastNoteSeen = null;
 
     public NoteContentViewTopComponent() {
         initComponents();
@@ -101,6 +101,25 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     private void initComponents() {
 
         jScrollPane2 = new javax.swing.JScrollPane();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        titleTextJLabel = new javax.swing.JLabel();
+        sourceurlTextJLabel = new javax.swing.JLabel();
+
+        jLabel1.setFont(jLabel1.getFont().deriveFont(jLabel1.getFont().getStyle() | java.awt.Font.BOLD));
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.jLabel1.text")); // NOI18N
+
+        jLabel2.setFont(jLabel2.getFont().deriveFont(jLabel2.getFont().getStyle() | java.awt.Font.BOLD));
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel2, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.jLabel2.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(titleTextJLabel, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.titleTextJLabel.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(sourceurlTextJLabel, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.sourceurlTextJLabel.text")); // NOI18N
+        sourceurlTextJLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                sourceurlTextJLabelMouseReleased(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -108,19 +127,61 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(titleTextJLabel))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(sourceurlTextJLabel)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 381, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(titleTextJLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel2)
+                    .addComponent(sourceurlTextJLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 339, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
+
+    private void sourceurlTextJLabelMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_sourceurlTextJLabelMouseReleased
+        Collection<? extends Note> notes = result.allInstances();
+
+        if (null != lastNoteSeen) {
+            final String sourceurl = lastNoteSeen.getSourceurl();
+            if (null != sourceurl) {
+                try {
+                    URL url = new URL(sourceurl);
+                    URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
+                    Desktop.getDesktop().browse(uri);
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                } catch (URISyntaxException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+
+            }
+        }
+
+    }//GEN-LAST:event_sourceurlTextJLabelMouseReleased
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JLabel sourceurlTextJLabel;
+    private javax.swing.JLabel titleTextJLabel;
     // End of variables declaration//GEN-END:variables
 
     /**
@@ -145,8 +206,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 int id = notes.iterator().next().getId();
 
                 //get(id) will gives us a fully loaded entity
-                Note n = Lookup.getDefault().lookup(NoteRepository.class).get(id);
-                parseAndSetNote(n);
+                lastNoteSeen = Lookup.getDefault().lookup(NoteRepository.class).get(id);
+
+                parseAndSetNote(lastNoteSeen);
             }
 
         } catch (SAXException e) {
@@ -160,7 +222,19 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
     }
 
-    private void parseAndSetNote(Note n) throws ParserConfigurationException, SAXException, IOException {
+    private void parseAndSetNote(final Note n) throws ParserConfigurationException, SAXException, IOException {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            public void run() {
+                titleTextJLabel.setText(n.getTitle());
+                final String url = n.getSourceurl();
+                if (null != url) {
+                    sourceurlTextJLabel.setText("<html><a href=\"" + n.getSourceurl() + "\">" + n.getSourceurl() + "</a></html>");
+                } else {
+                    sourceurlTextJLabel.setText("");
+                }
+            }
+        });
         cef.setNote(n);
 
         // Create a builder factory
@@ -174,12 +248,17 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         Reader content = n.getContentAsReader();
         if (null != content) {
             try {
-                Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
-                if (xhtmlPanel.getDocument()==null) {
+                final Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
+                if (xhtmlPanel.getDocument() == null) {
                     //only do it once, before the first document is set
                     installSelectionHighligherAndCopyHandler();
                 }
-                xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                SwingUtilities.invokeLater(new Runnable() {
+
+                    public void run() {
+                        xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                    }
+                });
             } catch (NullPointerException ex) {
                 LOG.warning("NPE when trying to process: " + content);
                 Exceptions.printStackTrace(ex);
@@ -238,6 +317,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
+
         MouseListener[] mls = (MouseListener[]) (xhtmlPanel.getListeners(MouseListener.class));
         for (MouseListener mouseListener : mls) {
             LOG.info("removing " + mouseListener);
