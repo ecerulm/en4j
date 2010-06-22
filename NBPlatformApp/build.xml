@@ -36,22 +36,29 @@
     <target name="build" depends="build-brand,suite.build"/>
 
     <target name="build-brand" depends="-init">
-        <propertyfile
-            file="${basedir}/branding/core/core.jar/org/netbeans/core/startup/Bundle.properties"
-            comment="Updated by build script">
+        <property 
+           name="bundlefile1"
+           value="${basedir}/branding/core/core.jar/org/netbeans/core/startup/Bundle.properties"/>
+        <property 
+           name="bundlefile2"
+           value="${basedir}/branding/modules/org-netbeans-core-windows.jar/org/netbeans/core/windows/view/ui/Bundle.properties"/>
+        <property 
+           name="bundlefile3"
+           value="${basedir}/branding/modules/org-netbeans-core.jar/org/netbeans/core/ui/Bundle.properties"/>
+
+        <touch file="${bundlefile1}" mkdirs="true"/>
+        <touch file="${bundlefile2}" mkdirs="true"/>
+        <touch file="${bundlefile3}" mkdirs="true"/>
+        <propertyfile file="${bundlefile1}" comment="Updated by build script">
             <entry key="currentVersion" value="${app.title} ${app.version} " />
         </propertyfile>
 
-        <propertyfile
-            file="${basedir}/branding/modules/org-netbeans-core-windows.jar/org/netbeans/core/windows/view/ui/Bundle.properties"
-            comment="Updated by build script">
+        <propertyfile file="${bundlefile2}" comment="Updated by build script">
             <entry key="CTL_MainWindow_Title" value="${app.title} ${app.version}" />
             <entry key="CTL_MainWindow_Title_No_Project" value="${app.title} ${app.version}" />
         </propertyfile>
 
-        <propertyfile
-            file="${basedir}/branding/modules/org-netbeans-core.jar/org/netbeans/core/ui/Bundle.properties"
-            comment="Updated by build script">
+        <propertyfile file="${bundlefile3}" comment="Updated by build script">
             <entry key="LBL_ProductInformation" value="${app.title}" />
         </propertyfile>
 
