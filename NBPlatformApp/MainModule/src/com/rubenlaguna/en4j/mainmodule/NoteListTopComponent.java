@@ -79,7 +79,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         associateLookup(new AbstractLookup(ic));
         jTable1.getSelectionModel().addListSelectionListener(this);
         putClientProperty(PROP_CLOSING_DISABLED, true);
-//        jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
         customGlassPane.setVisible(false);
         jLayeredPane1.add(customGlassPane, (Integer) (jLayeredPane1.DEFAULT_LAYER + 50));
     }
@@ -102,16 +101,14 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         list1 = getList();
         jLayeredPane1 = new javax.swing.JLayeredPane();
         jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
-        jPanel1 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
         jButton1 = new javax.swing.JButton();
         jLabel1 = new javax.swing.JLabel();
 
-        jPanel1.setOpaque(false);
-        jPanel1.setLayout(new java.awt.BorderLayout());
+        jScrollPane1.setBounds(jLayeredPane1.getVisibleRect());
 
-        jTable1.setBackground(getBackground());
+        jTable1.setBounds(jScrollPane1.getVisibleRect());
         jTable1.setColumnSelectionAllowed(true);
 
         org.jdesktop.swingbinding.JTableBinding jTableBinding = org.jdesktop.swingbinding.SwingBindings.createJTableBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, list1, jTable1);
@@ -125,10 +122,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
 
-        jPanel1.add(jScrollPane1, java.awt.BorderLayout.CENTER);
-
-        jPanel1.setBounds(0, 0, -1, -1);
-        jLayeredPane1.add(jPanel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jScrollPane1.setBounds(0, 0, 450, -1);
+        jLayeredPane1.add(jScrollPane1, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         searchTextField.setText(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text")); // NOI18N
         searchTextField.addFocusListener(new java.awt.event.FocusAdapter() {
@@ -211,6 +206,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 final Collection<Note> list = prelList;
                 try {
                     dimTask.cancel();
+                    dimTask.waitFinished();
                     final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
                     SwingUtilities.invokeAndWait(new Runnable() {
 
@@ -270,7 +266,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLayeredPane jLayeredPane1;
-    private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
     private java.util.List<Note> list1;
