@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module: com.rubenlaguna.en4j.commonsmath
+OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/commonsmath/Bundle.properties
+OpenIDE-Module-Specification-Version: 2.1
+

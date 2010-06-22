@@ -26,10 +26,12 @@ import java.io.IOException;
 import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.openide.util.Exceptions;
@@ -51,9 +53,11 @@ import org.xhtmlrenderer.simple.extend.XhtmlNamespaceHandler;
 import org.xhtmlrenderer.swing.BasicPanel;
 import org.xhtmlrenderer.swing.FSMouseListener;
 import org.xhtmlrenderer.swing.MouseTracker;
+import org.xhtmlrenderer.swing.SelectionHighlighter;
 import org.xhtmlrenderer.swing.SwingReplacedElementFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.openide.actions.CopyAction;
 
 /**
  * Top component which displays something.
@@ -68,8 +72,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 //    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
     private static final String PREFERRED_ID = "NoteContentViewTopComponent";
     private Lookup.Result<Note> result = null;
-    private XHTMLPanel panel = null;
+    private XHTMLPanel xhtmlPanel = null;
     private final ENMLReplacedElementFactory cef;
+    private Note lastNoteSeen = null;
 
     public NoteContentViewTopComponent() {
         initComponents();
@@ -77,80 +82,14 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
         setToolTipText(NbBundle.getMessage(NoteContentViewTopComponent.class, "HINT_NoteContentViewTopComponent"));
 //        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
         cef = new ENMLReplacedElementFactory(new SwingReplacedElementFactory());
-        panel = new XHTMLPanel();
-        //panel.getListeners(MouseListener.class);
-        MouseListener[] mls = (MouseListener[]) (panel.getListeners(MouseListener.class));
-        for (MouseListener mouseListener : mls) {
-            LOG.info("removing " + mouseListener);
-            if (mouseListener instanceof MouseTracker) {
-                final MouseTracker mouseTracker = (MouseTracker) mouseListener;
-                List<FSMouseListener> fsmlList = mouseTracker.getListeners();
-                for (FSMouseListener fsml : fsmlList) {
-                    LOG.info("removing FSMouseListener: " + fsml);
-                    mouseTracker.removeListener(fsml);
-                }
-            }
-            panel.removeMouseListener(mouseListener);
-        }
-        panel.addMouseTrackingListener(new FSMouseListener() {
+        xhtmlPanel = new XHTMLPanel();
+        xhtmlPanel.getSharedContext().setReplacedElementFactory(cef);
 
-            public void onMouseOver(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseOver");
-            }
 
-            public void onMouseOut(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseOut");
-            }
 
-            public void onMouseUp(BasicPanel pnl, Box box) {
-                LOG.fine("onMouseUp");
-                if (box == null || box.getElement() == null) {
-                    return;
-                }
 
-                String uri = findLink(panel, box.getElement());
-                LOG.fine("onMouseUp: uri: " + uri);
-
-                if (uri != null) {
-                    try {
-                        Desktop.getDesktop().browse(new URI(uri));
-                    } catch (IOException ex) {
-                        Exceptions.printStackTrace(ex);
-                    } catch (URISyntaxException ex) {
-                        Exceptions.printStackTrace(ex);
-                    }
-                }
-            }
-
-            private String findLink(BasicPanel panel, Element e) {
-                String uri = null;
-
-                for (Node node = e; node.getNodeType() == Node.ELEMENT_NODE; node = node.getParentNode()) {
-                    uri = panel.getSharedContext().getNamespaceHandler().getLinkUri((Element) node);
-
-                    if (uri != null) {
-                        break;
-                    }
-                }
-
-                return uri;
-            }
-
-            public void onMousePressed(BasicPanel pnl, MouseEvent me) {
-                LOG.fine("onMousePressed");
-            }
-
-            public void onMouseDragged(BasicPanel pnl, MouseEvent me) {
-                LOG.fine("onMouseDragged");
-            }
-
-            public void reset() {
-                LOG.fine("reset");
-            }
-        });
-
-        panel.getSharedContext().setReplacedElementFactory(cef);
-        jScrollPane2.setViewportView(panel);
+        jScrollPane2.setViewportView(xhtmlPanel);
+        putClientProperty(PROP_CLOSING_DISABLED, true);
     }
 
     /** This method is called from within the constructor to
@@ -162,6 +101,25 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     private void initComponents() {
 
         jScrollPane2 = new javax.swing.JScrollPane();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        titleTextJLabel = new javax.swing.JLabel();
+        sourceurlTextJLabel = new javax.swing.JLabel();
+
+        jLabel1.setFont(jLabel1.getFont().deriveFont(jLabel1.getFont().getStyle() | java.awt.Font.BOLD));
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.jLabel1.text")); // NOI18N
+
+        jLabel2.setFont(jLabel2.getFont().deriveFont(jLabel2.getFont().getStyle() | java.awt.Font.BOLD));
+        org.openide.awt.Mnemonics.setLocalizedText(jLabel2, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.jLabel2.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(titleTextJLabel, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.titleTextJLabel.text")); // NOI18N
+
+        org.openide.awt.Mnemonics.setLocalizedText(sourceurlTextJLabel, org.openide.util.NbBundle.getMessage(NoteContentViewTopComponent.class, "NoteContentViewTopComponent.sourceurlTextJLabel.text")); // NOI18N
+        sourceurlTextJLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                sourceurlTextJLabelMouseReleased(evt);
+            }
+        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -169,19 +127,61 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 459, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(titleTextJLabel))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jLabel2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(sourceurlTextJLabel)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 381, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(titleTextJLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel2)
+                    .addComponent(sourceurlTextJLabel))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 339, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
+
+    private void sourceurlTextJLabelMouseReleased(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_sourceurlTextJLabelMouseReleased
+        Collection<? extends Note> notes = result.allInstances();
+
+        if (null != lastNoteSeen) {
+            final String sourceurl = lastNoteSeen.getSourceurl();
+            if (null != sourceurl) {
+                try {
+                    URL url = new URL(sourceurl);
+                    URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
+                    Desktop.getDesktop().browse(uri);
+                } catch (IOException ex) {
+                    Exceptions.printStackTrace(ex);
+                } catch (URISyntaxException ex) {
+                    Exceptions.printStackTrace(ex);
+                }
+
+            }
+        }
+
+    }//GEN-LAST:event_sourceurlTextJLabelMouseReleased
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane2;
+    private javax.swing.JLabel sourceurlTextJLabel;
+    private javax.swing.JLabel titleTextJLabel;
     // End of variables declaration//GEN-END:variables
 
     /**
@@ -206,29 +206,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 int id = notes.iterator().next().getId();
 
                 //get(id) will gives us a fully loaded entity
-                Note n = Lookup.getDefault().lookup(NoteRepository.class).get(id);
-                cef.setNote(n);
+                lastNoteSeen = Lookup.getDefault().lookup(NoteRepository.class).get(id);
 
-                // Create a builder factory
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                factory.setValidating(false);
-                //factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-                factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-                factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
-
-                // Create the builder and parse the file
-                Reader content = n.getContentAsReader();
-                if (null != content) {
-                    try {
-                        Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
-                        panel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
-                    } catch (NullPointerException ex) {
-                        LOG.warning("NPE when trying to process: " + content);
-                        Exceptions.printStackTrace(ex);
-                    }
-                } else {
-                    LOG.warning("empty contents for note " + n.getGuid());
-                }
+                parseAndSetNote(lastNoteSeen);
             }
 
         } catch (SAXException e) {
@@ -238,6 +218,53 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
         } catch (IOException e) {
             Logger.getLogger(getName()).log(Level.SEVERE, "Exception", e);
+        }
+
+    }
+
+    private void parseAndSetNote(final Note n) throws ParserConfigurationException, SAXException, IOException {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            public void run() {
+                titleTextJLabel.setText(n.getTitle());
+                final String url = n.getSourceurl();
+                if (null != url) {
+                    sourceurlTextJLabel.setText("<html><a href=\"" + n.getSourceurl() + "\">" + n.getSourceurl() + "</a></html>");
+                } else {
+                    sourceurlTextJLabel.setText("");
+                }
+            }
+        });
+        cef.setNote(n);
+
+        // Create a builder factory
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(false);
+        //factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setFeature("http://apache.org/xml/features/dom/defer-node-expansion", false);
+
+        // Create the builder and parse the file
+        Reader content = n.getContentAsReader();
+        if (null != content) {
+            try {
+                final Document doc = factory.newDocumentBuilder().parse(new InputSource(content));
+                if (xhtmlPanel.getDocument() == null) {
+                    //only do it once, before the first document is set
+                    installSelectionHighligherAndCopyHandler();
+                }
+                SwingUtilities.invokeLater(new Runnable() {
+
+                    public void run() {
+                        xhtmlPanel.setDocument(doc, "", new ENMLNamespaceHandler(new XhtmlNamespaceHandler()));
+                    }
+                });
+            } catch (NullPointerException ex) {
+                LOG.warning("NPE when trying to process: " + content);
+                Exceptions.printStackTrace(ex);
+            }
+        } else {
+            LOG.warning("empty contents for note " + n.getGuid());
         }
 
     }
@@ -290,10 +317,94 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     @Override
     public void componentOpened() {
         // TODO add custom code on component opening
+
+        MouseListener[] mls = (MouseListener[]) (xhtmlPanel.getListeners(MouseListener.class));
+        for (MouseListener mouseListener : mls) {
+            LOG.info("removing " + mouseListener);
+            if (mouseListener instanceof MouseTracker) {
+                final MouseTracker mouseTracker = (MouseTracker) mouseListener;
+                List<FSMouseListener> fsmlList = mouseTracker.getListeners();
+                for (FSMouseListener fsml : fsmlList) {
+                    LOG.info("removing FSMouseListener: " + fsml);
+                    mouseTracker.removeListener(fsml);
+                }
+            }
+            xhtmlPanel.removeMouseListener(mouseListener);
+        }
+        xhtmlPanel.addMouseTrackingListener(new FSMouseListener() {
+
+            public void onMouseOver(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOver");
+            }
+
+            public void onMouseOut(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseOut");
+            }
+
+            public void onMouseUp(BasicPanel pnl, Box box) {
+                LOG.fine("onMouseUp");
+                if (box == null || box.getElement() == null) {
+                    return;
+                }
+
+                String uriString = findLink(xhtmlPanel, box.getElement());
+                LOG.fine("onMouseUp: uri: " + uriString);
+
+                if (uriString != null) {
+                    try {
+                        URL url = new URL(uriString);
+                        URI uri = new URI(url.getProtocol(), url.getHost(), url.getPath(), url.getQuery(), null);
+                        Desktop.getDesktop().browse(uri);
+                    } catch (IOException ex) {
+                        Exceptions.printStackTrace(ex);
+                    } catch (URISyntaxException ex) {
+                        Exceptions.printStackTrace(ex);
+                    }
+                }
+            }
+
+            private String findLink(BasicPanel panel, Element e) {
+                String uri = null;
+
+                for (Node node = e; node.getNodeType() == Node.ELEMENT_NODE; node = node.getParentNode()) {
+                    uri = panel.getSharedContext().getNamespaceHandler().getLinkUri((Element) node);
+
+                    if (uri != null) {
+                        break;
+                    }
+                }
+
+                return uri;
+            }
+
+            public void onMousePressed(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMousePressed");
+            }
+
+            public void onMouseDragged(BasicPanel pnl, MouseEvent me) {
+                LOG.fine("onMouseDragged");
+            }
+
+            public void reset() {
+                LOG.fine("reset");
+            }
+        });
         Lookup.Template<Note> tpl = new Lookup.Template<Note>(Note.class);
         result = Utilities.actionsGlobalContext().lookup(tpl);
         result.addLookupListener(this);
         resultChanged(null);
+
+    }
+
+    private void installSelectionHighligherAndCopyHandler() {
+        final SelectionHighlighter caret = new SelectionHighlighter();
+        caret.install(xhtmlPanel);
+        //caret.selectAll();
+        final SelectionHighlighter.CopyAction copyAction = new SelectionHighlighter.CopyAction();
+        copyAction.install(caret);
+
+        CopyAction ra = CopyAction.get(CopyAction.class);
+        getActionMap().put(ra.getActionMapKey(), copyAction);
     }
 
     @Override

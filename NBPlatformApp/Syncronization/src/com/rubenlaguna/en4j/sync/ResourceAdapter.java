@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.sync;
 
@@ -11,6 +23,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.logging.Logger;
 
 /**
  *
@@ -18,6 +31,7 @@ import java.util.Date;
  */
 class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
 
+    private final static Logger LOG = Logger.getLogger(ResourceAdapter.class.getName());
     private final com.evernote.edam.type.Resource resource;
 
     public ResourceAdapter(com.evernote.edam.type.Resource resource) {
@@ -30,6 +44,10 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
             return null;
         }
         return data.getBody();
+    }
+
+    public int getDataLength() {
+        return resource.getData().getSize();
     }
 
     @Override
@@ -113,10 +131,20 @@ class ResourceAdapter implements com.rubenlaguna.en4j.noteinterface.Resource {
         try {
             MessageDigest md5 = MessageDigest.getInstance("MD5");
             BigInteger hash = new BigInteger(1, md5.digest(data));
-            String hashword = hash.toString(16);
+//            String hashword = hash.toString(16);
+            String hashword = String.format("%032x", hash);
+
+            LOG.info("generated hash = " + hashword);
+            if (hashword.length() != 32) {
+                throw new RuntimeException("generated incorrect hash " + hashword + " length:" + hashword.length());
+            }
             return hashword;
         } catch (NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    public int getUpdateSequenceNumber() {
+        return resource.getUpdateSequenceNum();
     }
 }

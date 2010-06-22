@@ -45,7 +45,15 @@ public interface NoteRepository {
 
     boolean isNoteUpToDate(String guid, int usn);
 
+    boolean isResourceUpToDate(String guid, int usn);
+
     boolean add(NoteReader n);
+
+    boolean deleteNoteByGuid(String noteguid);
+
+    boolean add(Resource r);
+
+    int size();
 
 //    int getHighestUSN();
     void addPropertyChangeListener(PropertyChangeListener listener);

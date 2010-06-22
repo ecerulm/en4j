@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.searchlucene;
 
@@ -92,6 +104,15 @@ class IndexWriterWrapper {
         }
     }
 
+    void deleteDocuments(Term term) throws IOException {
+        available.acquireUninterruptibly();
+        try {
+            indexWriterInstance.deleteDocuments(term);
+        } finally {
+            available.release();
+        }
+    }
+
     void commit() throws CorruptIndexException, IOException {
         available.acquireUninterruptibly();
         try {
@@ -100,21 +121,9 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-//        if (commits > 5) {
-//            closeAndReopen();
-//        }
 
     }
 
-//    private void closeAndReopen() throws IOException {
-//        available.acquireUninterruptibly(MAX_AVAILABLE);
-//        LOG.info("the actual IndexWriter instance has been closed and replaced with a new instance");
-//        indexWriterInstance.close();
-//        indexWriterInstance = null;
-//        commits = 0;
-//        initWriter();
-//        available.release(MAX_AVAILABLE);
-//    }
     void optimize()
             throws CorruptIndexException, IOException {
         available.acquireUninterruptibly();
@@ -123,7 +132,6 @@ class IndexWriterWrapper {
         } finally {
             available.release();
         }
-//        closeAndReopen();
     }
 
     void setInfoStream(PrintStream os) {

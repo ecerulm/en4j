@@ -3,9 +3,58 @@
 <!-- for some information on what you could do (e.g. targets to override). -->
 <!-- If you delete this file and reopen the project it will be recreated. -->
 <project name="NBPlatformApp" basedir=".">
-    <description>Builds the module suite NBPlatformApp.</description>
+    <description>Builds the module suite NBPlatformApp/EN4J.</description>
+    <exec outputproperty="app.version" executable="git">
+        <arg line="describe --always --dirty" />
+    </exec>
+
     <import file="nbproject/build-impl.xml"/>
+
     <target name="build-launchers" depends="suite.build-launchers">
-        <replace file="build/launcher/etc/${app.name}.conf" token="/dev" value="/${app.version}"/>
+        <exec outputproperty="app.verdir" executable="git">
+            <arg line="describe --always " />
+            <redirector>
+                <outputfilterchain>
+                    <tokenfilter>
+                        <replaceregex pattern="([^-]*).*" replace="\1" flags="g"/>
+                    </tokenfilter>
+                </outputfilterchain>
+            </redirector>
+        </exec>
+        <replace file="build/launcher/etc/${app.name}.conf" token="/dev" value="/${app.verdir}"/>
+        <replace file="build/launcher/etc/${app.name}.conf" token="-J-Xms24m -J-Xmx64m" value="${run.args.extra}"/>
     </target>
+
+    <target name="build-zip" depends="suite.build-zip">
+        <move file="${dist.dir}/${app.name}.zip" tofile="${dist.dir}/${app.name}-${app.version}.zip"/>
+    </target>
+
+    <target name="build-mac" depends="suite.build-mac">
+        <move file="${dist.dir}/${app.name}.app" tofile="${dist.dir}/${app.name}-${app.version}.app"/>
+    </target>
+
+    <target name="build" depends="build-brand,suite.build"/>
+
+    <target name="build-brand" depends="-init">
+        <propertyfile
+            file="${basedir}/branding/core/core.jar/org/netbeans/core/startup/Bundle.properties"
+            comment="Updated by build script">
+            <entry key="currentVersion" value="${app.title} ${app.version} " />
+        </propertyfile>
+
+        <propertyfile
+            file="${basedir}/branding/modules/org-netbeans-core-windows.jar/org/netbeans/core/windows/view/ui/Bundle.properties"
+            comment="Updated by build script">
+            <entry key="CTL_MainWindow_Title" value="${app.title} ${app.version}" />
+            <entry key="CTL_MainWindow_Title_No_Project" value="${app.title} ${app.version}" />
+        </propertyfile>
+
+        <propertyfile
+            file="${basedir}/branding/modules/org-netbeans-core.jar/org/netbeans/core/ui/Bundle.properties"
+            comment="Updated by build script">
+            <entry key="LBL_ProductInformation" value="${app.title}" />
+        </propertyfile>
+
+    </target>
+
 </project>

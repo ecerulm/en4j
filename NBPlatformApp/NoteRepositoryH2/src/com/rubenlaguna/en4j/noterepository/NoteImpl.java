@@ -1,27 +1,34 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
-import com.rubenlaguna.en4j.noteinterface.NoteReader;
 import com.rubenlaguna.en4j.noteinterface.Resource;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Serializable;
 import java.nio.CharBuffer;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 /**
@@ -62,34 +69,7 @@ class NoteImpl implements Note {
     }
 
     public Reader getContentAsReader() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final Reader characterStream = rs.getCharacterStream("CONTENT");
-                return characterStream;
-            }
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return null;
+        return DbPstmts.getInstance().getContentAsReader(id);
     }
 
     public void setContent(String content) {
@@ -113,35 +93,7 @@ class NoteImpl implements Note {
     }
 
     public String getSourceurl() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT SOURCEURL FROM NOTES WHERE ID =?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String toReturn = rs.getString("SOURCEURL");
-                return toReturn;
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return "";
-
+        return DbPstmts.getInstance().getSourceurl(id);
     }
 
     public void setSourceurl(String sourceurl) {
@@ -149,34 +101,7 @@ class NoteImpl implements Note {
     }
 
     public String getTitle() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT TITLE FROM NOTES WHERE ID =?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String toReturn = rs.getString("TITLE");
-                return toReturn;
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return "";
+        return DbPstmts.getInstance().getTitle(id);
     }
 
     public void setTitle(String title) {
@@ -192,38 +117,11 @@ class NoteImpl implements Note {
     }
 
     public int getUpdateSequenceNumber() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT USN FROM NOTES WHERE ID =?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final int toReturn = rs.getInt("USN");
-                return toReturn;
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return -1;
+        return DbPstmts.getInstance().getUpdateSequenceNumber(id);
     }
 
     public boolean isActive() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().isActive(id);
     }
 
     public void setActive(boolean active) {
@@ -239,70 +137,43 @@ class NoteImpl implements Note {
     }
 
     public Resource getResource(String hash) {
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(getGuid(), hash);
+        final String guid = getGuid();
+        if (null == guid) {
+            return null;
+        }
+        if (hash.length()<32) {
+            getLogger().warning("Hash should be 32 char long. Left padding it with zeros");
+            StringBuffer sb = new StringBuffer();
+            for(int i =hash.length();i<32;i++) {
+                sb.append("0");
+            }
+            sb.append(hash);
+            final String paddedHash = sb.toString();
+            getLogger().warning("changed from "+hash+" ("+hash.length()+") to "+paddedHash+" ("+paddedHash.length()+")");
+            getResource(paddedHash);
+        }
+        if (hash.length() != 32) {
+            throw new IllegalArgumentException("hash has to be 32 bytes long. this "+hash+" was "+hash.length());
+        }
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource( guid, hash);
     }
 
+    @Override
     public Collection<Resource> getResources() {
-        List<Resource> toReturn = new ArrayList<Resource>();
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE OWNERGUID =?");
-            pstmt.setString(1, getGuid());
-            rs = pstmt.executeQuery();
-            while (rs.next()) {
-                final String hash = rs.getString("HASH");
-                toReturn.add(getResource(hash));
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
+        Set<Resource> toReturn = new HashSet<Resource>();
+        final String guid = getGuid();
+        if (null == guid) {
+            return Collections.EMPTY_LIST;
+        }
+        Collection<String> resHashes = DbPstmts.getInstance().getResources(guid);
+        for (String hash : resHashes) {
+            toReturn.add(getResource(hash));
         }
         return toReturn;
     }
 
     public String getGuid() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?");
-            pstmt.setInt(1, id);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String toReturn = rs.getString("GUID");
-                return toReturn;
-            }
-        } catch (SQLException sQLException) {
-            getLogger().log(Level.WARNING, "exception caught:", sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-        return "";
+        return DbPstmts.getInstance().getGuid(id);
     }
 
     private Connection getConnection() {

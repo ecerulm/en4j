@@ -1,12 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/*
- * UnrecognizedResourceJPanel.java
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
  *
- * Created on 2010-feb-15, 16:26:41
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.NoteContentViewModule;
 
@@ -41,7 +47,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         if (null != resource) {
             setFilename(resource.getFilename());
             setMime(resource.getMime());
-//            setFilesize(resource.getData().length);
+            setFilesize(resource.getDataLength());
         }
     }
 
@@ -65,6 +71,8 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
         jButton1 = new javax.swing.JButton();
 
         jLabel12.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel12.text")); // NOI18N
+
+        setBorder(new javax.swing.border.LineBorder(new java.awt.Color(0, 0, 0), 1, true));
 
         jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/com/rubenlaguna/en4j/NoteContentViewModule/unknown-icon.png"))); // NOI18N
         jLabel1.setText(org.openide.util.NbBundle.getMessage(UnrecognizedResourceJPanel.class, "UnrecognizedResourceJPanel.jLabel1.text")); // NOI18N
@@ -108,14 +116,14 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                             .addComponent(filenameJLabel)
                             .addComponent(mimeJLabel)))
                     .addComponent(jButton1))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(19, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 128, Short.MAX_VALUE)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 130, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel2)
@@ -144,6 +152,7 @@ public class UnrecognizedResourceJPanel extends javax.swing.JPanel {
                     //save resource to tmp file
                     String extension = FilenameUtils.getExtension(resource.getFilename());
                     File tempFile = File.createTempFile("en4j", "." + extension);
+                    tempFile.deleteOnExit();
                     OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile));
                     InputStream is = resource.getDataAsInputStream();
                     // Transfer bytes from in to out

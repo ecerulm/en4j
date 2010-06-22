@@ -1,6 +1,18 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.noterepository;
 
@@ -12,6 +24,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.modules.ModuleInstall;
 import org.openide.util.Exceptions;
+import java.lang.management.ManagementFactory;
+import javax.management.ObjectName;
+import javax.management.JMException;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryH2Data;
 
 /**
  * Manages a module's lifecycle. Remember that an installer is optional and
@@ -21,6 +37,7 @@ public class Installer extends ModuleInstall {
 
     private static final Logger LOG = Logger.getLogger(Installer.class.getName());
     public static Connection c = null;
+    public static final NoteRepositoryH2Data mbean = new NoteRepositoryH2Data();
 
     @Override
     public void restored() {
@@ -74,6 +91,7 @@ public class Installer extends ModuleInstall {
                         + "FILENAME VARCHAR, "
                         + "MIME VARCHAR, "
                         + "RECOGNITION BINARY, "
+                        + "USN INT NOT NULL, "
                         + "CONSTRAINT UNQ_GUID_RES UNIQUE (GUID))");
                 c.createStatement().execute("CREATE INDEX I_RSOURCS_OWNER ON RESOURCES (OWNERGUID)");
                 c.createStatement().execute("CREATE INDEX I_NOTES_GUID ON NOTES (GUID)");
@@ -83,12 +101,21 @@ public class Installer extends ModuleInstall {
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "exception ", e);
         }
+        try { // Register MBean in Platform MBeanServer
+            ManagementFactory.getPlatformMBeanServer().
+                    registerMBean(mbean,new ObjectName("com.rubenlaguna.en4j.noterepository:type=NoteRepositoryH2Data"));
+        }catch(JMException ex) {
+            // TODO handle exception
+        }
     }
 
     @Override
     public void close() {
         try {
+            DbPstmts.getInstance().close();
             c.createStatement().execute("SHUTDOWN");
+            c.close();
+            c=null;
         } catch (SQLException e) {
             LOG.log(Level.WARNING, "exception caught while doing db shutdown", e);
         }

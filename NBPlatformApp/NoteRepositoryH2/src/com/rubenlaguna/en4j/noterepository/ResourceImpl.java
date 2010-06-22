@@ -1,22 +1,27 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ *  Copyright (C) 2010 Ruben Laguna <ruben.laguna@gmail.com>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.rubenlaguna.en4j.noterepository;
 
 import com.rubenlaguna.en4j.noteinterface.Resource;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.sql.Blob;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Date;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.openide.util.Exceptions;
 
 /**
  *
@@ -47,133 +52,19 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public byte[] getData() {
-        getLogger().fine("resource guid:" + guid);
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final Blob blob = rs.getBlob("DATA");
-                final InputStream is = blob.getBinaryStream();
-                // Create the byte array to hold the data
-                final byte[] toReturn = new byte[(int) blob.length()];
+        return DbPstmts.getInstance().getData(guid);
+    }
 
-                // Read in the bytes
-                int offset = 0;
-                int numRead = 0;
-                try {
-                    while (offset < toReturn.length
-                            && (numRead = is.read(toReturn, offset, toReturn.length - offset)) >= 0) {
-                        offset += numRead;
-                    }
-
-                    // Ensure all the bytes have been read in
-                    if (offset < toReturn.length) {
-                        getLogger().warning("could not completely read data for resource guid:" + guid);
-                        //throw new IOException("Could not completely read file " + file.getName());
-                    }
-                } catch (IOException e) {
-                    getLogger().log(Level.WARNING, "caught exception:", e);
-                } finally {
-                    // Close the input stream and return bytes
-                    try {
-                        is.close();
-                    } catch (IOException e) {
-                    }
-
-                }
-                return toReturn;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return null;
+    public int getDataLength() {
+        return DbPstmts.getInstance().getDataLength(guid);
     }
 
     public InputStream getDataAsInputStream() {
-        getLogger().fine("resource guid:" + guid);
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT DATA FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final Blob blob = rs.getBlob("DATA");
-                final InputStream is = blob.getBinaryStream();
-                return is;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return null;
+        return DbPstmts.getInstance().getDataAsInputStream(guid);
     }
 
     public String getDataHash() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String hash = rs.getString("HASH");
-                return hash;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return "";
+        return DbPstmts.getInstance().getDataHash(guid);
     }
 
     public String getAlternateDataHash() {
@@ -181,36 +72,7 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public String getFilename() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT FILENAME FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String hash = rs.getString("FILENAME");
-                return hash;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return "";
+        return DbPstmts.getInstance().getFilename(guid);
     }
 
     public String getGuid() {
@@ -226,71 +88,11 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public String getMime() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT MIME FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String hash = rs.getString("MIME");
-                return hash;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return "";
-
+        return DbPstmts.getInstance().getMime(guid);
     }
 
     public String getNoteguid() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT OWNERGUID FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final String hash = rs.getString("OWNERGUID");
-                return hash;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return "";
-
+        return DbPstmts.getInstance().getNoteguid(guid);
     }
 
     public boolean getPremiumAttachment() {
@@ -298,36 +100,7 @@ class ResourceImpl implements Resource, Serializable {
     }
 
     public byte[] getRecognition() {
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            pstmt = getConnection().prepareStatement("SELECT RECOGNITION FROM RESOURCES WHERE GUID=?");
-            pstmt.setString(1, guid);
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                final byte[] toReturn = rs.getBytes("RECOGNITION");
-                return toReturn;
-            }
-
-        } catch (SQLException sQLException) {
-            Exceptions.printStackTrace(sQLException);
-        } finally {
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                }
-
-            }
-            if (pstmt != null) {
-                try {
-                    pstmt.close();
-                } catch (SQLException e) {
-                }
-            }
-        }
-
-        return null;
+        return DbPstmts.getInstance().getRecognition(guid);
     }
 
     public Date getTimestamp() {
@@ -340,5 +113,9 @@ class ResourceImpl implements Resource, Serializable {
 
     private Logger getLogger() {
         return Logger.getLogger(ResourceImpl.class.getName());
+    }
+
+    public int getUpdateSequenceNumber() {
+        return DbPstmts.getInstance().getUpdateSequenceNumberForResource(guid);
     }
 }

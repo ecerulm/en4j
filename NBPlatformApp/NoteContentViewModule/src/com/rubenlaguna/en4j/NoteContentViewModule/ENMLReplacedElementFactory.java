@@ -70,14 +70,14 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //LOG.log(Level.INFO, "Element content:" + box.getElement().getNodeValue());
 
         if ("en-media".equals(box.getElement().getNodeName())) {
-            LOG.log(Level.INFO, "en-media detected");
+            LOG.log(Level.FINE, "en-media detected");
 
             final String type = box.getElement().getAttribute("type");
             String hash = box.getElement().getAttribute("hash");
 
             if (isImage(type)) {
-                LOG.log(Level.INFO, "en-media type: image/jpeg");
-                LOG.log(Level.INFO, "en-media hash: " + hash);
+//                LOG.log(Level.FINE, "en-media type: image/jpeg");
+                LOG.log(Level.FINE, "en-media hash: " + hash);
 
                 toReturn = loadImage(context, hash);
                 if (null == toReturn) {
@@ -150,6 +150,9 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
                 is.close();
             } catch (IOException e) {
             }
+        }
+        if (image == null) {
+            return brokenImage(context, 100, 100);
         }
 
         ImageIcon icon = new ImageIcon(image);

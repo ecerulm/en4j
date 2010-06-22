@@ -16,11 +16,13 @@
  */
 package com.rubenlaguna.en4j.sync;
 
+import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import org.openide.modules.ModuleInstall;
 import java.lang.management.ManagementFactory;
 import javax.management.ObjectName;
 import javax.management.JMException;
 import org.openide.util.Exceptions;
+import org.openide.util.Lookup;
 
 /**
  * Manages a module's lifecycle. Remember that an installer is optional and
@@ -40,4 +42,10 @@ public class Installer extends ModuleInstall {
             Exceptions.printStackTrace(ex);
         }
     }
+
+    @Override
+    public void close() {
+        Lookup.getDefault().lookup(SynchronizationService.class).close();
+    }
+
 }

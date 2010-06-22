@@ -56,7 +56,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
@@ -104,7 +103,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             //make sure that there is an index that the readers can open
             IndexWriterWrapper.getInstance().commit();
             Installer.mbean.setThreadPoolExecutor(RP);
-//            Directory dir = FSDirectory.open(IndexWriterWrapper.getDirectory());
             Directory dir = IndexWriterWrapper.getInstance().getLuceneDirectory();
             reader = IndexReader.open(dir, true);
         } catch (CorruptIndexException ex) {
@@ -120,7 +118,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public int getNumDocs() {
         try {
-//            return IndexWriterWrapper.getInstance().numDocs() - IndexWriterWrapper.getInstance().numRamDocs();
             return IndexWriterWrapper.getInstance().numDocs();
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
@@ -147,7 +144,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 LOG.info("skipping commit. Nothing to commit to the index");
             }
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "exception while commiting changes to the index", ex);
+            LOG.log(Level.WARNING, "exception while commiting changes to the index", ex.getMessage());
+            LOG.log(Level.FINE, "exception while commiting changes to the index", ex);
         }
     }
 
@@ -157,7 +155,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
         long start = System.currentTimeMillis();
         searchText = searchText.trim();
-//        String patternStr = "(?:\\w)\\s+";
         String patternStr = "\\s+";
         String replaceStr = "* ";
         Pattern pattern = Pattern.compile(patternStr);
@@ -200,7 +197,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     Document document = searcher.doc(scoreId);
                     final String stringValue = document.getField("id").stringValue();
                     int docId = Integer.parseInt(stringValue);
-                    LOG.info("doc id " + stringValue + " matches the search.");
+                    LOG.fine("doc id " + stringValue + " matches the search.");
                     toReturn.add(nr.get(docId, false));
                 }
 
@@ -222,8 +219,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Exceptions.printStackTrace(ex);
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
+        } catch (IllegalStateException ex) {
+            LOG.info("caught "+ex.getMessage()+". Most likely the app is shutting down");
         }
         long delta = System.currentTimeMillis() - start;
+        Installer.mbean.sampleSearchTime(delta);
         LOG.info("find took " + delta / 1000.0 + " secs. " + toReturn.size() + " results found");
         return toReturn;
     }
@@ -238,15 +238,23 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 Document document = null;
                 if (null != note) {
                     try {
-                        document = getLuceneDocument(note);
-                        IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
-                        if (!pendingCommit) {
-                            pendingCommit = true;
-                            LOG.info("scheduling COMMITER");
-                            COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                        if (note.isActive()) {
+                            document = getLuceneDocument(note);
+                            IndexWriterWrapper.getInstance().updateDocument(new Term("id", n.getId().toString()), document);
+                            if (!pendingCommit) {
+                                pendingCommit = true;
+                                LOG.info("scheduling COMMITER");
+                                COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                            }
+                        } else {
+                            LOG.info("delete note (id:" + n.getId() + ") from index");
+                            remove(n);
                         }
+                    } catch (IllegalStateException ex) {
+                        //indexer is closed. probably the whole app is closing
+                        return;
                     } catch (Exception ex) {
-                        LOG.log(Level.WARNING, "couldn't index note " + note.getGuid(), ex);
+                        LOG.log(Level.WARNING, "couldn't index note " + note.getTitle(), ex);
                         return;
                     } finally {
                         if (document != null) {
@@ -322,9 +330,11 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             this.pcs.firePropertyChange("index", true, false);
             long delta = System.currentTimeMillis() - start2;
             LOG.info("Index optimized.It took " + delta / 1000.0 + " secs.");
+        } catch (IllegalStateException ex) {
+            LOG.info("rebuild index failed. is the app closing?");
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "exception", ex);
-            Exceptions.printStackTrace(ex);
+            LOG.log(Level.WARNING, "exception", ex.getMessage());
+            LOG.log(Level.FINE, "exception", ex);
         }
         long delta = System.currentTimeMillis() - start;
         LOG.info("Rebuild index finished. It took " + delta / 1000L + " secs.");
@@ -335,8 +345,16 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         Document document = new Document();
         Field idField = new Field("id", note.getId().toString(), Field.Store.YES, Field.Index.NOT_ANALYZED);
         document.add(idField);
-        Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
-        document.add(titleField);
+
+        if (note.getGuid() != null) {
+            Field guidField = new Field("guid", note.getGuid(), Field.Store.YES, Field.Index.NOT_ANALYZED);
+            document.add(guidField);
+        }
+
+        if (note.getTitle() != null) {
+            Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
+            document.add(titleField);
+        }
         DocumentFragment node = parseNote(note);
         String text = getText(node);
         if ((text != null) && (!text.equals(""))) {
@@ -353,6 +371,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
         for (Resource r : note.getResources()) {
+            if (r==null) {
+                LOG.warning("How come getResources returns some null resources?");
+                continue;
+            }
             LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
             if (r.getRecognition() != null) {
                 LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
@@ -361,7 +383,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 LOG.fine("recognitionText: " + recognitionText);
                 allText.append(" ").append(recognitionText);
             } else {
-                if (r.getMime().contains("image")) {
+
+                if (r.getMime() != null && r.getMime().contains("image")) {
                     LOG.fine("no recognition for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
                 }
             }
@@ -373,8 +396,8 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 metadata.set(Metadata.CONTENT_TYPE, r.getMime());
                 try {
                     final InputStream dataAsInputStream = r.getDataAsInputStream();
-                    final Reader docTikaReader = new Tika().parse( dataAsInputStream, metadata);
-                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader,dataAsInputStream);
+                    final Reader docTikaReader = new Tika().parse(dataAsInputStream, metadata);
+                    final Reader resourceReader = new ReaderThatEatsUpExceptions(docTikaReader, dataAsInputStream);
                     document.add(new Field("all", resourceReader));
 
                 } catch (Exception ex) {
@@ -438,9 +461,15 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     }
 
     private Note getProperNote(Note noteWithoutContents) {
-//        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
         final Integer id = noteWithoutContents.getId();
-        return nr.get(id);
+        final Note noteFromDatabase = nr.get(id);
+        if (noteFromDatabase.getGuid() == null || noteFromDatabase.getTitle() == null) {
+            LOG.warning("How come entry (id:" + id + ") entry has no guid?");
+            //better return null than some corrupted entry
+            return null;
+        }
+
+        return noteFromDatabase;
     }
 
     private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
@@ -456,6 +485,56 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
     public void removePropertyChangeListener(PropertyChangeListener listener) {
         this.pcs.removePropertyChangeListener(listener);
+    }
+
+    public void remove(Note n) {
+        removeById(n.getId());
+        removeByGuid(n.getGuid());
+    }
+
+    public void removeByGuid(final String noteguid) {
+        if (noteguid == null) {
+            return;
+        }
+        RP.submit(new Runnable() {
+
+            public void run() {
+                try {
+                    LOG.info("removing from index guid:" + noteguid);
+                    IndexWriterWrapper.getInstance().deleteDocuments(new Term("guid", noteguid));
+                    if (!pendingCommit) {
+                        pendingCommit = true;
+                        LOG.info("scheduling COMMITER");
+                        COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                    }
+                } catch (IOException ex) {
+                    LOG.log(Level.WARNING, "caught exception:", ex);
+                }
+            }
+        });
+    }
+
+    public void removeById(final int id) {
+        RP.submit(new Runnable() {
+
+            public void run() {
+                try {
+                    LOG.info("removing from index id:" + id);
+                    IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", Integer.toString(id)));
+                    if (!pendingCommit) {
+                        pendingCommit = true;
+                        LOG.info("scheduling COMMITER");
+                        COMMITER.schedule(TIME_BETWEEN_COMMITS);
+                    }
+                } catch (IOException ex) {
+                    LOG.log(Level.WARNING, "caught exception:", ex);
+                }
+            }
+        });
+    }
+
+    public void close() {
+        RP.shutdownNow();
     }
 }
 
