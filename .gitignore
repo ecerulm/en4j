@@ -9,3 +9,6 @@ NBPlatformApp/jaxbgeneratedclasses/src/com/rubenlaguna/en4j/jaxb/generated
 private.properties
 private.xml
 build
+NBPlatformApp/branding/core/core.jar/org/netbeans/core/startup/Bundle.properties
+NBPlatformApp/branding/modules/org-netbeans-core-windows.jar/org/netbeans/core/windows/view/ui/Bundle.properties
+NBPlatformApp/branding/modules/org-netbeans-core.jar/org/netbeans/core/ui/Bundle.properties
