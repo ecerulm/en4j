@@ -20,6 +20,7 @@ import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.GlazedLists;
 import ca.odell.glazedlists.gui.TableFormat;
+import ca.odell.glazedlists.swing.EventSelectionModel;
 import ca.odell.glazedlists.swing.EventTableModel;
 import java.beans.PropertyChangeEvent;
 import java.util.Collections;
@@ -73,6 +74,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
     private EventList<Note> contentList = null;
+    private EventSelectionModel selectionModel = null;
 
     public NoteListTopComponent() {
         LOG.log(Level.INFO, "creating NoteListTopComponen {0}", this.toString());
@@ -298,7 +300,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     @Override
     public void componentOpened() {
-        //TODO substitute with GlazedList specifics EventSelectionModel
+        selectionModel = new EventSelectionModel(getList());
+        jTable1.setSelectionModel(selectionModel);
         jTable1.getSelectionModel().addListSelectionListener(this);
 
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
@@ -381,21 +384,22 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     @Override
+    /**
+     * @see         javax.swing.event.ListSelectionListener#valueChanged
+     */
     public void valueChanged(ListSelectionEvent arg0) {
-        if (!arg0.getValueIsAdjusting()) {
-//            int sr = jTable1.getSelectedRow();
-            Property<JTable, Object> p = BeanProperty.create("selectedElement");
-            Object value = p.getValue(jTable1);
-
-            //TODO clear this, move ic.set outside the if else block 
-            if (value != null) {
-                LOG.log(Level.FINE, "selection changed: {0}", p.getValue(jTable1).toString());
-                ic.set(Collections.singleton(value), null);
-
-            } else {
-                ic.set(Collections.emptySet(), null);
-                Logger.getLogger(getName()).log(Level.FINE, "selection changed: nothing selected");
+            if (!arg0.getValueIsAdjusting()) {
+            if (selectionModel != null) {
+                EventList<Note> selectionList = selectionModel.getSelected();
+                if (!selectionList.isEmpty()) {
+                    Object value = selectionList.get(0);
+                    LOG.log(Level.FINE, "selection changed: {0}", value.toString());
+                    ic.set(Collections.singleton(value), null);
+                    return;
+                }
             }
+            ic.set(Collections.emptySet(), null);
+            LOG.log(Level.FINE, "selection changed: nothing selected");
         }
     }
 
