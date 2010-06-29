@@ -4,9 +4,14 @@
 <!-- If you delete this file and reopen the project it will be recreated. -->
 <project name="NBPlatformApp" basedir=".">
     <description>Builds the module suite NBPlatformApp/EN4J.</description>
-    <exec outputproperty="app.version" executable="git">
+    <exec outputproperty="app.version" failifexecutionfails="false" executable="git">
         <arg line="describe --always --dirty" />
     </exec>
+    <condition property="app.version" value="unknown">
+        <not>
+            <isset property="app.version"/>
+        </not>
+    </condition>
 
     <import file="nbproject/build-impl.xml"/>
 
@@ -36,13 +41,13 @@
     <target name="build" depends="build-brand,suite.build"/>
 
     <target name="build-brand" depends="-init">
-        <property 
+        <property
            name="bundlefile1"
            value="${basedir}/branding/core/core.jar/org/netbeans/core/startup/Bundle.properties"/>
-        <property 
+        <property
            name="bundlefile2"
            value="${basedir}/branding/modules/org-netbeans-core-windows.jar/org/netbeans/core/windows/view/ui/Bundle.properties"/>
-        <property 
+        <property
            name="bundlefile3"
            value="${basedir}/branding/modules/org-netbeans-core.jar/org/netbeans/core/ui/Bundle.properties"/>
 
