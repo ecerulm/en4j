@@ -16,20 +16,23 @@
  */
 package com.rubenlaguna.en4j.mainmodule;
 
+import ca.odell.glazedlists.BasicEventList;
+import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.gui.TableFormat;
+import ca.odell.glazedlists.swing.EventSelectionModel;
+import ca.odell.glazedlists.swing.EventTableModel;
 import java.beans.PropertyChangeEvent;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JLayeredPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.TableModel;
 import org.jdesktop.beansbinding.BeanProperty;
 import org.jdesktop.beansbinding.Property;
-import org.jdesktop.observablecollections.ObservableCollections;
-import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
 import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
@@ -59,7 +62,7 @@ import org.openide.util.RequestProcessor;
 autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
 
-    private Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
+    private static final Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
     private static final RequestProcessor RP = new RequestProcessor("search tasks", 2);
     private static NoteListTopComponent instance;
     /** path to the icon used by the component and its open action */
@@ -70,21 +73,23 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private RequestProcessor.Task currentRefreshTask = null;
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
+    private EventList<Note> contentList = null;
+    private EventSelectionModel selectionModel = null;
 
     public NoteListTopComponent() {
-        LOG.info("creating NoteListTopComponen " + this.toString());
+        LOG.log(Level.INFO, "creating NoteListTopComponen {0}", this.toString());
         initComponents();
         setName(NbBundle.getMessage(NoteListTopComponent.class, "CTL_NoteListTopComponent"));
         setToolTipText(NbBundle.getMessage(NoteListTopComponent.class, "HINT_NoteListTopComponent"));
         associateLookup(new AbstractLookup(ic));
-        jTable1.getSelectionModel().addListSelectionListener(this);
         putClientProperty(PROP_CLOSING_DISABLED, true);
+//        jTable1.getSelectionModel().addListSelectionListener(this);
         customGlassPane.setVisible(false);
-        jLayeredPane1.add(customGlassPane, (Integer) (jLayeredPane1.DEFAULT_LAYER + 50));
+        jLayeredPane1.add(customGlassPane, (Integer) (JLayeredPane.DEFAULT_LAYER + 50));
     }
 
     public void refresh() {
-        LOG.fine("refresh notelist " + new SimpleDateFormat("h:mm:ss a").format(new Date()));
+        LOG.log(Level.FINE, "refresh notelist {0}", new SimpleDateFormat("h:mm:ss a").format(new Date()));
         performSearch();
     }
 
@@ -96,31 +101,21 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
-        bindingGroup = new org.jdesktop.beansbinding.BindingGroup();
 
-        list1 = getList();
         jLayeredPane1 = new javax.swing.JLayeredPane();
         jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
-        jButton1 = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
+        searchJButton = new javax.swing.JButton();
+        partialResultsJLabel = new javax.swing.JLabel();
 
         jScrollPane1.setBounds(jLayeredPane1.getVisibleRect());
 
+        jTable1.setModel(getGlazedListTableModel());
         jTable1.setBounds(jScrollPane1.getVisibleRect());
         jTable1.setColumnSelectionAllowed(true);
-
-        org.jdesktop.swingbinding.JTableBinding jTableBinding = org.jdesktop.swingbinding.SwingBindings.createJTableBinding(org.jdesktop.beansbinding.AutoBinding.UpdateStrategy.READ_WRITE, list1, jTable1);
-        org.jdesktop.swingbinding.JTableBinding.ColumnBinding columnBinding = jTableBinding.addColumnBinding(org.jdesktop.beansbinding.ELProperty.create("${title}"));
-        columnBinding.setColumnName("Title");
-        columnBinding.setColumnClass(String.class);
-        columnBinding.setEditable(false);
-        bindingGroup.addBinding(jTableBinding);
-        jTableBinding.bind();
         jScrollPane1.setViewportView(jTable1);
         jTable1.getColumnModel().getSelectionModel().setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
-        jTable1.getColumnModel().getColumn(0).setHeaderValue(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jTable1.columnModel.title0_2")); // NOI18N
 
         jScrollPane1.setBounds(0, 0, 450, -1);
         jLayeredPane1.add(jScrollPane1, javax.swing.JLayeredPane.DEFAULT_LAYER);
@@ -135,14 +130,14 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jButton1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jButton1.text")); // NOI18N
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(searchJButton, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchJButton.text")); // NOI18N
+        searchJButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                searchJButtonActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jLabel1.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(partialResultsJLabel, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.partialResultsJLabel.text")); // NOI18N
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -155,9 +150,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel1)
+                        .addComponent(partialResultsJLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1)))
+                        .addComponent(searchJButton)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -166,25 +161,23 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 .addGap(30, 30, 30)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(searchJButton)
+                    .addComponent(partialResultsJLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(10, 10, 10)
                 .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 286, Short.MAX_VALUE)
                 .addContainerGap())
         );
-
-        bindingGroup.bind();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void searchJButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchJButtonActionPerformed
         performSearch();
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_searchJButtonActionPerformed
 
     private void performSearch() {
         if (currentSearchTask != null) {
             currentSearchTask.cancel();
         }
-        LOG.info(this.toString() + " searchstring " + searchstring);
+        LOG.log(Level.INFO, "{0} searchstring {1}", new Object[]{this.toString(), searchstring});
 
         Runnable r = new Runnable() {
 
@@ -194,34 +187,32 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 final Task dimTask = postDimTask();
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
-                Collection<Note> prelList = null;
+                Collection<Note> prelList = Collections.EMPTY_LIST;
                 if (text.trim().isEmpty() || text.equals(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"))) {
-                    LOG.fine("no need to search the search box is empty " + text + " from thread " + Thread.currentThread().getName());
-                    prelList = getList();
+                    LOG.log(Level.FINE, "no need to search the search box is empty {0} from thread {1}", new Object[]{text, Thread.currentThread().getName()});
+                    prelList = getAllNotesInDb();
                 } else {
                     NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
                     prelList = finder.find(text);
-                    LOG.info("search for " + text + " returned " + prelList.size() + " results.");
+                    LOG.log(Level.INFO, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
                 }
-                final Collection<Note> list = prelList;
-                try {
-                    dimTask.cancel();
-                    dimTask.waitFinished();
-                    final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
-                    SwingUtilities.invokeAndWait(new Runnable() {
+                LOG.log(Level.INFO, "prelList size {0}", prelList.size());
+                getList().clear();
+                getList().addAll(prelList);
+                LOG.log(Level.INFO, "getList size {0}", getList().size());
+                dimTask.cancel();
+                dimTask.waitFinished();
+                final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
+                SwingUtilities.invokeLater(new Runnable() {
 
-                        @Override
-                        public void run() {
-                            LOG.fine("Refreshing the list in the EDT");
-                            list1.clear();
-                            list1.addAll(list);
-                            jLabel1.setText(list1.size()+"/"+repSize);
-                            customGlassPane.setVisible(false);
-                        }
-                    });
-                } catch (InterruptedException ex) {
-                } catch (InvocationTargetException ex) {
-                }
+                    @Override
+                    public void run() {
+                        final String text = getList().size() + "/" + repSize;
+                        LOG.log(Level.INFO, "Refreshing the label in the EDT with {0}", text);
+                        partialResultsJLabel.setText(text);
+                        customGlassPane.setVisible(false);
+                    }
+                });
             }
 
             private Task postDimTask() {
@@ -263,14 +254,12 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         }
     }//GEN-LAST:event_searchTextFieldFocusLost
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLayeredPane jLayeredPane1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
-    private java.util.List<Note> list1;
+    private javax.swing.JLabel partialResultsJLabel;
+    private javax.swing.JButton searchJButton;
     public final javax.swing.JTextField searchTextField = new javax.swing.JTextField();
-    private org.jdesktop.beansbinding.BindingGroup bindingGroup;
     // End of variables declaration//GEN-END:variables
 
     /**
@@ -311,11 +300,14 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     @Override
     public void componentOpened() {
-        // TODO add custom code on component opening
+        selectionModel = new EventSelectionModel(getList());
+        jTable1.setSelectionModel(selectionModel);
+        jTable1.getSelectionModel().addListSelectionListener(this);
+
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         rep.addPropertyChangeListener(this);
         Lookup.getDefault().lookup(NoteFinder.class).addPropertyChangeListener(this);
-        LOG.info(this.toString() + " registered as listener to NoteRepositor and NoteFinder");
+        LOG.log(Level.INFO, "{0} registered as listener to NoteRepositor and NoteFinder", this.toString());
         searchTextField.getDocument().addDocumentListener(new DocumentListener() {
 
             @Override
@@ -335,11 +327,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             private void search() {
                 searchstring = searchTextField.getText();
-                LOG.info("searchTextField changed: " + searchTextField.getText());
+                LOG.log(Level.INFO, "searchTextField changed: {0}", searchTextField.getText());
                 performSearch();
             }
         });
-        performSearch();
+        performSearch(); // to populate the table
     }
 
     @Override
@@ -348,7 +340,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         rep.removePropertyChangeListener(this);
         Lookup.getDefault().lookup(NoteFinder.class).removePropertyChangeListener(this);
-        LOG.info(this.toString() + " removed as listener to NoteRepositor and NoteFinder");
+        LOG.log(Level.INFO, "{0} removed as listener to NoteRepositor and NoteFinder", this.toString());
     }
 
     @Override
@@ -379,31 +371,35 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         return PREFERRED_ID;
     }
 
-    private List<Note> getList() {
-        List<Note> toReturn = ObservableCollections.observableList(new ArrayList<Note>());
+    private EventList<Note> getList() {
+        if (contentList == null) {
+            contentList = GlazedLists.threadSafeList(new BasicEventList<Note>());
+        }
+        return contentList;
+    }
+
+    private Collection<Note> getAllNotesInDb() {
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
-        toReturn.addAll(rep.getAllNotes());
-        Logger logger = Logger.getLogger(NoteListTopComponent.class.getName());
-        logger.log(Level.INFO, "number of entries in db:" + toReturn.size());
-        return toReturn;
+        return rep.getAllNotes();
     }
 
     @Override
+    /**
+     * @see         javax.swing.event.ListSelectionListener#valueChanged
+     */
     public void valueChanged(ListSelectionEvent arg0) {
-        if (!arg0.getValueIsAdjusting()) {
-//            int sr = jTable1.getSelectedRow();
-            Property<JTable, Object> p = BeanProperty.create("selectedElement");
-            Object value = p.getValue(jTable1);
-
-            //TODO clear this, move ic.set outside the if else block 
-            if (value != null) {
-                Logger.getLogger(getName()).log(Level.FINE, "selection changed: " + p.getValue(jTable1).toString());
-                ic.set(Collections.singleton(value), null);
-
-            } else {
-                ic.set(Collections.emptySet(), null);
-                Logger.getLogger(getName()).log(Level.FINE, "selection changed: nothing selected");
+            if (!arg0.getValueIsAdjusting()) {
+            if (selectionModel != null) {
+                EventList<Note> selectionList = selectionModel.getSelected();
+                if (!selectionList.isEmpty()) {
+                    Object value = selectionList.get(0);
+                    LOG.log(Level.FINE, "selection changed: {0}", value.toString());
+                    ic.set(Collections.singleton(value), null);
+                    return;
+                }
             }
+            ic.set(Collections.emptySet(), null);
+            LOG.log(Level.FINE, "selection changed: nothing selected");
         }
     }
 
@@ -411,21 +407,31 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     public void propertyChange(PropertyChangeEvent evt) {
         LOG.fine("change in noterepository / index");
         if (null != currentRefreshTask) {
-            boolean removed = currentRefreshTask.cancel();//cancel the last refresh so we only
+            //cancel the last refresh so we only
             //two refresh task at a given moment
+            currentRefreshTask.cancel();
         }
         Runnable runnable = new Runnable() {
 
             @Override
             public void run() {
                 NoteListTopComponent.this.refresh();
-                try {
-                    Thread.sleep(5000); //no more than 1 refresh every two seconds
-                } catch (InterruptedException ex) {
-                    //do nothing
-                }
+//                try {
+//                    Thread.sleep(5000); //no more than 1 refresh every two seconds
+//                } catch (InterruptedException ex) {
+//                    //do nothing
+//                }
             }
         };
         currentRefreshTask = RP.post(runnable);
+    }
+
+    private TableModel getGlazedListTableModel() {
+
+        String[] propertyNames = {"title"};
+        String[] columnLabels = {"Title"};
+        TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);
+        EventTableModel<Note> etm = new EventTableModel<Note>(getList(), tf);
+        return etm;
     }
 }
