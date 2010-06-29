@@ -107,8 +107,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jLayeredPane1.setLayout(new OverlayLayout(jLayeredPane1));
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
-        jButton1 = new javax.swing.JButton();
-        jLabel1 = new javax.swing.JLabel();
+        searchJButton = new javax.swing.JButton();
+        partialResultsJLabel = new javax.swing.JLabel();
 
         jScrollPane1.setBounds(jLayeredPane1.getVisibleRect());
 
@@ -131,14 +131,14 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jButton1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jButton1.text")); // NOI18N
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        org.openide.awt.Mnemonics.setLocalizedText(searchJButton, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchJButton.text")); // NOI18N
+        searchJButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                searchJButtonActionPerformed(evt);
             }
         });
 
-        org.openide.awt.Mnemonics.setLocalizedText(jLabel1, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.jLabel1.text")); // NOI18N
+        org.openide.awt.Mnemonics.setLocalizedText(partialResultsJLabel, org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.partialResultsJLabel.text")); // NOI18N
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
@@ -151,9 +151,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(searchTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 304, Short.MAX_VALUE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jLabel1)
+                        .addComponent(partialResultsJLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1)))
+                        .addComponent(searchJButton)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -162,17 +162,17 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 .addGap(30, 30, 30)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(searchTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton1)
-                    .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(searchJButton)
+                    .addComponent(partialResultsJLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 16, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(10, 10, 10)
                 .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 286, Short.MAX_VALUE)
                 .addContainerGap())
         );
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void searchJButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchJButtonActionPerformed
         performSearch();
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_searchJButtonActionPerformed
 
     private void performSearch() {
         if (currentSearchTask != null) {
@@ -212,7 +212,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                         public void run() {
                             final String text = getList().size() + "/" + repSize;
                             LOG.log(Level.INFO, "Refreshing the label in the EDT with {0}", text);
-                            jLabel1.setText(text);
+                            partialResultsJLabel.setText(text);
                             customGlassPane.setVisible(false);
                         }
                     });
@@ -260,11 +260,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         }
     }//GEN-LAST:event_searchTextFieldFocusLost
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLayeredPane jLayeredPane1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable jTable1;
+    private javax.swing.JLabel partialResultsJLabel;
+    private javax.swing.JButton searchJButton;
     public final javax.swing.JTextField searchTextField = new javax.swing.JTextField();
     // End of variables declaration//GEN-END:variables
 
