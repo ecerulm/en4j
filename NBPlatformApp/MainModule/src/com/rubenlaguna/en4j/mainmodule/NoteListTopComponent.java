@@ -410,6 +410,13 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             public void run() {
+                allNotes.getReadWriteLock().writeLock().lock();
+                try {
+                    allNotes.clear();
+                    allNotes.addAll(getAllNotesInDb());
+                } finally {
+                    allNotes.getReadWriteLock().writeLock().unlock();
+                }
                 NoteListTopComponent.this.refresh();
             }
         };
