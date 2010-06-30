@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.mainmodule;
 
 import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
+import ca.odell.glazedlists.FilterList;
 import ca.odell.glazedlists.GlazedLists;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.swing.EventSelectionModel;
@@ -31,8 +32,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.TableModel;
-import org.jdesktop.beansbinding.BeanProperty;
-import org.jdesktop.beansbinding.Property;
 import org.openide.util.NbBundle;
 import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
@@ -49,7 +48,6 @@ import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
-import javax.swing.JTable;
 import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
@@ -73,7 +71,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private RequestProcessor.Task currentRefreshTask = null;
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
-    private EventList<Note> contentList = null;
+    //empty it will be populated in componentOpened
+    private EventList<Note> allNotes = GlazedLists.threadSafeList(new BasicEventList<Note>());
+    private NoteMatcherEditor notesMatcher = new NoteMatcherEditor();
+    private FilterList<Note> filteredList = new FilterList<Note>(allNotes, notesMatcher);
+
     private EventSelectionModel selectionModel = null;
 
     public NoteListTopComponent() {
@@ -197,9 +199,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     LOG.log(Level.INFO, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
                 }
                 LOG.log(Level.INFO, "prelList size {0}", prelList.size());
-                getList().clear();
-                getList().addAll(prelList);
-                LOG.log(Level.INFO, "getList size {0}", getList().size());
+                notesMatcher.refilter(prelList);
                 dimTask.cancel();
                 dimTask.waitFinished();
                 final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
@@ -207,7 +207,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
                     @Override
                     public void run() {
-                        final String text = getList().size() + "/" + repSize;
+                        final String text = filteredList.size() + "/" + repSize;
                         LOG.log(Level.INFO, "Refreshing the label in the EDT with {0}", text);
                         partialResultsJLabel.setText(text);
                         customGlassPane.setVisible(false);
@@ -300,7 +300,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     @Override
     public void componentOpened() {
-        selectionModel = new EventSelectionModel(getList());
+        allNotes.addAll(getAllNotesInDb());
+        selectionModel = new EventSelectionModel(filteredList);
         jTable1.setSelectionModel(selectionModel);
         jTable1.getSelectionModel().addListSelectionListener(this);
 
@@ -371,13 +372,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         return PREFERRED_ID;
     }
 
-    private EventList<Note> getList() {
-        if (contentList == null) {
-            contentList = GlazedLists.threadSafeList(new BasicEventList<Note>());
-        }
-        return contentList;
-    }
-
     private Collection<Note> getAllNotesInDb() {
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         return rep.getAllNotes();
@@ -416,11 +410,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             @Override
             public void run() {
                 NoteListTopComponent.this.refresh();
-//                try {
-//                    Thread.sleep(5000); //no more than 1 refresh every two seconds
-//                } catch (InterruptedException ex) {
-//                    //do nothing
-//                }
             }
         };
         currentRefreshTask = RP.post(runnable);
@@ -431,7 +420,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         String[] propertyNames = {"title"};
         String[] columnLabels = {"Title"};
         TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);
-        EventTableModel<Note> etm = new EventTableModel<Note>(getList(), tf);
+        EventTableModel<Note> etm = new EventTableModel<Note>(filteredList, tf);
         return etm;
     }
 }
