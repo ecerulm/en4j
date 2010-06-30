@@ -75,7 +75,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private EventList<Note> allNotes = GlazedLists.threadSafeList(new BasicEventList<Note>());
     private NoteMatcherEditor notesMatcher = new NoteMatcherEditor();
     private FilterList<Note> filteredList = new FilterList<Note>(allNotes, notesMatcher);
-
     private EventSelectionModel selectionModel = null;
 
     public NoteListTopComponent() {
@@ -382,14 +381,16 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
      * @see         javax.swing.event.ListSelectionListener#valueChanged
      */
     public void valueChanged(ListSelectionEvent arg0) {
-            if (!arg0.getValueIsAdjusting()) {
+        if (!arg0.getValueIsAdjusting()) {
             if (selectionModel != null) {
                 EventList<Note> selectionList = selectionModel.getSelected();
-                if (!selectionList.isEmpty()) {
+                if ((selectionList != null) && (!selectionList.isEmpty())) {
                     Object value = selectionList.get(0);
-                    LOG.log(Level.FINE, "selection changed: {0}", value.toString());
-                    ic.set(Collections.singleton(value), null);
-                    return;
+                    if (value != null) {
+                        LOG.log(Level.FINE, "selection changed: {0}", value.toString());
+                        ic.set(Collections.singleton(value), null);
+                        return;
+                    }
                 }
             }
             ic.set(Collections.emptySet(), null);
