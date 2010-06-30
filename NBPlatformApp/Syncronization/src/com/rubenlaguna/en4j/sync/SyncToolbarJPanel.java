@@ -106,8 +106,8 @@ public class SyncToolbarJPanel extends javax.swing.JPanel {
     com.rubenlaguna.en4j.sync.SyncServiceBean syncServiceBean1;
     // End of variables declaration//GEN-END:variables
 
-    void startAnimator() {
-        rotatingLogo1.startAnimator();
+    boolean  startAnimator() {
+         return rotatingLogo1.startAnimator();
     }
 
     void stopAnimator() {

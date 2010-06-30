@@ -90,9 +90,13 @@ public class RotatingLogo extends JComponent implements Serializable {
 
     }
 
-    public void startAnimator() {
+    public boolean startAnimator() {
         LOG.info("startAnimator");
-        animator.start();
+        if (!animator.isRunning()) {
+             animator.start();
+             return true;
+        }
+        return false;
     }
 
     public void stopAnimator() {
