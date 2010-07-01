@@ -77,6 +77,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             LOG.info("There is another sync running.");
             return false;
         }
+        StatusDisplayer.Message currentStatusBarMessage = null;
         try {
             setPendingRemoteUpdateNotes(-1);
             setSyncFailed(false);
@@ -106,7 +107,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                     initialPendingUpdates = pendingUpdates;
                 }
                 final int percentage = (int) ((1.0 - ((float) pendingUpdates / initialPendingUpdates)) * 100);
-                StatusDisplayer.getDefault().setStatusText("Downloading notes (" + percentage + " %)");
+                currentStatusBarMessage = StatusDisplayer.getDefault().setStatusText("Downloading notes (" + percentage + " %)", 1);
 
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
@@ -130,6 +131,9 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
         } finally {
+            if (currentStatusBarMessage != null) {
+                currentStatusBarMessage.clear(500);
+            }
             sem.release();
         }
     }
