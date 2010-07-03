@@ -48,6 +48,7 @@ import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
@@ -68,8 +69,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private static final String PREFERRED_ID = "NoteListTopComponent";
     private final InstanceContent ic = new InstanceContent();
     private RequestProcessor.Task currentSearchTask = null;
-    private RequestProcessor.Task currentRefreshTask = null;
-    private RequestProcessor.Task currentUnDimTask = null;
+    private RequestProcessor.Task updateAllNotesTask = null;
+//    private RequestProcessor.Task currentUnDimTask = null;
+    private final AtomicInteger dimCounter = new AtomicInteger(0);
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
     //empty it will be populated in componentOpened
@@ -91,7 +93,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     public void refresh() {
-        LOG.log(Level.FINE, "refresh notelist {0}", new SimpleDateFormat("h:mm:ss a").format(new Date()));
+        LOG.log(Level.FINE, "refresh notelist {0}. just performSearch again", new SimpleDateFormat("h:mm:ss a").format(new Date()));
         performSearch();
     }
 
@@ -180,13 +182,13 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             currentSearchTask.schedule(500);
             return;
         }
-        final RequestProcessor.Task previousSearchTask = currentSearchTask;
-        LOG.log(Level.INFO, "{0} searchstring {1}", new Object[]{this.toString(), searchstring});
+//        final RequestProcessor.Task previousSearchTask = currentSearchTask;
 
         Runnable r = new Runnable() {
 
             @Override
             public void run() {
+                LOG.log(Level.FINE, "{0} searchstring {1}", new Object[]{this.toString(), searchstring});
                 dim();
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
@@ -197,9 +199,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 } else {
                     NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
                     prelList = finder.find(text);
-                    LOG.log(Level.INFO, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
+                    LOG.log(Level.FINE, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
                 }
-                LOG.log(Level.INFO, "prelList size {0}", prelList.size());
+                LOG.log(Level.FINE, "prelList size {0}. filter allNotes with prelList", prelList.size());
                 notesMatcher.refilter(prelList);
                 final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
                 SwingUtilities.invokeLater(new Runnable() {
@@ -207,7 +209,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     @Override
                     public void run() {
                         final String text = filteredList.size() + "/" + repSize;
-                        LOG.log(Level.INFO, "Refreshing the label in the EDT with {0}", text);
+                        LOG.log(Level.FINE, "Refreshing the label in the EDT with {0}", text);
                         partialResultsJLabel.setText(text);
                     }
                 });
@@ -381,28 +383,27 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     public void unDim() {
-        if (currentUnDimTask != null) {
-            /* if not started is postponed, if is started or finished is scheduled
-            to start again*/
-            currentUnDimTask.schedule(500);
-            return;
-        }
-        Runnable runnable = new Runnable() {
+        final int valAfterDecrement = dimCounter.decrementAndGet();
 
-            public void run() {
-                setGlasspane(false);
+        if (valAfterDecrement < 1) {
+            setGlasspane(false);
+        }
+
+        while (dimCounter.get() < 0) {
+            // if dimcounter when under zero, something wrong
+            // try to reset it to zero
+            final int cur = dimCounter.get();
+            if (cur < 0) {
+                LOG.log(Level.SEVERE, "dimCounter is less that zero  ({0})", cur);
+                dimCounter.compareAndSet(cur, 0);
             }
-        };
-        currentUnDimTask = RP.post(runnable, 500);
+        }
+
     }
 
     public void dim() {
-        if (currentUnDimTask != null) {
-            currentUnDimTask.cancel();
-            currentUnDimTask.waitFinished();
-        }
-
         setGlasspane(true);
+        dimCounter.incrementAndGet();
     }
 
     public void setGlasspane(final boolean visible) {
@@ -417,11 +418,11 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        LOG.fine("change in noterepository / index");
-        if (null != currentRefreshTask) {
+        LOG.info("change in noterepository / index");
+        if (null != updateAllNotesTask) {
             //cancel the last refresh so we only
             //two refresh task at a given moment
-            currentRefreshTask.cancel();
+            updateAllNotesTask.schedule(500);
         }
         Runnable runnable = new Runnable() {
 
@@ -431,16 +432,18 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 dim();
                 allNotes.getReadWriteLock().writeLock().lock();
                 try {
+                    LOG.info("clear and repopulate allNotes list");
                     allNotes.clear();
                     allNotes.addAll(getAllNotesInDb());
+
                 } finally {
                     allNotes.getReadWriteLock().writeLock().unlock();
                 }
-                unDim();
                 NoteListTopComponent.this.refresh();
+                unDim();
             }
         };
-        currentRefreshTask = RP.post(runnable);
+        updateAllNotesTask = RP.post(runnable, 500);
     }
 
     private TableModel getGlazedListTableModel() {
