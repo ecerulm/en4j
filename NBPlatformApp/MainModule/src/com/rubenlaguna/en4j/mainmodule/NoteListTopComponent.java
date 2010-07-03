@@ -185,7 +185,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
             @Override
             public void run() {
 
-                final Task dimTask = postDimTask();
+                dim();
+//                final Task dimTask = postDimTask();
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
                 Collection<Note> prelList = Collections.EMPTY_LIST;
@@ -199,8 +200,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 }
                 LOG.log(Level.INFO, "prelList size {0}", prelList.size());
                 notesMatcher.refilter(prelList);
-                dimTask.cancel();
-                dimTask.waitFinished();
+//                dimTask.cancel();
+//                dimTask.waitFinished();
                 final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
                 SwingUtilities.invokeLater(new Runnable() {
 
@@ -209,28 +210,29 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                         final String text = filteredList.size() + "/" + repSize;
                         LOG.log(Level.INFO, "Refreshing the label in the EDT with {0}", text);
                         partialResultsJLabel.setText(text);
-                        customGlassPane.setVisible(false);
+//                        customGlassPane.setVisible(false);
                     }
                 });
+                unDim();
             }
 
-            private Task postDimTask() {
-                Runnable dimListRunnable = new Runnable() {
-
-                    @Override
-                    public void run() {
-                        SwingUtilities.invokeLater(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                customGlassPane.setVisible(true);
-                            }
-                        });
-                    }
-                };
-                final Task dimTask = RP.post(dimListRunnable, 500);
-                return dimTask;
-            }
+//            private Task postDimTask() {
+//                Runnable dimListRunnable = new Runnable() {
+//
+//                    @Override
+//                    public void run() {
+//                        SwingUtilities.invokeLater(new Runnable() {
+//
+//                            @Override
+//                            public void run() {
+//                                customGlassPane.setVisible(true);
+//                            }
+//                        });
+//                    }
+//                };
+//                final Task dimTask = RP.post(dimListRunnable, 500);
+//                return dimTask;
+//            }
         };
 
         currentSearchTask = RP.post(r, 500);
@@ -398,6 +400,24 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         }
     }
 
+    public void unDim() {
+        setGlasspane(false);
+    }
+
+    public void dim() {
+        setGlasspane(true);
+    }
+
+    public void setGlasspane(final boolean visible) {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                customGlassPane.setVisible(visible);
+            }
+        });
+    }
+
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
         LOG.fine("change in noterepository / index");
@@ -410,6 +430,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             @Override
             public void run() {
+                dim();
+
                 allNotes.getReadWriteLock().writeLock().lock();
                 try {
                     allNotes.clear();
@@ -418,6 +440,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     allNotes.getReadWriteLock().writeLock().unlock();
                 }
                 NoteListTopComponent.this.refresh();
+                unDim();
             }
         };
         currentRefreshTask = RP.post(runnable);
@@ -429,6 +452,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         String[] columnLabels = {"Title"};
         TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);
         EventTableModel<Note> etm = new EventTableModel<Note>(filteredList, tf);
+
         return etm;
     }
 }
