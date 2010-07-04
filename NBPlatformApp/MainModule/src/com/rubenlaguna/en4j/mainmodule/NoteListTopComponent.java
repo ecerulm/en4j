@@ -448,8 +448,8 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
     private TableModel getGlazedListTableModel() {
 
-        String[] propertyNames = {"title"};
-        String[] columnLabels = {"Title"};
+        String[] propertyNames = {"title","created"};
+        String[] columnLabels = {"Title 2","Created"};
         TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);
         EventTableModel<Note> etm = new EventTableModel<Note>(filteredList, tf);
 

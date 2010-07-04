@@ -77,8 +77,7 @@ class NoteImpl implements Note {
     }
 
     public Date getCreated() {
-return new Date();
-        //        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().getCreated(id);
     }
 
     public void setCreated(Date created) {
@@ -142,21 +141,21 @@ return new Date();
         if (null == guid) {
             return null;
         }
-        if (hash.length()<32) {
+        if (hash.length() < 32) {
             getLogger().warning("Hash should be 32 char long. Left padding it with zeros");
             StringBuffer sb = new StringBuffer();
-            for(int i =hash.length();i<32;i++) {
+            for (int i = hash.length(); i < 32; i++) {
                 sb.append("0");
             }
             sb.append(hash);
             final String paddedHash = sb.toString();
-            getLogger().warning("changed from "+hash+" ("+hash.length()+") to "+paddedHash+" ("+paddedHash.length()+")");
+            getLogger().warning("changed from " + hash + " (" + hash.length() + ") to " + paddedHash + " (" + paddedHash.length() + ")");
             getResource(paddedHash);
         }
         if (hash.length() != 32) {
-            throw new IllegalArgumentException("hash has to be 32 bytes long. this "+hash+" was "+hash.length());
+            throw new IllegalArgumentException("hash has to be 32 bytes long. this " + hash + " was " + hash.length());
         }
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource( guid, hash);
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(guid, hash);
     }
 
     @Override
