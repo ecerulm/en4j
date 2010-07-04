@@ -43,7 +43,7 @@ public class Installer extends ModuleInstall {
     public void restored() {
         try {
             Class.forName("org.h2.Driver").newInstance();
-            String connectionURL = "jdbc:h2:" + System.getProperty("netbeans.user") + "/en4jh2db/db";
+            String connectionURL = "jdbc:h2:" + System.getProperty("netbeans.user") + "/en4jh2db/db;DB_CLOSE_ON_EXIT=FALSE";
             c = DriverManager.getConnection(connectionURL, "", "");
 
             c.setAutoCommit(true);
