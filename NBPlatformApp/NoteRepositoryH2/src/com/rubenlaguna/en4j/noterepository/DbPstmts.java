@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.openide.util.Exceptions;
 
@@ -228,7 +230,7 @@ public class DbPstmts {
     public String getDataHash(String resGuid) {
         final String hash = hashFromResourcesPstmt.get(resGuid);
 
-        
+
         return padded(hash);
     }
 
@@ -254,7 +256,7 @@ public class DbPstmts {
         }
         return null;
     }
-    
+
     public int getDataLength(String guid) {
         return dataLengthFromResourcesPstmt.get(guid);
     }
@@ -284,58 +286,39 @@ public class DbPstmts {
     }
 
     public synchronized void close() {
+        if (closed) {
+            LOG.info("DbPstmts was already closed before");
+            return;
+        }
         closed = true;
         theInstance = null;
 
-        if (!closed) {
-            contentFromNotes.close();
-            contentFromNotes = null;
-            sourceurlPstmt.close();
-            sourceurlPstmt = null;
+        Field[] fields = this.getClass().getDeclaredFields();
 
-            dataFromResourcesPstmt.close();
-            dataFromResourcesPstmt = null;
+        for (Field field : fields) {
+            final Class<?> fieldType = field.getType();
+            final String fieldName = field.getName();
+            LOG.log(Level.INFO, "field {0} has type {1}", new Object[]{fieldName, fieldType});
+            if (fieldType.equals(PreparedStatementWrapper.class)) {
+                try {
+                    Object value = field.get(this);
 
-            dataLengthFromResourcesPstmt.close();
-            dataLengthFromResourcesPstmt = null;
-
-            titleFromNotes.close();
-            titleFromNotes = null;
-
-            hashFromResourcesPstmt.close();
-            hashFromResourcesPstmt = null;
-
-            filenameFromResourcesPstmt.close();
-            filenameFromResourcesPstmt = null;
-
-            guidFromNotesPstmt.close();
-            guidFromNotesPstmt = null;
-
-            mimeFromResources.close();
-            mimeFromResources = null;
-
-            ownerguidFromResourcesPstmt.close();
-            ownerguidFromResourcesPstmt = null;
-
-            recogFromResourcesPstmt.close();
-            recogFromResourcesPstmt = null;
-
-            hashResourcesOwnerPstmt.close();
-            hashResourcesOwnerPstmt = null;
-
-            usnFromNotesPstmt.close();
-            usnFromNotesPstmt = null;
+                    if (value != null && value instanceof PreparedStatementWrapper) {
+                        PreparedStatementWrapper toClose = (PreparedStatementWrapper) value;
+                        LOG.log(Level.INFO, "closing field {0}", fieldName);
+                        toClose.close();
+                        LOG.log(Level.INFO, "set field {0} to null", fieldName);
+                        field.set(this, null);
+                    }
+                } catch (IllegalArgumentException ex) {
+                    LOG.log(Level.SEVERE, "exception field '" + fieldName + "'", ex);
+                } catch (IllegalAccessException ex) {
+                    LOG.log(Level.SEVERE, "exception field '" + fieldName + "'", ex);
+                }
+            }
         }
     }
 
-//    private void closePStatement(PreparedStatement pstmt) {
-//        if (pstmt != null) {
-//            try {
-//                pstmt.close();
-//            } catch (SQLException e) {
-//            }
-//        }
-//    }
     private Connection getConnection() {
         return Installer.c;
     }
@@ -359,5 +342,4 @@ public class DbPstmts {
         return LOG;
 
     }
-
 }

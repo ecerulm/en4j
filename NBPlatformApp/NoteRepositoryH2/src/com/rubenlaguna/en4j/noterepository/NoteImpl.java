@@ -77,7 +77,8 @@ class NoteImpl implements Note {
     }
 
     public Date getCreated() {
-        throw new UnsupportedOperationException("Not supported yet.");
+return new Date();
+        //        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     public void setCreated(Date created) {
