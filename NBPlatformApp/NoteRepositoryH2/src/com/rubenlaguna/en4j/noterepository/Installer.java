@@ -78,6 +78,8 @@ public class Installer extends ModuleInstall {
                         + "CONTENT CLOB(5242880) NOT NULL,"
                         + "TITLE VARCHAR NOT NULL,"
                         + "SOURCEURL VARCHAR,"
+                        + "CREATED TIMESTAMP,"
+                        + "UPDATED TIMESTAMP,"
                         + "USN INT NOT NULL,"
                         + "CONSTRAINT UNQ_GUID UNIQUE (GUID))");
                 LOG.info("CREATE RESOURCES table.");

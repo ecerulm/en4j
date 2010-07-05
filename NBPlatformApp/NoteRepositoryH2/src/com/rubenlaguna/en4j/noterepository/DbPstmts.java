@@ -33,6 +33,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,6 +53,8 @@ public class DbPstmts {
     PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
     PreparedStatementWrapper<String, Integer> dataLengthFromResourcesPstmt;
     PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
+    PreparedStatementWrapper<Integer, Date> createdIdFromNotesPstmt;
+    PreparedStatementWrapper<Integer, Date> updatedIdFromNotesPstmt;
     PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
     PreparedStatementWrapper<String, Integer> usnFromResourcesGuidPstmt;
     PreparedStatementWrapper<String, String> ownerguidFromResourcesPstmt;
@@ -86,6 +89,20 @@ public class DbPstmts {
             @Override
             protected String getResultFromResulSet(ResultSet rs) throws SQLException {
                 return rs.getString("TITLE");
+            }
+        };
+        createdIdFromNotesPstmt = new PreparedStatementWrapper<Integer, Date>(getConnection().prepareStatement("SELECT CREATED FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Date getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getTimestamp("CREATED");
+            }
+        };
+        updatedIdFromNotesPstmt = new PreparedStatementWrapper<Integer, Date>(getConnection().prepareStatement("SELECT UPDATED FROM NOTES WHERE ID =?")) {
+
+            @Override
+            protected Date getResultFromResulSet(ResultSet rs) throws SQLException {
+                return rs.getTimestamp("UPDATED");
             }
         };
 
@@ -187,6 +204,12 @@ public class DbPstmts {
 
     public String getTitle(int id) {
         return titleFromNotes.get(id);
+    }
+    public Date getCreated(int id) {
+        return createdIdFromNotesPstmt.get(id);
+    }
+    public Date getUpdated(int id) {
+        return updatedIdFromNotesPstmt.get(id);
     }
 
     public int getUpdateSequenceNumber(int id) {
@@ -342,4 +365,5 @@ public class DbPstmts {
         return LOG;
 
     }
+
 }

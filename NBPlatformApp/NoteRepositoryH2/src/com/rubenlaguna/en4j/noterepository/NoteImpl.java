@@ -35,7 +35,7 @@ import org.openide.util.Lookup;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class NoteImpl implements Note {
+class NoteImpl implements Note,Comparable {
 
     private final int id;
 
@@ -109,7 +109,7 @@ class NoteImpl implements Note {
     }
 
     public Date getUpdated() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().getUpdated(id);
     }
 
     public void setUpdated(Date updated) {
@@ -182,5 +182,13 @@ class NoteImpl implements Note {
 
     private Logger getLogger() {
         return Logger.getLogger(NoteImpl.class.getName());
+    }
+
+    public int compareTo(Object o) {
+        if (o instanceof NoteImpl) {
+            NoteImpl v = (NoteImpl)o;
+            return -(getCreated().compareTo(v.getCreated()));
+        }
+        return 0;
     }
 }

@@ -52,7 +52,7 @@ class NoteAdapter implements com.rubenlaguna.en4j.noteinterface.NoteReader {
     }
 
     public Date getCreated() {
-        return new Date(adaptee.getCreated() * 1000L);
+        return new Date(adaptee.getCreated());
     }
 
     public void setCreated(Date created) {

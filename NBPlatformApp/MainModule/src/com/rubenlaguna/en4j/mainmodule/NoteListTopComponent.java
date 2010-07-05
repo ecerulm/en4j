@@ -20,9 +20,12 @@ import ca.odell.glazedlists.BasicEventList;
 import ca.odell.glazedlists.EventList;
 import ca.odell.glazedlists.FilterList;
 import ca.odell.glazedlists.GlazedLists;
+import ca.odell.glazedlists.SortedList;
 import ca.odell.glazedlists.gui.TableFormat;
 import ca.odell.glazedlists.swing.EventSelectionModel;
 import ca.odell.glazedlists.swing.EventTableModel;
+import ca.odell.glazedlists.swing.TableComparatorChooser;
+import ca.odell.renderpack.DateTableCellRenderer;
 import java.beans.PropertyChangeEvent;
 import java.util.Collections;
 import java.util.logging.Level;
@@ -33,7 +36,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.TableModel;
 import org.openide.util.NbBundle;
-import org.openide.util.RequestProcessor.Task;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
 //import org.openide.util.ImageUtilities;
@@ -52,6 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
+import javax.swing.table.TableCellRenderer;
 import org.openide.util.RequestProcessor;
 
 /**
@@ -61,6 +64,7 @@ import org.openide.util.RequestProcessor;
 autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
 
+    public static final int DELAY = 1000;
     private static final Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
     private static final RequestProcessor RP = new RequestProcessor("search tasks", 2);
     private static NoteListTopComponent instance;
@@ -78,6 +82,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private EventList<Note> allNotes = GlazedLists.threadSafeList(new BasicEventList<Note>());
     private NoteMatcherEditor notesMatcher = new NoteMatcherEditor();
     private FilterList<Note> filteredList = new FilterList<Note>(allNotes, notesMatcher);
+    private SortedList<Note> sortedList = new SortedList<Note>(filteredList);
     private EventSelectionModel selectionModel = null;
 
     public NoteListTopComponent() {
@@ -284,9 +289,17 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     @Override
     public void componentOpened() {
         allNotes.addAll(getAllNotesInDb());
-        selectionModel = new EventSelectionModel(filteredList);
+        selectionModel = new EventSelectionModel(sortedList);
         jTable1.setSelectionModel(selectionModel);
         jTable1.getSelectionModel().addListSelectionListener(this);
+
+        TableCellRenderer dateRenderer = new DateTableCellRenderer("yyyy-MM-dd HH:mm,E");
+        jTable1.getColumnModel().getColumn(1).setCellRenderer(dateRenderer);
+        jTable1.getColumnModel().getColumn(2).setCellRenderer(dateRenderer);
+
+        TableComparatorChooser tableSorter = TableComparatorChooser.install(
+                jTable1, sortedList, TableComparatorChooser.SINGLE_COLUMN);
+
 
         NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         rep.addPropertyChangeListener(this);
@@ -422,7 +435,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         if (null != updateAllNotesTask) {
             //cancel the last refresh so we only
             //two refresh task at a given moment
-            updateAllNotesTask.schedule(500);
+            updateAllNotesTask.schedule(DELAY);
         }
         Runnable runnable = new Runnable() {
 
@@ -443,15 +456,16 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 unDim();
             }
         };
-        updateAllNotesTask = RP.post(runnable, 500);
+        updateAllNotesTask = RP.post(runnable, DELAY);
     }
 
     private TableModel getGlazedListTableModel() {
 
-        String[] propertyNames = {"title","created"};
-        String[] columnLabels = {"Title 2","Created"};
+
+        String[] propertyNames = {"title", "created", "updated"};
+        String[] columnLabels = {"Title", "Created", "Last modified"};
         TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);
-        EventTableModel<Note> etm = new EventTableModel<Note>(filteredList, tf);
+        EventTableModel<Note> etm = new EventTableModel<Note>(sortedList, tf);
 
         return etm;
     }

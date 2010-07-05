@@ -276,13 +276,15 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             deleteStmt = connection.prepareStatement("DELETE FROM NOTES WHERE GUID=?");
             deleteStmt.setString(1, guid);
             deleteStmt.executeUpdate();
-            insertStmt = this.connection.prepareStatement("INSERT INTO NOTES (ID,ISACTIVE,GUID,CONTENT,TITLE,SOURCEURL,USN) VALUES(NULL,?,?,?,?,?,?)");
+            insertStmt = this.connection.prepareStatement("INSERT INTO NOTES (ID,ISACTIVE,GUID,CONTENT,TITLE,SOURCEURL,USN,CREATED,UPDATED) VALUES(NULL,?,?,?,?,?,?,?,?)");
             insertStmt.setBoolean(1, note.isActive());
             insertStmt.setString(2, guid);
             insertStmt.setCharacterStream(3, note.getContentAsReader());
             insertStmt.setString(4, note.getTitle());
             insertStmt.setString(5, note.getSourceurl());
             insertStmt.setInt(6, note.getUpdateSequenceNumber());
+            insertStmt.setTimestamp(7, new java.sql.Timestamp(note.getCreated().getTime()));
+            insertStmt.setTimestamp(8, new java.sql.Timestamp(note.getUpdated().getTime()));
 
             final int rowCount = insertStmt.executeUpdate();
             if (rowCount != 1) {
