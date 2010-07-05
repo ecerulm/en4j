@@ -65,8 +65,8 @@ import org.openide.util.RequestProcessor;
 @ConvertAsProperties(dtd = "-//com.rubenlaguna.en4j.mainmodule//NoteList//EN",
 autostore = false)
 public final class NoteListTopComponent extends TopComponent implements ListSelectionListener, PropertyChangeListener {
-    public static final int ALLNOTESREFRESHDELAY = 4000;
 
+    public static final int ALLNOTESREFRESHDELAY = 4000;
     public static final int DELAY = 1000;
     private static final Logger LOG = Logger.getLogger(NoteListTopComponent.class.getName());
     private static final RequestProcessor RP = new RequestProcessor("search tasks", 1);
@@ -222,17 +222,15 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
                 final String text = searchstring;
                 LOG.fine("searching in lucene...");
-                Collection<Note> prelList = Collections.EMPTY_LIST;
                 if (text.trim().isEmpty() || text.equals(org.openide.util.NbBundle.getMessage(NoteListTopComponent.class, "NoteListTopComponent.searchTextField.text"))) {
                     LOG.log(Level.FINE, "no need to search the search box is empty {0} from thread {1}", new Object[]{text, Thread.currentThread().getName()});
-                    prelList = getAllNotesInDb();// TODO: change to null, notesMatcher.refilter(null);
+                    notesMatcher.refilter(null);
                 } else {
                     NoteFinder finder = Lookup.getDefault().lookup(NoteFinder.class);
-                    prelList = finder.find(text);
+                    Collection<Note> prelList = finder.find(text);
                     LOG.log(Level.FINE, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
+                    notesMatcher.refilter(prelList);
                 }
-                LOG.log(Level.FINE, "prelList size {0}. filter allNotes with prelList", prelList.size());
-                notesMatcher.refilter(prelList);
                 final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
                 SwingUtilities.invokeLater(new Runnable() {
 

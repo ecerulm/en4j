@@ -14,7 +14,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package com.rubenlaguna.en4j.mainmodule;
 
 import ca.odell.glazedlists.matchers.Matcher;
@@ -29,14 +28,21 @@ import java.util.Collection;
 class NotesMatcher implements Matcher<Note> {
 
     private final Collection<Note> internalList = new ArrayList<Note>();
+    private boolean goThrough = false;
 
     public NotesMatcher(Collection<Note> notesToBeShown) {
-        internalList.addAll(notesToBeShown); //deep copy list
+        if (notesToBeShown == null) {
+            goThrough = true;
+        } else {
+            internalList.addAll(notesToBeShown); //deep copy list
+        }
     }
 
     @Override
     public boolean matches(Note item) {
+        if (goThrough) {
+            return true;
+        }
         return internalList.contains(item);
     }
-
 }
