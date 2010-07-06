@@ -479,19 +479,26 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     @Override
-    public void propertyChange(final PropertyChangeEvent evt) {
+    public synchronized void propertyChange(final PropertyChangeEvent evt) {
         LOG.info("change in noterepository / index");
-        if (null != updateAllNotesTask) {
-            long delay = calculateDelay();
-            updateAllNotesTask.schedule((int) delay);
-            LOG.log(Level.INFO, "updateAllNotesTask scheduled in {0} ms", delay);
-            return;
-        }
+        final long requestedAt = System.currentTimeMillis();
+        final RequestProcessor.Task previousTask = currentSearchTask;
+
+//TODO: split this runnable into two. one for the update and one for the refresh
+
 
         Runnable runnable = new Runnable() {
 
             @Override
             public void run() {
+                if (requestedAt < lastPropertyChangeTimestamp) {
+                    //this request has been superseeded
+                    return;
+                }
+                if (previousTask != null) {
+                    previousTask.waitFinished();
+                }
+
                 final long delta = System.currentTimeMillis() - lastPropertyChangeTimestamp;
                 LOG.log(Level.INFO, "time since last clear and repopulate: {0}", delta);
                 //make sure that we don't refresh more often that ALLNOTESREFRESHDELAY
@@ -503,40 +510,42 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     } catch (InterruptedException ex) {
                     }
                 }
-
-                long start = System.currentTimeMillis();
-
+                lastPropertyChangeTimestamp = System.currentTimeMillis();
                 if ("notes".equals(evt.getPropertyName())) {
-                    final Collection<Note> allNotesInDb = getAllNotesInDb();
-                    if (allNotes.isEmpty()) {
-                        //if it's the first do it outsithe the critical section
-                        //it takes a while to get allNotes to the reach the
-                        //capacity.
-                        allNotes.addAll(allNotesInDb);
-                    }
-                    long startLockList = System.currentTimeMillis();
-                    if (!allNotes.equals(allNotesInDb)) {
-                        LOG.info("clear and repopulate allNotes list");
-                        //allNotes.getReadWriteLock().writeLock().lock();
-                        try {
-                            allNotes.clear();
-                            allNotes.addAll(allNotesInDb);
-                        } finally {
-                            //allNotes.getReadWriteLock().writeLock().unlock();
-                        }
-                    }
-                    LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
+                    updateAllNotes();
                 } else {
                     LOG.log(Level.INFO, "Event {0} doesn't require update of allNotes", evt.getPropertyName());
                 }
 
                 NoteListTopComponent.this.refresh();
-                lastPropertyChangeTimestamp = System.currentTimeMillis();
-                LOG.log(Level.INFO, "clear and repopulate took {0} ms", lastPropertyChangeTimestamp - start);
+            }
+
+            private void updateAllNotes() {
+                final Collection<Note> allNotesInDb = getAllNotesInDb();
+                if (allNotes.isEmpty()) {
+                    //if it's the first do it outsithe the critical section
+                    //it takes a while to get allNotes to the reach the
+                    //capacity.
+                    allNotes.addAll(allNotesInDb);
+                }
+                long startLockList = System.currentTimeMillis();
+                if (!allNotes.equals(allNotesInDb)) {
+                    LOG.info("clear and repopulate allNotes list");
+                    //allNotes.getReadWriteLock().writeLock().lock();
+                    try {
+                        allNotes.clear();
+                        allNotes.addAll(allNotesInDb);
+                    } finally {
+                        //allNotes.getReadWriteLock().writeLock().unlock();
+                    }
+                }
+                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
 
             }
         };
-        updateAllNotesTask = RPALLNOTESUPDATE.post(runnable, DELAY);
+        long delay = calculateDelay();
+        LOG.log(Level.INFO, "updateAllNotesTask scheduled in {0} ms", delay);
+        updateAllNotesTask = RPALLNOTESUPDATE.post(runnable, (int) delay);
     }
 
     private TableModel getGlazedListTableModel() {
