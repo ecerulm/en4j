@@ -77,9 +77,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private static final String PREFERRED_ID = "NoteListTopComponent";
     private final InstanceContent ic = new InstanceContent();
     private RequestProcessor.Task currentSearchTask = null;
-    private RequestProcessor.Task updateAllNotesTask = null;
+    private RepeatableTask updateAllNotesTask = null;
     private RequestProcessor.Task undimTask = null;
-    private RequestProcessor.Task refreshTask = null;
+    private RepeatableTask refreshTask = null;
     private final AtomicInteger dimCounter = new AtomicInteger(0);
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
@@ -103,49 +103,19 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jLayeredPane1.add(customGlassPane, (Integer) (JLayeredPane.DEFAULT_LAYER + 50));
     }
 
-    public long calculateDelay() {
-        //cancel the last refresh so we only
-        //two refresh task at a given moment
-        long delay = lastPropertyChangeTimestamp + ALLNOTESREFRESHDELAY - System.currentTimeMillis();
-        LOG.log(Level.INFO, "updateAllNotesTask should start in {0} ms", delay);
-        if (delay < 0) {
-            delay = 0;
-        }
-        if (delay > 2000) {
-            delay = 2000;
-        }
-        return delay;
-    }
-
     public void refresh() {
         LOG.log(Level.FINE, "refresh notelist {0}. just performSearch again", new SimpleDateFormat("h:mm:ss a").format(new Date()));
         performSearch(false);
     }
 
-    private RequestProcessor.Task createUpdateAllNotesTask() {
+    private RepeatableTask createUpdateAllNotesTask() {
         Runnable runnable = new Runnable() {
 
             @Override
             @SuppressWarnings(value = "SleepWhileHoldingLock")
             public void run() {
-                final long delta = System.currentTimeMillis() - lastPropertyChangeTimestamp;
-                LOG.log(Level.INFO, "time since last clear and repopulate: {0}", delta);
-                waitTurn(delta);
-                lastPropertyChangeTimestamp = System.currentTimeMillis();
                 updateAllNotes();
                 NoteListTopComponent.this.refresh();
-            }
-
-            private void waitTurn(final long delta) {
-                //make sure that we don't refresh more often that ALLNOTESREFRESHDELAY
-                if (delta < ALLNOTESREFRESHDELAY) {
-                    try {
-                        final long waitFor = ALLNOTESREFRESHDELAY - delta + 500;
-                        LOG.log(Level.INFO, "wait for: {0}", waitFor);
-                        Thread.sleep(waitFor);
-                    } catch (InterruptedException ex) {
-                    }
-                }
             }
 
             private void updateAllNotes() {
@@ -170,7 +140,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
             }
         };
-        return RPALLNOTESUPDATE.post(runnable);
+        return new RepeatableTask(runnable, 4000);
     }
 
     /** This method is called from within the constructor to
@@ -539,21 +509,20 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         if (refreshTask == null) {
             Runnable runnable = new Runnable() {
 
+                @Override
                 public void run() {
                     NoteListTopComponent.this.refresh();
 
                 }
             };
-            refreshTask = RPALLNOTESUPDATE.post(runnable);
+            refreshTask = new RepeatableTask(runnable, 4000);
         }
 
-        long delay = calculateDelay();
         if ("notes".equals(evt.getPropertyName())) {
-            LOG.log(Level.INFO, "updateAllNotesTask scheduled in {0} ms", delay);
-            updateAllNotesTask.schedule((int) delay);
+            updateAllNotesTask.schedule();
         } else {
             LOG.log(Level.INFO, "Event {0} doesn't require update of allNotes", evt.getPropertyName());
-            refreshTask.schedule((int) delay);
+            refreshTask.schedule();
         }
     }
 
