@@ -479,7 +479,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     @Override
-    public void propertyChange(PropertyChangeEvent evt) {
+    public void propertyChange(final PropertyChangeEvent evt) {
         LOG.info("change in noterepository / index");
         if (null != updateAllNotesTask) {
             long delay = calculateDelay();
@@ -505,26 +505,32 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 }
 
                 long start = System.currentTimeMillis();
-                //dim();
-                final Collection<Note> allNotesInDb = getAllNotesInDb();
-                if (allNotes.isEmpty()) {
-                    //if allNotes is empty make it grow outside the critical section
-                    allNotes.addAll(allNotesInDb);
-                }
-                long startLockList = System.currentTimeMillis();
-                LOG.info("clear and repopulate allNotes list");
 
-                allNotes.getReadWriteLock().writeLock().lock();
-                try {
-                    allNotes.clear();
-                    allNotes.addAll(allNotesInDb);
-                } finally {
-                    allNotes.getReadWriteLock().writeLock().unlock();
+                if ("notes".equals(evt.getPropertyName())) {
+                    final Collection<Note> allNotesInDb = getAllNotesInDb();
+                    if (allNotes.isEmpty()) {
+                        //if it's the first do it outsithe the critical section
+                        //it takes a while to get allNotes to the reach the
+                        //capacity.
+                        allNotes.addAll(allNotesInDb);
+                    }
+                    long startLockList = System.currentTimeMillis();
+                    if (!allNotes.equals(allNotesInDb)) {
+                        LOG.info("clear and repopulate allNotes list");
+                        //allNotes.getReadWriteLock().writeLock().lock();
+                        try {
+                            allNotes.clear();
+                            allNotes.addAll(allNotesInDb);
+                        } finally {
+                            //allNotes.getReadWriteLock().writeLock().unlock();
+                        }
+                    }
+                    LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
+                } else {
+                    LOG.log(Level.INFO, "Event {0} doesn't require update of allNotes", evt.getPropertyName());
                 }
-                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
 
                 NoteListTopComponent.this.refresh();
-                //unDim();
                 lastPropertyChangeTimestamp = System.currentTimeMillis();
                 LOG.log(Level.INFO, "clear and repopulate took {0} ms", lastPropertyChangeTimestamp - start);
 
