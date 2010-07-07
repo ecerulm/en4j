@@ -77,8 +77,9 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private static final String PREFERRED_ID = "NoteListTopComponent";
     private final InstanceContent ic = new InstanceContent();
     private RequestProcessor.Task currentSearchTask = null;
-    private RequestProcessor.Task updateAllNotesTask = null;
+    private RepeatableTask updateAllNotesTask = null;
     private RequestProcessor.Task undimTask = null;
+    private RepeatableTask refreshTask = null;
     private final AtomicInteger dimCounter = new AtomicInteger(0);
     private String searchstring = "";
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
@@ -102,23 +103,44 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         jLayeredPane1.add(customGlassPane, (Integer) (JLayeredPane.DEFAULT_LAYER + 50));
     }
 
-    public long calculateDelay() {
-        //cancel the last refresh so we only
-        //two refresh task at a given moment
-        long delay = lastPropertyChangeTimestamp + ALLNOTESREFRESHDELAY - System.currentTimeMillis();
-        LOG.log(Level.INFO, "updateAllNotesTask should start in {0} ms", delay);
-        if (delay < 0) {
-            delay = 0;
-        }
-        if (delay > 2000) {
-            delay = 2000;
-        }
-        return delay;
-    }
-
     public void refresh() {
         LOG.log(Level.FINE, "refresh notelist {0}. just performSearch again", new SimpleDateFormat("h:mm:ss a").format(new Date()));
         performSearch(false);
+    }
+
+    private RepeatableTask createUpdateAllNotesTask() {
+        Runnable runnable = new Runnable() {
+
+            @Override
+            @SuppressWarnings(value = "SleepWhileHoldingLock")
+            public void run() {
+                updateAllNotes();
+                NoteListTopComponent.this.refresh();
+            }
+
+            private void updateAllNotes() {
+                final Collection<Note> allNotesInDb = getAllNotesInDb();
+                if (allNotes.isEmpty()) {
+                    //if it's the first do it outsithe the critical section
+                    //it takes a while to get allNotes to the reach the
+                    //capacity.
+                    allNotes.addAll(allNotesInDb);
+                }
+                long startLockList = System.currentTimeMillis();
+                if (!allNotes.equals(allNotesInDb)) {
+                    LOG.info("clear and repopulate allNotes list");
+                    //allNotes.getReadWriteLock().writeLock().lock();
+                    try {
+                        allNotes.clear();
+                        allNotes.addAll(allNotesInDb);
+                    } finally {
+                        //allNotes.getReadWriteLock().writeLock().unlock();
+                    }
+                }
+                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
+            }
+        };
+        return new RepeatableTask(runnable, 4000);
     }
 
     /** This method is called from within the constructor to
@@ -479,63 +501,32 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     @Override
-    public void propertyChange(PropertyChangeEvent evt) {
+    public synchronized void propertyChange(final PropertyChangeEvent evt) {
         LOG.info("change in noterepository / index");
-        if (null != updateAllNotesTask) {
-            long delay = calculateDelay();
-            updateAllNotesTask.schedule((int) delay);
-            LOG.log(Level.INFO, "updateAllNotesTask scheduled in {0} ms", delay);
-            return;
+        if (updateAllNotesTask == null) {
+            updateAllNotesTask = createUpdateAllNotesTask();
+        }
+        if (refreshTask == null) {
+            Runnable runnable = new Runnable() {
+
+                @Override
+                public void run() {
+                    NoteListTopComponent.this.refresh();
+
+                }
+            };
+            refreshTask = new RepeatableTask(runnable, 4000);
         }
 
-        Runnable runnable = new Runnable() {
-
-            @Override
-            public void run() {
-                final long delta = System.currentTimeMillis() - lastPropertyChangeTimestamp;
-                LOG.log(Level.INFO, "time since last clear and repopulate: {0}", delta);
-                //make sure that we don't refresh more often that ALLNOTESREFRESHDELAY
-                if (delta < ALLNOTESREFRESHDELAY) {
-                    try {
-                        final long waitFor = ALLNOTESREFRESHDELAY - delta + 500;
-                        LOG.log(Level.INFO, "wait for: {0}", waitFor);
-                        Thread.sleep(waitFor);
-                    } catch (InterruptedException ex) {
-                    }
-                }
-
-                long start = System.currentTimeMillis();
-                //dim();
-                final Collection<Note> allNotesInDb = getAllNotesInDb();
-                if (allNotes.isEmpty()) {
-                    //if allNotes is empty make it grow outside the critical section
-                    allNotes.addAll(allNotesInDb);
-                }
-                long startLockList = System.currentTimeMillis();
-                LOG.info("clear and repopulate allNotes list");
-
-                allNotes.getReadWriteLock().writeLock().lock();
-                try {
-                    allNotes.clear();
-                    allNotes.addAll(allNotesInDb);
-                } finally {
-                    allNotes.getReadWriteLock().writeLock().unlock();
-                }
-                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
-
-                NoteListTopComponent.this.refresh();
-                //unDim();
-                lastPropertyChangeTimestamp = System.currentTimeMillis();
-                LOG.log(Level.INFO, "clear and repopulate took {0} ms", lastPropertyChangeTimestamp - start);
-
-            }
-        };
-        updateAllNotesTask = RPALLNOTESUPDATE.post(runnable, DELAY);
+        if ("notes".equals(evt.getPropertyName())) {
+            updateAllNotesTask.schedule();
+        } else {
+            LOG.log(Level.INFO, "Event {0} doesn't require update of allNotes", evt.getPropertyName());
+            refreshTask.schedule();
+        }
     }
 
     private TableModel getGlazedListTableModel() {
-
-
         String[] propertyNames = {"title", "created", "updated"};
         String[] columnLabels = {"Title", "Created", "Last modified"};
         TableFormat<Note> tf = GlazedLists.tableFormat(Note.class, propertyNames, columnLabels);

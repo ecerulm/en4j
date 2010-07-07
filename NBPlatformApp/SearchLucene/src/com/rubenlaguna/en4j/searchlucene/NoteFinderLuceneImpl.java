@@ -85,7 +85,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     public static final int TIME_BETWEEN_COMMITS = 10000;
     private NoteRepository nr = null;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-    private final RequestProcessor.Task COMMITER = RequestProcessor.getDefault().create(new Runnable() {
+    private final RequestProcessor.Task COMMITER = new RequestProcessor().create(new Runnable() {
 
         public void run() {
             commitToIndex();
