@@ -59,7 +59,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
-import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
@@ -68,8 +67,12 @@ import org.w3c.dom.DocumentFragment;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.XMLReader;
 
 /**
  *
@@ -110,6 +113,65 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         }
+    }
+
+    private String getTextFromInputStream(ByteArrayInputStream byteArrayInputStream) {
+        try {
+            return getTextFromInputSource(new InputSource(byteArrayInputStream));
+        } catch (SAXException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } catch (IOException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } finally {
+            try {
+                byteArrayInputStream.close();
+            } catch (IOException ex) {
+                LOG.log(Level.INFO, "caught exception: ", ex);
+            }
+        }
+        return "";
+    }
+
+    private String getTextFromNoteContent(Note note) {
+        final Reader contentAsReader = note.getContentAsReader();
+        InputSource is = new InputSource(contentAsReader);
+        try {
+            return getTextFromInputSource(is);
+        } catch (SAXException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } catch (IOException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } finally {
+            try {
+                contentAsReader.close();
+            } catch (IOException ex) {
+                LOG.log(Level.INFO, "caught exception: ", ex);
+            }
+        }
+        return "";
+    }
+
+    private String getTextFromInputSource(InputSource is) throws SAXException, IOException {
+        XMLReader xr = new org.ccil.cowan.tagsoup.Parser();
+        ContentHandler handler = new MyHandler();
+        xr.setContentHandler(handler);
+        xr.setErrorHandler(new ErrorHandler() {
+
+            public void warning(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+
+            public void error(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+
+            public void fatalError(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+        });
+        xr.parse(is);
+        String text = handler.toString();
+        return text;
     }
 
     public void setInfoStream(PrintStream os) {
@@ -220,7 +282,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         } catch (IllegalStateException ex) {
-            LOG.info("caught "+ex.getMessage()+". Most likely the app is shutting down");
+            LOG.info("caught " + ex.getMessage() + ". Most likely the app is shutting down");
         }
         long delta = System.currentTimeMillis() - start;
         Installer.mbean.sampleSearchTime(delta);
@@ -355,12 +417,14 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
             document.add(titleField);
         }
-        DocumentFragment node = parseNote(note);
-        String text = getText(node);
+
+        String text = getTextFromNoteContent(note);
+        LOG.log(Level.FINE, "note text: {0}", text);
         if ((text != null) && (!text.equals(""))) {
             Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
             document.add(contentField);
         }
+
         String sourceUrl = note.getSourceurl();
         if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
             Field sourceField = new Field("source", sourceUrl, Field.Store.NO, Field.Index.ANALYZED);
@@ -371,16 +435,15 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
         for (Resource r : note.getResources()) {
-            if (r==null) {
+            if (r == null) {
                 LOG.warning("How come getResources returns some null resources?");
                 continue;
             }
             LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
             if (r.getRecognition() != null) {
                 LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
-                DocumentFragment rnode = parseXmlByteArray(r.getRecognition());
-                final String recognitionText = getText(rnode);
-                LOG.fine("recognitionText: " + recognitionText);
+                final String recognitionText = getTextFromInputStream(new ByteArrayInputStream(r.getRecognition()));
+                LOG.log(Level.INFO, "recognitionText: {0}", recognitionText);
                 allText.append(" ").append(recognitionText);
             } else {
 
@@ -421,43 +484,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return isDocument;
     }
 
-    private DocumentFragment parseNote(Note note) throws IOException, SAXException {
-        //according to Lucene in Action 7.4 we should use
-        //JTidy or NekoHTML to parse the thlm
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(note.getContentAsReader()), node);
-        return node;
-    }
-
     private Collection<Note> getAllNotes() {
-//        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         Collection<Note> toReturn = nr.getAllNotes();
         return toReturn;
-    }
-
-    private String getText(Node node) {
-        final StringBuffer sb = new StringBuffer(" ");
-        final String localName = node.getNodeName();
-        if ("en-media".equalsIgnoreCase(localName)) {
-            final String fname = ((Element) node).getAttribute("alt");
-            if (null != fname) {
-                sb.append(fname).append(" ");
-            }
-        }
-        if (node.getNodeType() == Node.TEXT_NODE) {
-            final String nodeValue = node.getNodeValue();
-            //LOG.info("textnode " + nodeValue);
-            sb.append(nodeValue);
-        }
-        NodeList children = node.getChildNodes();
-        if (children != null) {
-            int len = children.getLength();
-            for (int i = 0; i < len; i++) {
-                sb.append(getText(children.item(i)));
-            }
-        }
-        return sb.toString();
     }
 
     private Note getProperNote(Note noteWithoutContents) {
@@ -470,13 +499,6 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
 
         return noteFromDatabase;
-    }
-
-    private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new ByteArrayInputStream(theArray)), node);
-        return node;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener listener) {

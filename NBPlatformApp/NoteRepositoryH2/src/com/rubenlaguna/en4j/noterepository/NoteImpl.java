@@ -35,7 +35,7 @@ import org.openide.util.Lookup;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class NoteImpl implements Note,Comparable {
+class NoteImpl implements Note, Comparable {
 
     private final int id;
 
@@ -49,7 +49,7 @@ class NoteImpl implements Note,Comparable {
             return "";
         }
         CharBuffer cb = CharBuffer.allocate(64000);
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder(64000);
         try {
             while (characterStream.ready()) {
                 cb.clear();
@@ -186,8 +186,14 @@ class NoteImpl implements Note,Comparable {
 
     public int compareTo(Object o) {
         if (o instanceof NoteImpl) {
-            NoteImpl v = (NoteImpl)o;
-            return -(getCreated().compareTo(v.getCreated()));
+            NoteImpl v = (NoteImpl) o;
+            final Date createdrhs = getCreated();
+            if (null != createdrhs) {
+                final Date createdlhs = v.getCreated();
+                if (null != createdrhs) {
+                    return -(createdrhs.compareTo(createdlhs));
+                }
+            }
         }
         return 0;
     }

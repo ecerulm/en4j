@@ -14,7 +14,7 @@ import java.util.Date;
  */
 public interface NoteReader {
 
-//    String getContent();
+    String getContent();
     Reader getContentAsReader();
 
     Date getCreated();
