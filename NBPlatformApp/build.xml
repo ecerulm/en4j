@@ -8,15 +8,15 @@
         <arg line="describe --always --dirty" />
     </exec>
     <exec outputproperty="app.verdir" failifexecutionfails="false" executable="git">
-            <arg line="describe --always " />
-            <redirector>
-                <outputfilterchain>
-                    <tokenfilter>
-                        <replaceregex pattern="([^-]*).*" replace="\1" flags="g"/>
-                    </tokenfilter>
-                </outputfilterchain>
-            </redirector>
-        </exec>
+        <arg line="describe --always " />
+        <redirector>
+            <outputfilterchain>
+                <tokenfilter>
+                    <replaceregex pattern="([^-]*).*" replace="\1" flags="g"/>
+                </tokenfilter>
+            </outputfilterchain>
+        </redirector>
+    </exec>
     <condition property="app.version" value="unknown">
         <not>
             <isset property="app.version"/>
@@ -75,4 +75,11 @@
 
     </target>
 
+    <target name="-testuserdir-delete-ok" depends="-testuserdir-delete-init" unless="app.running">
+        <delete dir="${test.user.dir}">
+            <exclude name="en4jluceneindex"/>
+            <exclude name="en4jh2db"/>
+        </delete>
+        <echo message="delete testuserdir but left index and note db intact"/>
+    </target>
 </project>
