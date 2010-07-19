@@ -62,6 +62,14 @@
             <file name="org-netbeans-core-windows-actions-UndockAction.shadow_hidden"/>
         </folder>
     </folder>
+    <folder name="OptionsDialog">
+        <folder name="Advanced">
+            <file name="org-netbeans-core-ui-options-filetypes-FileAssociationsOptionsPanelController.instance_hidden"/>
+            <file name="org-netbeans-core-windows-options-WinSysOptionsPanelController.instance_hidden"/>
+        </folder>
+        <file name="Advanced.instance_hidden"/>
+        <file name="Keymaps.instance_hidden"/>
+    </folder>
     <folder name="Shortcuts">
         <file name="OM-G.shadow">
             <attr name="originalFile" stringvalue="Actions/View/com-rubenlaguna-en4j-mainmodule-GoToSearchBoxAction.instance"/>
