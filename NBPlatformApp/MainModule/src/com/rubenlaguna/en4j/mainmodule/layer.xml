@@ -10,6 +10,8 @@
                 <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
+            <file name="org-netbeans-modules-print-action-PageSetupAction.instance_hidden"/>
+            <file name="org-netbeans-modules-print-action-PrintAction.instance_hidden"/>
         </folder>
         <folder name="View">
             <file name="com-rubenlaguna-en4j-mainmodule-GoToSearchBoxAction.instance">
