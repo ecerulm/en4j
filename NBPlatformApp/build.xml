@@ -77,8 +77,8 @@
 
     <target name="-testuserdir-delete-ok" depends="-testuserdir-delete-init" unless="app.running">
         <delete dir="${test.user.dir}">
-            <exclude name="en4jluceneindex"/>
-            <exclude name="en4jh2db"/>
+            <exclude name="en4jluceneindex/**"/>
+            <exclude name="en4jh2db/**"/>
         </delete>
         <echo message="delete testuserdir but left index and note db intact"/>
     </target>
