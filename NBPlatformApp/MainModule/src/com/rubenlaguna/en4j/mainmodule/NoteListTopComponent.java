@@ -57,6 +57,7 @@ import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableCellRenderer;
+import org.apache.commons.collections.CollectionUtils;
 import org.openide.util.RequestProcessor;
 
 /**
@@ -126,18 +127,20 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     //capacity.
                     allNotes.addAll(allNotesInDb);
                 }
-                long startLockList = System.currentTimeMillis();
                 if (!allNotes.equals(allNotesInDb)) {
                     LOG.info("clear and repopulate allNotes list");
+                    Collection<Note> toAdd = CollectionUtils.disjunction(allNotes, allNotesInDb);
+                    long startLockList = System.currentTimeMillis();
                     //allNotes.getReadWriteLock().writeLock().lock();
                     try {
-                        allNotes.clear();
-                        allNotes.addAll(allNotesInDb);
+                        allNotes.retainAll(allNotesInDb);
+                        allNotes.addAll(toAdd);
                     } finally {
                         //allNotes.getReadWriteLock().writeLock().unlock();
                     }
+                    long deltaListLock = System.currentTimeMillis() - startLockList;
+                    LOG.log(Level.INFO, "We locked the eventlist for {0} ms", deltaListLock );
                 }
-                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", System.currentTimeMillis() - startLockList);
             }
         };
         return new RepeatableTask(runnable, 4000);
