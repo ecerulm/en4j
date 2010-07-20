@@ -425,7 +425,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Field sourceField = new Field("source", sourceUrl, Field.Store.NO, Field.Index.ANALYZED);
             document.add(sourceField);
         }
-        StringBuffer allText = new StringBuffer();
+        StringBuilder allText = new StringBuilder();
         allText.append(note.getTitle());
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
@@ -434,16 +434,16 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                 LOG.warning("How come getResources returns some null resources?");
                 continue;
             }
-            LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+            LOG.log(Level.FINE, "resource: {0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
             if (r.getRecognition() != null) {
-                LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                LOG.log(Level.FINE,"recognition is not null for " + "resource: " + "{0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
                 final String recognitionText = getTextFromInputStream(new ByteArrayInputStream(r.getRecognition()));
-                LOG.log(Level.INFO, "recognitionText: {0}", recognitionText);
+                LOG.log(Level.FINE, "recognitionText: {0}", recognitionText);
                 allText.append(" ").append(recognitionText);
             } else {
 
                 if (r.getMime() != null && r.getMime().contains("image")) {
-                    LOG.fine("no recognition for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                    LOG.log(Level.FINE,"no recognition for " + "resource: " + "{0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
                 }
             }
             if (isDocument(r)) {
@@ -459,13 +459,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     document.add(new Field("all", resourceReader));
 
                 } catch (Exception ex) {
-                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
+                    LOG.log(Level.WARNING, "couldn''t parse resource ({0}) in note ({1}) TikaException catched", new Object[]{r.getMime(), note.getTitle()});
                 }
             }
         }
 
         Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
-        LOG.finest("note indexed with text:\n" + allText.toString());
+        LOG.log(Level.FINEST, "note indexed with text:\n{0}", allText.toString());
         document.add(allField);
         return document;
     }
@@ -488,7 +488,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         final Integer id = noteWithoutContents.getId();
         final Note noteFromDatabase = nr.get(id);
         if (noteFromDatabase.getGuid() == null || noteFromDatabase.getTitle() == null) {
-            LOG.warning("How come entry (id:" + id + ") entry has no guid?");
+            LOG.log(Level.WARNING, "How come entry (id:{0}) entry has no guid?", id);
             //better return null than some corrupted entry
             return null;
         }
@@ -517,7 +517,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
             public void run() {
                 try {
-                    LOG.info("removing from index guid:" + noteguid);
+                    LOG.log(Level.INFO, "removing from index guid:{0}", noteguid);
                     IndexWriterWrapper.getInstance().deleteDocuments(new Term("guid", noteguid));
                     if (!pendingCommit) {
                         pendingCommit = true;
@@ -536,7 +536,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
             public void run() {
                 try {
-                    LOG.info("removing from index id:" + id);
+                    LOG.log(Level.INFO, "removing from index id:{0}", id);
                     IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", Integer.toString(id)));
                     if (!pendingCommit) {
                         pendingCommit = true;
