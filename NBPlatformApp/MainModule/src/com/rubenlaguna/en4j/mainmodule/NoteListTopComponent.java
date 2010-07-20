@@ -86,7 +86,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private final CustomGlassPane customGlassPane = new CustomGlassPane();
     //empty it will be populated in componentOpened
     private EventList<Note> allNotes = GlazedLists.threadSafeList(new BasicEventList<Note>());
-    private NoteMatcherEditor notesMatcher = new NoteMatcherEditor();
+    private final NoteMatcherEditor notesMatcher = new NoteMatcherEditor();
     private FilterList<Note> filteredList = new FilterList<Note>(allNotes, notesMatcher);
     private SortedList<Note> sortedList = new SortedList<Note>(filteredList);
     private EventSelectionModel selectionModel = null;
