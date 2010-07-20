@@ -3,6 +3,7 @@
 <filesystem>
     <folder name="Actions">
         <folder name="File">
+<!--
             <file name="com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.instance">
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
                 <attr name="delegate" newvalue="com.rubenlaguna.en4j.mainmodule.ImportEvernoteFile"/>
@@ -10,6 +11,7 @@
                 <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
+-->
             <file name="org-netbeans-modules-print-action-PageSetupAction.instance_hidden"/>
             <file name="org-netbeans-modules-print-action-PrintAction.instance_hidden"/>
         </folder>
