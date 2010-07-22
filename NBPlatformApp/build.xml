@@ -7,6 +7,7 @@
     <exec outputproperty="app.version" failifexecutionfails="false" executable="git">
         <arg line="describe --always --dirty" />
     </exec>
+
     <exec outputproperty="app.verdir" failifexecutionfails="false" executable="git">
         <arg line="describe --always " />
         <redirector>
@@ -37,11 +38,11 @@
     </target>
 
     <target name="build-zip" depends="suite.build-zip">
-        <move file="${dist.dir}/${app.name}.zip" tofile="${dist.dir}/${app.name}-${app.version}.zip"/>
+        <copy file="${dist.dir}/${app.name}.zip" tofile="${dist.dir}/${app.name}-${app.version}.zip"/>
     </target>
 
     <target name="build-mac" depends="suite.build-mac">
-        <move file="${dist.dir}/${app.name}.app" tofile="${dist.dir}/${app.name}-${app.version}.app"/>
+        <copy file="${dist.dir}/${app.name}.app" tofile="${dist.dir}/${app.name}-${app.version}.app"/>
     </target>
 
     <target name="build" depends="build-brand,suite.build"/>
