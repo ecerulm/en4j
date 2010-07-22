@@ -110,6 +110,10 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
     }
 
+    private void fireChange() {
+        this.pcs.firePropertyChange("index", true, false);
+    }
+
     private String getTextFromInputStream(ByteArrayInputStream byteArrayInputStream) {
         try {
             return getTextFromInputSource(new InputSource(byteArrayInputStream));
@@ -182,20 +186,21 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return 0;
     }
 
+    @SuppressWarnings("SleepWhileHoldingLock")
     public void commitToIndex() {
         try {
             if (pendingCommit) {
                 while ((System.currentTimeMillis() - lastRun) < TIME_BETWEEN_COMMITS) {
                     long x = TIME_BETWEEN_COMMITS - (System.currentTimeMillis() - lastRun);
-                    LOG.info("waiting " + x + " ms before committing changes to index.");
+                    LOG.log(Level.INFO, "waiting {0} ms before committing changes to index.", x);
                     Thread.sleep(x);
                 }
                 long previousRun = lastRun;
                 lastRun = System.currentTimeMillis();
                 pendingCommit = false;
-                LOG.info("committing lucene index now. (" + lastRun + ") " + (lastRun - previousRun) / 1000 + " secs from previous run");
+                LOG.log(Level.INFO, "committing lucene index now. ({0}) {1} secs from previous run", new Object[]{lastRun, (lastRun - previousRun) / 1000});
                 IndexWriterWrapper.getInstance().commit();
-                this.pcs.firePropertyChange("index", true, false);
+                fireChange();
                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
             } else {
                 LOG.info("skipping commit. Nothing to commit to the index");
@@ -304,7 +309,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
                             }
                         } else {
-                            LOG.info("delete note (id:" + n.getId() + ") from index");
+                            LOG.log(Level.INFO, "delete note (id:{0}) from index", n.getId());
                             remove(n);
                         }
                     } catch (IllegalStateException ex) {
@@ -384,7 +389,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             start2 = System.currentTimeMillis();
             writer.optimize();
             //commitToIndex();
-            this.pcs.firePropertyChange("index", true, false);
+            fireChange();
             long delta = System.currentTimeMillis() - start2;
             LOG.info("Index optimized.It took " + delta / 1000.0 + " secs.");
         } catch (IllegalStateException ex) {
@@ -487,6 +492,9 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private Note getProperNote(Note noteWithoutContents) {
         final Integer id = noteWithoutContents.getId();
         final Note noteFromDatabase = nr.get(id);
+        if (noteFromDatabase == null){
+            return null;
+        }
         if (noteFromDatabase.getGuid() == null || noteFromDatabase.getTitle() == null) {
             LOG.log(Level.WARNING, "How come entry (id:{0}) entry has no guid?", id);
             //better return null than some corrupted entry

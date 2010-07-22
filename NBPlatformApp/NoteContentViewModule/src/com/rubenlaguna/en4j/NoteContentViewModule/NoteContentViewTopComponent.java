@@ -209,8 +209,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
 
                 //get(id) will gives us a fully loaded entity
                 lastNoteSeen = Lookup.getDefault().lookup(NoteRepository.class).get(id);
-
-                parseAndSetNote(lastNoteSeen);
+                if (lastNoteSeen != null) {
+                    parseAndSetNote(lastNoteSeen);
+                }
             }
 
         } catch (SAXException e) {
@@ -225,6 +226,9 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
     }
 
     private void parseAndSetNote(final Note n) throws ParserConfigurationException, SAXException, IOException {
+        if (n == null) {
+            return;
+        }
         SwingUtilities.invokeLater(new Runnable() {
 
             public void run() {
