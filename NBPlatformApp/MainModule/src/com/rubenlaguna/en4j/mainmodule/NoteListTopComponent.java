@@ -57,6 +57,7 @@ import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableCellRenderer;
+import org.apache.commons.collections.Closure;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.openide.util.RequestProcessor;
@@ -130,8 +131,16 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 long startLockList = System.currentTimeMillis();
                 //allNotes.getReadWriteLock().writeLock().lock();
                 try {
-                    allNotes.removeAll(toRemove);
-                    allNotes.addAll(toAdd);
+                    // avoid removeAll as it would block allNotes for too long
+                    CollectionUtils.forAllDo(toRemove, new Closure() {
+                        @Override
+                        @SuppressWarnings("element-type-mismatch")
+                        public void execute(Object input) {
+                            allNotes.remove(input);
+                        }
+                    });
+                    //avoid allNotes.addAll it could block allNotes for too long
+                    CollectionUtils.addAll(allNotes, toAdd.iterator());
                 } finally {
                     //allNotes.getReadWriteLock().writeLock().unlock();
                 }
