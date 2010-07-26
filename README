@@ -1,1 +1,76 @@
-README
+                      EN4J
+                      
+                      
+What is it?
+-----------
+
+EN4J is a client to the Evernote services written in Java. It designed to
+become a replacement to the Evernote client for Windows & Mac. Although 
+currently EN4J is a read-only client and cannot fully replace the 
+official Evernote client. 
+
+Features
+--------
+  * Fast search based on Lucene
+  * Indexing of word documents, zip files, etc. All doc types supported by Apache Tika
+  * Based on Netbeans Platform, runs on Windows, Mac OS X and Linux
+  * Open source 
+
+TO DO 
+-----
+
+  * Editable notes
+  * tags
+  * Keyring api
+  * Rich-text clipboard copy
+  * Ignore diacritical marks during search
+  
+Bugs
+----
+
+If you find any write a bug report on http://github.com/ecerulm/en4j/issues
+  
+How to build and install
+------------------------
+
+First, grab the source from github
+
+git clone git://github.com/ecerulm/en4j.git
+
+Then proceed to the main directory
+
+cd en4j/NBPlatformApp
+
+to build the windows zip distribution do
+
+ant build-zip 
+
+to build the mac os x distribution do 
+
+ant build-mac
+
+Then take the output file in NBPlatformApp/dist
+
+
+Contribute
+----------
+
+Just fork the project from http://github.com/ecerulm/en4j
+
+and send me a pull request with the changes.
+
+Licensing
+---------
+
+Please see the file called LICENSE.
+
+Credits
+-------
+
+Netbeans team for the Netbeans Plaform and Netbeans IDE
+
+icons: Tango Icon Library http://tango.freedesktop.org/Tango_Icon_Library
+icons: Nuvola http://www.icon-king.com/projects/nuvola/
+icons: Crystal project http://www.everaldo.com/crystal/
+icons: Addictive Flavour. Designed by Mirjami Manninen (http://www.mirkku.com). www.smashingmagazine.com
+icons: Bunch of Cool Bluish ICONS http://mebaze.com/ 
