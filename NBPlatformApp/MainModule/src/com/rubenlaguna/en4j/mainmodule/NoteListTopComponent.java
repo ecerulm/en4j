@@ -57,7 +57,9 @@ import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableCellRenderer;
+import org.apache.commons.collections.Closure;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
 import org.openide.util.RequestProcessor;
 
 /**
@@ -121,26 +123,30 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
 
             private void updateAllNotes() {
                 final Collection<Note> allNotesInDb = getAllNotesInDb();
-                if (allNotes.isEmpty()) {
-                    //if it's the first do it outsithe the critical section
-                    //it takes a while to get allNotes to the reach the
-                    //capacity.
-                    allNotes.addAll(allNotesInDb);
+                LOG.info("clear and repopulate allNotes list");
+
+                final Collection<Note> toRemove = CollectionUtils.subtract(allNotes, allNotesInDb);
+                final Collection<Note> toAdd = CollectionUtils.subtract(allNotesInDb, allNotes);
+
+                long startLockList = System.currentTimeMillis();
+                //allNotes.getReadWriteLock().writeLock().lock();
+                try {
+                    // avoid removeAll as it would block allNotes for too long
+                    CollectionUtils.forAllDo(toRemove, new Closure() {
+                        @Override
+                        @SuppressWarnings("element-type-mismatch")
+                        public void execute(Object input) {
+                            allNotes.remove(input);
+                        }
+                    });
+                    //avoid allNotes.addAll it could block allNotes for too long
+                    CollectionUtils.addAll(allNotes, toAdd.iterator());
+                } finally {
+                    //allNotes.getReadWriteLock().writeLock().unlock();
                 }
-                if (!allNotes.equals(allNotesInDb)) {
-                    LOG.info("clear and repopulate allNotes list");
-                    Collection<Note> toAdd = CollectionUtils.disjunction(allNotes, allNotesInDb);
-                    long startLockList = System.currentTimeMillis();
-                    //allNotes.getReadWriteLock().writeLock().lock();
-                    try {
-                        allNotes.retainAll(allNotesInDb);
-                        allNotes.addAll(toAdd);
-                    } finally {
-                        //allNotes.getReadWriteLock().writeLock().unlock();
-                    }
-                    long deltaListLock = System.currentTimeMillis() - startLockList;
-                    LOG.log(Level.INFO, "We locked the eventlist for {0} ms", deltaListLock );
-                }
+                long deltaListLock = System.currentTimeMillis() - startLockList;
+                LOG.log(Level.INFO, "We locked the eventlist for {0} ms", deltaListLock);
+                LOG.log(Level.INFO, "allNotes size: {0}  allNotesInDb size: {1}", new Object[]{allNotes.size(), allNotesInDb.size()});
             }
         };
         return new RepeatableTask(runnable, 4000);
@@ -522,11 +528,12 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
         }
 
         if ("notes".equals(evt.getPropertyName())) {
+            LOG.log(Level.INFO, "Event {0} received  updating allNotes", evt.getPropertyName());
             updateAllNotesTask.schedule();
         } else {
             LOG.log(Level.INFO, "Event {0} doesn't require update of allNotes", evt.getPropertyName());
-            refreshTask.schedule();
         }
+        refreshTask.schedule();
     }
 
     private TableModel getGlazedListTableModel() {

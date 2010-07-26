@@ -29,14 +29,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 //import com.rubenlaguna.en4j.hsqldbnoterep.Installer;
 
@@ -46,7 +45,7 @@ import org.openide.util.Lookup;
  */
 public class NoteRepositoryH2Impl implements NoteRepository {
 
-    private final Logger LOG = Logger.getLogger(NoteRepositoryH2Impl.class.getName());
+    private static final Logger LOG = Logger.getLogger(NoteRepositoryH2Impl.class.getName());
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
     private Connection connection = null;
     private final Map softrefMapById = new SoftHashMap();
@@ -68,7 +67,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
     public Collection<Note> getAllNotes() {
         long start = System.currentTimeMillis();
-        List<Note> toReturn = new ArrayList<Note>();
+        Set<Note> toReturn = new HashSet<Note>();
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
@@ -78,10 +77,13 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             rs = pstmt.executeQuery();
             while (rs.next()) {
                 final int id = rs.getInt("ID");
-                toReturn.add(get(id));
+                final Note note = get(id);
+                if (null != note && note.getGuid() != null) {
+                    toReturn.add(note);
+                }
             }
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
         } finally {
             if (rs != null) {
@@ -107,25 +109,28 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    public Note get(int id) {
+    public Note get(final int id) {
         long start = System.currentTimeMillis();
         final Note cached = (Note) softrefMapById.get(id);
         if (null != cached) {
-            LOG.fine("cache hit note id:" + id);
+            if (id != cached.getId()) {
+                LOG.log(Level.WARNING, "Weird. We asked the cache for id: {0} and we got a note with id: {1}", new Object[]{id, cached.getId()});
+            }
+            LOG.log(Level.INFO, "cache hit note id:{0}", id);
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("we got something from the cache (id:" + id + ") but seems to be corrupted (no guid)");
-                softrefMapById.remove(id);
+                LOG.log(Level.WARNING, "we got something from the cache (id: {0} ) but seems to be corrupted (no guid)", id);
+                resetCaches();
             }
         }
         final Note toReturn = new NoteImpl(id);
         if (toReturn.getGuid() == null) {
-            LOG.info("Better return null than a non existing entry");
-            Lookup.getDefault().lookup(NoteFinder.class).remove(toReturn);
+            LOG.log(Level.WARNING, "Better return null than a non existing entry id:{0}", id);
+            Lookup.getDefault().lookup(NoteFinder.class).remove(toReturn); //remove from index
             return null;
         }
-        softrefMapById.put(id, toReturn);
+        addToCache(toReturn);
         long delta = System.currentTimeMillis() - start;
         Installer.mbean.sampleGetNote(delta);
         return toReturn;
@@ -133,41 +138,45 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
     public Note get(int id, boolean withContents) {
         return get(id);
+
     }
 
     public Note getByGuid(String guid, boolean withContents) {
         long start = System.currentTimeMillis();
         final Note cached = (Note) softrefMapByGuid.get(guid);
         if (null != cached) {
-            LOG.fine("cache hit note guid:" + guid);
+            LOG.log(Level.FINE, "cache hit note guid:{0}", guid);
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("we got something from the cache (guid:" + guid + ")but seems to be corrupted (no guid)");
-                softrefMapByGuid.remove(guid);
+                LOG.log(Level.WARNING, "we got something from the cache (guid:{0})but seems to be corrupted (no guid)", guid);
+                resetCaches();
             }
         }
 
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            LOG.info("searching note with guid: " + guid);
+            LOG.log(Level.INFO, "searching note with guid: {0}", guid);
             pstmt = connection.prepareStatement("SELECT ID FROM NOTES WHERE GUID = ?");
             pstmt.setString(1, guid);
             rs = pstmt.executeQuery();
             if (!rs.next()) {
-                LOG.info("There is no entry in the db  with guid: " + guid);
+                LOG.log(Level.INFO, "There is no entry in the db  with guid: {0}", guid);
                 return null;
             }
 //            final Note toReturn = (Note) rs.getObject("SERIALIZEDOBJECT");
             final int id = rs.getInt("ID");
             final Note toReturn = get(id);
-            softrefMapByGuid.put(guid, toReturn);
+            if (toReturn != null) {
+                addToCache(toReturn);
+            }
             long delta = System.currentTimeMillis() - start;
             Installer.mbean.sampleGetNote(delta);
+            LOG.log(Level.INFO, "Returning note id: {0} guid: {1}", new Object[]{toReturn.getId(), toReturn.getGuid()});
             return toReturn;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -204,6 +213,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     public synchronized boolean add(NoteReader note) {
+        if (null == note) {
+            return false;
+        }
+        if (null == note.getGuid()) {
+            LOG.log(Level.WARNING, "Refuse to store a corrupted note without guid into the db: ({0})", note.getTitle());
+        }
         //first iterate over resources and
         for (Resource resource : note.getResources()) {
             if (!insertResource(resource)) {
@@ -230,25 +245,21 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
         }
         //Frst remove it from caches
-        final Note cached = (Note) softrefMapByGuid.get(noteguid);
-        if (null != cached) {
-            softrefMapById.remove(cached.getId());
-        }
-        softrefMapByGuid.remove(noteguid);
+        resetCaches();
         //Then remove it from the database
         PreparedStatement pstmt = null;
         try {
-            LOG.info("delete note with guid: " + noteguid);
+            LOG.log(Level.INFO, "delete note with guid: {0}", noteguid);
             pstmt = connection.prepareStatement("DELETE FROM NOTES WHERE GUID = ?");
             pstmt.setString(1, noteguid);
             int rows = pstmt.executeUpdate();
             if (rows < 1) {
-                LOG.info("There is no note in the db  with guid: " + noteguid + " so I cannot delete");
+                LOG.log(Level.INFO, "There is no note in the db  with guid: {0} so I cannot delete", noteguid);
                 return false;
             }
             return true;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
@@ -268,6 +279,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     private boolean insertNote(NoteReader note) {
+        if (null == note) {
+            return false;
+        }
+        if (null == note.getGuid()) {
+            return false;
+        }
         PreparedStatement deleteStmt = null;
         PreparedStatement insertStmt = null;
         try {
@@ -290,9 +307,16 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             if (rowCount != 1) {
                 return false;
             }
+            final Note noteJustCreated = getByGuid(guid, false);
+            if (null != noteJustCreated) {
+                LOG.log(Level.INFO, "Note guid: {0} successfully created with id:{1}", new Object[]{noteJustCreated.getGuid(), noteJustCreated.getId()});
+            } else {
+                LOG.log(Level.WARNING, "Note guid: {0} was created but I can't find in the db anymore", new Object[]{guid});
+                return false;
+            }
             return true;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
@@ -312,6 +336,12 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     }
 
     private boolean insertResource(Resource resource) {
+        if (null == resource) {
+            return false;
+        }
+        if (null == resource.getGuid()) {
+            return false;
+        }
         PreparedStatement deleteStmt = null;
         PreparedStatement insertStmt = null;
         try {
@@ -328,7 +358,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             insertStmt.setString(6, resource.getMime());
             insertStmt.setBytes(7, resource.getRecognition());
             insertStmt.setInt(8, resource.getUpdateSequenceNumber());
-            LOG.info("inserting resource guid:" + guid);
+            LOG.log(Level.INFO, "inserting resource guid:{0}", guid);
 
             final int rowCount = insertStmt.executeUpdate();
             if (rowCount == 1) {
@@ -336,7 +366,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             }
             return false;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return false;
         } finally {
@@ -372,25 +402,25 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
         final Resource cached = (Resource) resSoftMapByOwnerGuidAndHash.get(guid + hash);
         if (null != cached) {
-            LOG.fine("cache hit resource parent guid:" + guid + " hash:" + hash);
+            LOG.log(Level.FINE, "cache hit resource parent guid:{0} hash:{1}", new Object[]{guid, hash});
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("found resource (guid:" + guid + ",hash:" + hash + ") in the cache but it seems to be corrupted (no guid)");
-                resSoftMapByOwnerGuidAndHash.remove(guid + hash);
+                LOG.log(Level.WARNING, "found resource (guid:{0},hash:{1}) in the cache but it seems to be corrupted (no guid)", new Object[]{guid, hash});
+                resetCaches();
             }
         }
 
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            LOG.fine("searching resource with parent guid: " + guid + " and hash: " + hash);
+            LOG.log(Level.FINE, "searching resource with parent guid: {0} and hash: {1}", new Object[]{guid, hash});
             pstmt = connection.prepareStatement("SELECT GUID FROM RESOURCES WHERE OWNERGUID=? AND HASH=?");
             pstmt.setString(1, guid);
             pstmt.setString(2, hash);
             rs = pstmt.executeQuery();
             if (!rs.next()) {
-                LOG.info("There is no resource in the db  with parentguid: " + guid + " and hash:" + hash + ". Redownloading the whole note.");
+                LOG.log(Level.INFO, "There is no resource in the db  with parentguid: {0} and hash:{1}. Redownloading the whole note.", new Object[]{guid, hash});
                 Lookup.getDefault().lookup(SynchronizationService.class).downloadNote(guid);
                 return null;
             }
@@ -399,7 +429,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             resSoftMapByOwnerGuidAndHash.put(guid + hash, toReturn);
             return toReturn;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -421,31 +451,31 @@ public class NoteRepositoryH2Impl implements NoteRepository {
     private Resource getResourceByGuid(String resguid) {
         final Resource cached = (Resource) resSoftMapByGuid.get(resguid);
         if (null != cached) {
-            LOG.fine("cache hit resourceguid:" + resguid);
+            LOG.log(Level.FINE, "cache hit resourceguid:{0}", resguid);
             if (cached.getGuid() != null) {
                 return cached;
             } else {
-                LOG.warning("found resource (guid:" + resguid + ") in the cache but it seems to be corrupted");
-                resSoftMapByGuid.remove(resguid);
+                LOG.log(Level.WARNING, "found resource (guid:{0}) in the cache but it seems to be corrupted", resguid);
+                resetCaches();
             }
         }
 
         PreparedStatement pstmt = null;
         ResultSet rs = null;
         try {
-            LOG.fine("searching resource with guid: " + resguid);
+            LOG.log(Level.FINE, "searching resource with guid: {0}", resguid);
             pstmt = connection.prepareStatement("SELECT GUID FROM RESOURCES WHERE GUID=?");
             pstmt.setString(1, resguid);
             rs = pstmt.executeQuery();
             if (!rs.next()) {
-                LOG.info("There is no resource in the db  with guid: " + resguid);
+                LOG.log(Level.INFO, "There is no resource in the db  with guid: {0}", resguid);
                 return null;
             }
             final Resource toReturn = new ResourceImpl(resguid);
             resSoftMapByGuid.put(resguid, toReturn);
             return toReturn;
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
             return null;
         } finally {
@@ -495,7 +525,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 
         PreparedStatement pstmt = null;
         ResultSet rs = null;
-        int toReturn =0;
+        int toReturn = 0;
         try {
 
             pstmt = connection.prepareStatement("SELECT COUNT(ID) FROM NOTES WHERE ISACTIVE = ?");
@@ -505,7 +535,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
                 toReturn = rs.getInt(1);
             }
         } catch (Exception ex) {
-            LOG.log(Level.WARNING, "caught exception:" + ex.getMessage());
+            LOG.log(Level.WARNING, "caught exception:{0}", ex.getMessage());
             LOG.log(Level.FINE, "caught exception:", ex);
         } finally {
             if (rs != null) {
@@ -525,5 +555,20 @@ public class NoteRepositoryH2Impl implements NoteRepository {
 //        long delta = System.currentTimeMillis() - start;
 //        Installer.mbean.sampleGetAllNotes(delta);
         return toReturn;
+    }
+
+    private void addToCache(Note toReturn) {
+        if (toReturn == null) {
+            return;
+        }
+        softrefMapByGuid.put(toReturn.getGuid(), toReturn);
+        softrefMapById.put(toReturn.getId(), toReturn);
+    }
+
+    private void resetCaches() {
+        softrefMapByGuid.clear();
+        softrefMapById.clear();
+        resSoftMapByGuid.clear();
+        resSoftMapByOwnerGuidAndHash.clear();
     }
 }

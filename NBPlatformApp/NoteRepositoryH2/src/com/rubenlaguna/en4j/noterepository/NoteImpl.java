@@ -190,11 +190,34 @@ class NoteImpl implements Note, Comparable {
             final Date createdrhs = getCreated();
             if (null != createdrhs) {
                 final Date createdlhs = v.getCreated();
-                if (null != createdrhs) {
+                if (null != createdlhs) {
                     return -(createdrhs.compareTo(createdlhs));
                 }
             }
         }
         return 0;
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NoteImpl other = (NoteImpl) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 89 * hash + this.id;
+        return hash;
+    }
+    
 }
