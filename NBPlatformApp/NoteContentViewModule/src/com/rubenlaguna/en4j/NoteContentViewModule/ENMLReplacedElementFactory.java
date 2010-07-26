@@ -25,9 +25,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
 import org.w3c.dom.Element;
+import org.xhtmlrenderer.extend.FSCanvas;
 import org.xhtmlrenderer.extend.ReplacedElement;
 import org.xhtmlrenderer.extend.ReplacedElementFactory;
 import org.xhtmlrenderer.extend.UserAgentCallback;
@@ -119,7 +121,7 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
 
-        context.getCanvas().add(cc);
+//        context.getCanvas().add(cc);
 
         toReturn = new SwingReplacedElement(cc) {
 
@@ -160,7 +162,12 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         JLabel cc = new JLabel(icon);
         cc.setSize(cc.getPreferredSize());
 
-        context.getCanvas().add(cc);
+//        context.getCanvas().add(cc);
+        FSCanvas canvas = context.getCanvas();
+        if (canvas instanceof JComponent) {
+            ((JComponent) canvas).add(cc);
+        }
+
 
         toReturn = new SwingReplacedElement(cc) {
 
@@ -208,8 +215,11 @@ class ENMLReplacedElementFactory implements ReplacedElementFactory {
         //cc.setPreferredSize(new Dimension(cssWidth, cssHeight));
         cc.setSize(cc.getPreferredSize());
 
-        context.getCanvas().add(cc);
-
+        FSCanvas canvas = context.getCanvas();
+        if (canvas instanceof JComponent) {
+            ((JComponent) canvas).add(cc);
+        }
+        
         toReturn = new SwingReplacedElement(cc) {
 
             public boolean isRequiresInteractivePaint() {

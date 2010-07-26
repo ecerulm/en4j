@@ -35,7 +35,7 @@ import org.openide.util.Lookup;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-class NoteImpl implements Note {
+class NoteImpl implements Note, Comparable {
 
     private final int id;
 
@@ -49,7 +49,7 @@ class NoteImpl implements Note {
             return "";
         }
         CharBuffer cb = CharBuffer.allocate(64000);
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder(64000);
         try {
             while (characterStream.ready()) {
                 cb.clear();
@@ -77,7 +77,7 @@ class NoteImpl implements Note {
     }
 
     public Date getCreated() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().getCreated(id);
     }
 
     public void setCreated(Date created) {
@@ -109,7 +109,7 @@ class NoteImpl implements Note {
     }
 
     public Date getUpdated() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return DbPstmts.getInstance().getUpdated(id);
     }
 
     public void setUpdated(Date updated) {
@@ -141,21 +141,21 @@ class NoteImpl implements Note {
         if (null == guid) {
             return null;
         }
-        if (hash.length()<32) {
+        if (hash.length() < 32) {
             getLogger().warning("Hash should be 32 char long. Left padding it with zeros");
             StringBuffer sb = new StringBuffer();
-            for(int i =hash.length();i<32;i++) {
+            for (int i = hash.length(); i < 32; i++) {
                 sb.append("0");
             }
             sb.append(hash);
             final String paddedHash = sb.toString();
-            getLogger().warning("changed from "+hash+" ("+hash.length()+") to "+paddedHash+" ("+paddedHash.length()+")");
+            getLogger().warning("changed from " + hash + " (" + hash.length() + ") to " + paddedHash + " (" + paddedHash.length() + ")");
             getResource(paddedHash);
         }
         if (hash.length() != 32) {
-            throw new IllegalArgumentException("hash has to be 32 bytes long. this "+hash+" was "+hash.length());
+            throw new IllegalArgumentException("hash has to be 32 bytes long. this " + hash + " was " + hash.length());
         }
-        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource( guid, hash);
+        return Lookup.getDefault().lookup(NoteRepositoryH2Impl.class).getResource(guid, hash);
     }
 
     @Override
@@ -183,4 +183,41 @@ class NoteImpl implements Note {
     private Logger getLogger() {
         return Logger.getLogger(NoteImpl.class.getName());
     }
+
+    public int compareTo(Object o) {
+        if (o instanceof NoteImpl) {
+            NoteImpl v = (NoteImpl) o;
+            final Date createdrhs = getCreated();
+            if (null != createdrhs) {
+                final Date createdlhs = v.getCreated();
+                if (null != createdlhs) {
+                    return -(createdrhs.compareTo(createdlhs));
+                }
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NoteImpl other = (NoteImpl) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 89 * hash + this.id;
+        return hash;
+    }
+    
 }

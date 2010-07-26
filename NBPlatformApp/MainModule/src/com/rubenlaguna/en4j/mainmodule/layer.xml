@@ -3,6 +3,7 @@
 <filesystem>
     <folder name="Actions">
         <folder name="File">
+<!--
             <file name="com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.instance">
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="com.rubenlaguna.en4j.mainmodule.Bundle"/>
                 <attr name="delegate" newvalue="com.rubenlaguna.en4j.mainmodule.ImportEvernoteFile"/>
@@ -10,6 +11,9 @@
                 <attr name="instanceCreate" methodvalue="org.openide.awt.Actions.alwaysEnabled"/>
                 <attr name="noIconInMenu" boolvalue="false"/>
             </file>
+-->
+            <file name="org-netbeans-modules-print-action-PageSetupAction.instance_hidden"/>
+            <file name="org-netbeans-modules-print-action-PrintAction.instance_hidden"/>
         </folder>
         <folder name="View">
             <file name="com-rubenlaguna-en4j-mainmodule-GoToSearchBoxAction.instance">
@@ -29,17 +33,43 @@
         </folder>
     </folder>
     <folder name="Menu">
+        <file name="Edit_hidden"/>
+        <file name="GoTo_hidden"/>
         <folder name="File">
             <file name="com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.shadow">
                 <attr name="originalFile" stringvalue="Actions/File/com-rubenlaguna-en4j-mainmodule-ImportEvernoteFile.instance"/>
                 <attr name="position" intvalue="0"/>
             </file>
+            <file name="org-netbeans-modules-print-action-PageSetupAction.shadow_hidden"/>
+            <file name="org-netbeans-modules-print-action-PrintAction.shadow_hidden"/>
+            <file name="org-openide-actions-SaveAction.shadow_hidden"/>
+            <file name="org-openide-actions-SaveAllAction.shadow_hidden"/>
+            <file name="org-openide-actions-SaveAsAction.shadow_hidden"/>
         </folder>
+
+        <file name="View_hidden"/>
         <folder name="Window">
+            <file name="CloneDocumentAction.shadow_hidden"/>
+            <file name="CloseAllButThisAction.shadow_hidden"/>
+            <file name="CloseAllDocumentsAction.shadow_hidden"/>
+            <file name="CloseWindowAction.shadow_hidden"/>
+            <file name="DocumentsAction.shadow_hidden"/>
+            <file name="MaximizeWindowAction.shadow_hidden"/>
             <file name="NoteListAction.shadow">
                 <attr name="originalFile" stringvalue="Actions/Window/com-rubenlaguna-en4j-mainmodule-NoteListAction.instance"/>
             </file>
+            <file name="Output_hidden"/>
+            <file name="ProgressListAction.shadow_hidden"/>
+            <file name="SwitchToRecentDocumentAction.shadow_hidden"/>
+            <file name="ViewFavoritesTabAction.shadow_hidden"/>
+            <file name="org-netbeans-core-windows-actions-GlobalPropertiesAction.shadow_hidden"/>
+            <file name="org-netbeans-core-windows-actions-UndockAction.shadow_hidden"/>
         </folder>
+    </folder>
+    <folder name="OptionsDialog">
+        <folder name="Advanced"/>
+            <file name="Advanced.instance_hidden"/>
+        <file name="Keymaps.instance_hidden"/>
     </folder>
     <folder name="Shortcuts">
         <file name="OM-G.shadow">

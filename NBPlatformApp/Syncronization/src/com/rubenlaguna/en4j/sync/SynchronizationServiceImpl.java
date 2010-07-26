@@ -77,6 +77,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             LOG.info("There is another sync running.");
             return false;
         }
+        StatusDisplayer.Message currentStatusBarMessage = null;
         try {
             setPendingRemoteUpdateNotes(-1);
             setSyncFailed(false);
@@ -106,7 +107,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                     initialPendingUpdates = pendingUpdates;
                 }
                 final int percentage = (int) ((1.0 - ((float) pendingUpdates / initialPendingUpdates)) * 100);
-                StatusDisplayer.getDefault().setStatusText("Downloading notes (" + percentage + " %)");
+                currentStatusBarMessage = StatusDisplayer.getDefault().setStatusText("Downloading notes (" + percentage + " %)", 1);
 
                 setPendingRemoteUpdateNotes(pendingUpdates);
 
@@ -130,6 +131,9 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             LOG.log(Level.WARNING, "Sync couldn't complete because of", ex);
             return false;
         } finally {
+            if (currentStatusBarMessage != null) {
+                currentStatusBarMessage.clear(500);
+            }
             sem.release();
         }
     }
@@ -158,8 +162,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         Collection<ElemInfo> sc = util.getNotesFrom(syncChunk);
         if (sc.size() > 0) {
             for (ElemInfo note : sc) {
-                Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
-                final Future<Boolean> task = RP.submit(callable);
+                final Future<Boolean> task = downloadNote(note);
                 tasks.add(task);
             }
         }
@@ -170,6 +173,10 @@ public class SynchronizationServiceImpl implements SynchronizationService {
         ElemInfo note = new ElemInfo();
         note.guid = noteguid;
         note.usn = Integer.MAX_VALUE;
+        return downloadNote(note);
+    }
+
+    private Future<Boolean> downloadNote(ElemInfo note) {
         Callable<Boolean> callable = new RetrieveAndAddNoteTask(note, util);
         final Future<Boolean> task = RP.submit(callable);
         return task;
@@ -216,14 +223,15 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     private boolean waitForAllTaskToComplete(final List<Future<Boolean>> tasks) {
         long start = System.currentTimeMillis();
         final int total = tasks.size();
-        LOG.info("wait for " + total + " download tasks.");
+        LOG.log(Level.INFO, "wait for {0} download tasks.", total);
         try {
             int i = 0;
             for (Future<Boolean> future : tasks) {
                 i++;
-                LOG.info("get  (" + i + "/" + total + ") from " + future);
+                LOG.log(Level.INFO, "get  ({0}/{1}) from {2}", new Object[]{i, total, future});
                 boolean suceeded = future.get(1, TimeUnit.DAYS);
                 if (!suceeded) {
+                    LOG.log(Level.WARNING, "task failed! {0}", future);
                     return false;
                 }
             }
@@ -324,7 +332,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
 
 class RetrieveAndAddNoteTask implements Callable<Boolean> {
 
-    private final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
+    private static final Logger LOG = Logger.getLogger(RetrieveAndAddNoteTask.class.getName());
     private final String noteGuid;
     private final int usn;
     private final EvernoteProtocolUtil util;
@@ -339,7 +347,7 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
     public Boolean call() throws Exception {
         long start = System.currentTimeMillis();
         if (!isUpToDate()) {
-            LOG.fine("Start downloading note " + noteGuid);
+            LOG.log(Level.FINE, "Start downloading note {0}", noteGuid);
             //EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
             com.rubenlaguna.en4j.noteinterface.NoteReader note = null;
             try {
@@ -350,9 +358,10 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
             }
             long delta = System.currentTimeMillis() - start;
             final String guid = note.getGuid();
-            LOG.info("It took " + delta + " ms" + " to download note " + guid);
+            LOG.log(Level.INFO, "It took {0}" + " ms" + " to download note " + "{1}", new Object[]{delta, guid});
             return addToDb(note);
         } else {
+            LOG.log(Level.INFO, "Note {0} is up-to-date no need to download it", noteGuid);
             return true;
         }
     }
@@ -365,13 +374,13 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
             final String guid = note.getGuid();
             final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
             if (null == byGuid) {
-                LOG.warning("the note " + guid + " was not added properly to the db");
+                LOG.log(Level.WARNING, "the note {0} was not added properly to the db", guid);
                 return false;
             }
             nf.index(byGuid); //non blocking
             return true;
         } else {
-            LOG.log(Level.WARNING, "Fail to add Note \"" + note.getTitle() + "\" to database");
+            LOG.log(Level.WARNING, "Fail to add Note \"{0}\" to database", note.getTitle());
             return false;
         }
     }
@@ -400,7 +409,7 @@ class RetrieveAndAddResourceTask implements Callable<Boolean> {
         long start = System.currentTimeMillis();
         if (!isUpToDate()) {
 
-            LOG.fine("Start downloading res " + resGuid);
+            LOG.log(Level.FINE, "Start downloading res {0}", resGuid);
             //EvernoteProtocolUtil util = EvernoteProtocolUtil.getInstance();
             com.rubenlaguna.en4j.noteinterface.Resource res = null;
             try {
@@ -411,7 +420,7 @@ class RetrieveAndAddResourceTask implements Callable<Boolean> {
             }
             final String guid = res.getGuid();
             long delta = System.currentTimeMillis() - start;
-            LOG.info("It took " + delta + " ms" + " to download res " + guid);
+            LOG.log(Level.INFO, "It took {0}" + " ms" + " to download res " + "{1}", new Object[]{delta, guid});
             final String noteguid = res.getNoteguid();
             final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
             final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(noteguid, false);
@@ -420,7 +429,11 @@ class RetrieveAndAddResourceTask implements Callable<Boolean> {
                 ElemInfo ei = new ElemInfo();
                 ei.guid = noteguid;
                 ei.usn = Integer.MAX_VALUE;
-                new RetrieveAndAddNoteTask(ei, util).call();
+                int retries = 0;
+                while (!new RetrieveAndAddNoteTask(ei, util).call() && retries < 3) {
+                    retries++;
+                    LOG.log(Level.SEVERE, "Problem while download the parent note ({0}). Retrying...", noteguid);
+                }
             }
             return addToDb(res);
         } else {
@@ -436,13 +449,13 @@ class RetrieveAndAddResourceTask implements Callable<Boolean> {
             final String guid = res.getNoteguid();
             final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(guid, false);
             if (null == byGuid) {
-                LOG.warning("the resource was not added properly to the db we can't find the parent note (" + guid + ")");
+                LOG.log(Level.WARNING, "the resource was not added properly to the db we can''t find the parent note ({0})", guid);
                 return false;
             }
             nf.index(byGuid); //non blocking
             return true;
         } else {
-            LOG.log(Level.WARNING, "Fail to add resoruce \"" + res.getGuid() + "\" to database");
+            LOG.log(Level.WARNING, "Fail to add resoruce \"{0}\" to database", res.getGuid());
             return false;
         }
     }

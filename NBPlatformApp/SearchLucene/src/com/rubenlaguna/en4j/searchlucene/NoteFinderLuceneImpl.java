@@ -40,7 +40,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.apache.html.dom.HTMLDocumentImpl;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -59,17 +58,16 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Version;
 import org.apache.tika.Tika;
 import org.apache.tika.metadata.Metadata;
-import org.cyberneko.html.parsers.DOMFragmentParser;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
-import org.w3c.dom.DocumentFragment;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.XMLReader;
 
 /**
  *
@@ -85,7 +83,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     public static final int TIME_BETWEEN_COMMITS = 10000;
     private NoteRepository nr = null;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
-    private final RequestProcessor.Task COMMITER = RequestProcessor.getDefault().create(new Runnable() {
+    private final RequestProcessor.Task COMMITER = new RequestProcessor().create(new Runnable() {
 
         public void run() {
             commitToIndex();
@@ -112,6 +110,69 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         }
     }
 
+    private void fireChange() {
+        this.pcs.firePropertyChange("index", true, false);
+    }
+
+    private String getTextFromInputStream(ByteArrayInputStream byteArrayInputStream) {
+        try {
+            return getTextFromInputSource(new InputSource(byteArrayInputStream));
+        } catch (SAXException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } catch (IOException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } finally {
+            try {
+                byteArrayInputStream.close();
+            } catch (IOException ex) {
+                LOG.log(Level.INFO, "caught exception: ", ex);
+            }
+        }
+        return "";
+    }
+
+    private String getTextFromNoteContent(Note note) {
+        final Reader contentAsReader = note.getContentAsReader();
+        InputSource is = new InputSource(contentAsReader);
+        try {
+            return getTextFromInputSource(is);
+        } catch (SAXException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } catch (IOException ex) {
+            LOG.log(Level.INFO, "caught exception: ", ex);
+        } finally {
+            try {
+                contentAsReader.close();
+            } catch (IOException ex) {
+                LOG.log(Level.INFO, "caught exception: ", ex);
+            }
+        }
+        return "";
+    }
+
+    private String getTextFromInputSource(InputSource is) throws SAXException, IOException {
+        XMLReader xr = new org.ccil.cowan.tagsoup.Parser();
+        ContentHandler handler = new MyHandler();
+        xr.setContentHandler(handler);
+        xr.setErrorHandler(new ErrorHandler() {
+
+            public void warning(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+
+            public void error(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+
+            public void fatalError(SAXParseException exception) throws SAXException {
+                LOG.log(Level.WARNING, "exception while parsing note contents", exception);
+            }
+        });
+        xr.parse(is);
+        String text = handler.toString();
+        return text;
+    }
+
     public void setInfoStream(PrintStream os) {
         IndexWriterWrapper.getInstance().setInfoStream(os);
     }
@@ -125,20 +186,21 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return 0;
     }
 
+    @SuppressWarnings("SleepWhileHoldingLock")
     public void commitToIndex() {
         try {
             if (pendingCommit) {
                 while ((System.currentTimeMillis() - lastRun) < TIME_BETWEEN_COMMITS) {
                     long x = TIME_BETWEEN_COMMITS - (System.currentTimeMillis() - lastRun);
-                    LOG.info("waiting " + x + " ms before committing changes to index.");
+                    LOG.log(Level.INFO, "waiting {0} ms before committing changes to index.", x);
                     Thread.sleep(x);
                 }
                 long previousRun = lastRun;
                 lastRun = System.currentTimeMillis();
                 pendingCommit = false;
-                LOG.info("committing lucene index now. (" + lastRun + ") " + (lastRun - previousRun) / 1000 + " secs from previous run");
+                LOG.log(Level.INFO, "committing lucene index now. ({0}) {1} secs from previous run", new Object[]{lastRun, (lastRun - previousRun) / 1000});
                 IndexWriterWrapper.getInstance().commit();
-                this.pcs.firePropertyChange("index", true, false);
+                fireChange();
                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
             } else {
                 LOG.info("skipping commit. Nothing to commit to the index");
@@ -220,7 +282,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         } catch (IOException ex) {
             Exceptions.printStackTrace(ex);
         } catch (IllegalStateException ex) {
-            LOG.info("caught "+ex.getMessage()+". Most likely the app is shutting down");
+            LOG.info("caught " + ex.getMessage() + ". Most likely the app is shutting down");
         }
         long delta = System.currentTimeMillis() - start;
         Installer.mbean.sampleSearchTime(delta);
@@ -247,7 +309,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                                 COMMITER.schedule(TIME_BETWEEN_COMMITS);
                             }
                         } else {
-                            LOG.info("delete note (id:" + n.getId() + ") from index");
+                            LOG.log(Level.INFO, "delete note (id:{0}) from index", n.getId());
                             remove(n);
                         }
                     } catch (IllegalStateException ex) {
@@ -327,7 +389,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             start2 = System.currentTimeMillis();
             writer.optimize();
             //commitToIndex();
-            this.pcs.firePropertyChange("index", true, false);
+            fireChange();
             long delta = System.currentTimeMillis() - start2;
             LOG.info("Index optimized.It took " + delta / 1000.0 + " secs.");
         } catch (IllegalStateException ex) {
@@ -355,37 +417,38 @@ public class NoteFinderLuceneImpl implements NoteFinder {
             Field titleField = new Field("title", note.getTitle(), Field.Store.YES, Field.Index.ANALYZED);
             document.add(titleField);
         }
-        DocumentFragment node = parseNote(note);
-        String text = getText(node);
+
+        String text = getTextFromNoteContent(note);
+        LOG.log(Level.FINE, "note text: {0}", text);
         if ((text != null) && (!text.equals(""))) {
             Field contentField = new Field("content", text, Field.Store.NO, Field.Index.ANALYZED);
             document.add(contentField);
         }
+
         String sourceUrl = note.getSourceurl();
         if ((null != sourceUrl) && (!"".equals(sourceUrl))) {
             Field sourceField = new Field("source", sourceUrl, Field.Store.NO, Field.Index.ANALYZED);
             document.add(sourceField);
         }
-        StringBuffer allText = new StringBuffer();
+        StringBuilder allText = new StringBuilder();
         allText.append(note.getTitle());
         allText.append(" ").append(text);
         allText.append(" ").append(sourceUrl);
         for (Resource r : note.getResources()) {
-            if (r==null) {
+            if (r == null) {
                 LOG.warning("How come getResources returns some null resources?");
                 continue;
             }
-            LOG.fine("resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+            LOG.log(Level.FINE, "resource: {0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
             if (r.getRecognition() != null) {
-                LOG.fine("recognition is not null for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
-                DocumentFragment rnode = parseXmlByteArray(r.getRecognition());
-                final String recognitionText = getText(rnode);
-                LOG.fine("recognitionText: " + recognitionText);
+                LOG.log(Level.FINE,"recognition is not null for " + "resource: " + "{0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
+                final String recognitionText = getTextFromInputStream(new ByteArrayInputStream(r.getRecognition()));
+                LOG.log(Level.FINE, "recognitionText: {0}", recognitionText);
                 allText.append(" ").append(recognitionText);
             } else {
 
                 if (r.getMime() != null && r.getMime().contains("image")) {
-                    LOG.fine("no recognition for " + "resource: " + r.getFilename() + " type: " + r.getMime() + " from note: " + note.getTitle());
+                    LOG.log(Level.FINE,"no recognition for " + "resource: " + "{0} type: {1} from note: {2}", new Object[]{r.getFilename(), r.getMime(), note.getTitle()});
                 }
             }
             if (isDocument(r)) {
@@ -401,13 +464,13 @@ public class NoteFinderLuceneImpl implements NoteFinder {
                     document.add(new Field("all", resourceReader));
 
                 } catch (Exception ex) {
-                    LOG.log(Level.WARNING, "couldn't parse resource (" + r.getMime() + ") in note (" + note.getTitle() + ") TikaException catched");
+                    LOG.log(Level.WARNING, "couldn''t parse resource ({0}) in note ({1}) TikaException catched", new Object[]{r.getMime(), note.getTitle()});
                 }
             }
         }
 
         Field allField = new Field("all", allText.toString().trim(), Field.Store.NO, Field.Index.ANALYZED);
-        LOG.finest("note indexed with text:\n" + allText.toString());
+        LOG.log(Level.FINEST, "note indexed with text:\n{0}", allText.toString());
         document.add(allField);
         return document;
     }
@@ -421,62 +484,24 @@ public class NoteFinderLuceneImpl implements NoteFinder {
         return isDocument;
     }
 
-    private DocumentFragment parseNote(Note note) throws IOException, SAXException {
-        //according to Lucene in Action 7.4 we should use
-        //JTidy or NekoHTML to parse the thlm
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(note.getContentAsReader()), node);
-        return node;
-    }
-
     private Collection<Note> getAllNotes() {
-//        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         Collection<Note> toReturn = nr.getAllNotes();
         return toReturn;
-    }
-
-    private String getText(Node node) {
-        final StringBuffer sb = new StringBuffer(" ");
-        final String localName = node.getNodeName();
-        if ("en-media".equalsIgnoreCase(localName)) {
-            final String fname = ((Element) node).getAttribute("alt");
-            if (null != fname) {
-                sb.append(fname).append(" ");
-            }
-        }
-        if (node.getNodeType() == Node.TEXT_NODE) {
-            final String nodeValue = node.getNodeValue();
-            //LOG.info("textnode " + nodeValue);
-            sb.append(nodeValue);
-        }
-        NodeList children = node.getChildNodes();
-        if (children != null) {
-            int len = children.getLength();
-            for (int i = 0; i < len; i++) {
-                sb.append(getText(children.item(i)));
-            }
-        }
-        return sb.toString();
     }
 
     private Note getProperNote(Note noteWithoutContents) {
         final Integer id = noteWithoutContents.getId();
         final Note noteFromDatabase = nr.get(id);
+        if (noteFromDatabase == null){
+            return null;
+        }
         if (noteFromDatabase.getGuid() == null || noteFromDatabase.getTitle() == null) {
-            LOG.warning("How come entry (id:" + id + ") entry has no guid?");
+            LOG.log(Level.WARNING, "How come entry (id:{0}) entry has no guid?", id);
             //better return null than some corrupted entry
             return null;
         }
 
         return noteFromDatabase;
-    }
-
-    private DocumentFragment parseXmlByteArray(byte[] theArray) throws SAXException, IOException {
-        DocumentFragment node = new HTMLDocumentImpl().createDocumentFragment();
-        DOMFragmentParser domParser = new DOMFragmentParser();
-        domParser.parse(new InputSource(new ByteArrayInputStream(theArray)), node);
-        return node;
     }
 
     public void addPropertyChangeListener(PropertyChangeListener listener) {
@@ -500,7 +525,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
             public void run() {
                 try {
-                    LOG.info("removing from index guid:" + noteguid);
+                    LOG.log(Level.INFO, "removing from index guid:{0}", noteguid);
                     IndexWriterWrapper.getInstance().deleteDocuments(new Term("guid", noteguid));
                     if (!pendingCommit) {
                         pendingCommit = true;
@@ -519,7 +544,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
 
             public void run() {
                 try {
-                    LOG.info("removing from index id:" + id);
+                    LOG.log(Level.INFO, "removing from index id:{0}", id);
                     IndexWriterWrapper.getInstance().deleteDocuments(new Term("id", Integer.toString(id)));
                     if (!pendingCommit) {
                         pendingCommit = true;

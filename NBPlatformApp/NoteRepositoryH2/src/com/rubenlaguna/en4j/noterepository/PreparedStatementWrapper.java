@@ -19,26 +19,28 @@ package com.rubenlaguna.en4j.noterepository;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.openide.util.Exceptions;
 
 /**
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-public abstract class PreparedStatementWrapper<T,E> {
+public abstract class PreparedStatementWrapper<T, E> {
 
+    private static final Logger LOG = Logger.getLogger(PreparedStatementWrapper.class.getName());
     final PreparedStatement pstmt;
 
     public PreparedStatementWrapper(PreparedStatement ps) {
         this.pstmt = ps;
     }
 
-
     public E get(T key) {
         ResultSet rs = null;
         try {
             synchronized (pstmt) {
-                setInputParametersOfThePreparedSt(pstmt,key);
+                setInputParametersOfThePreparedSt(pstmt, key);
                 rs = pstmt.executeQuery();
                 if (rs.next()) {
                     return getResultFromResulSet(rs);
@@ -51,33 +53,37 @@ public abstract class PreparedStatementWrapper<T,E> {
                 try {
                     rs.close();
                 } catch (SQLException e) {
+                    LOG.log(Level.WARNING, "exception while trying to close ResultSet", e);
+                    ;
                 }
             }
         }
         return null;
-
     }
 
     public void close() {
         if (pstmt != null) {
             try {
                 pstmt.close();
+                LOG.log(Level.OFF, "PreparedStatement {0} closed", pstmt);
             } catch (SQLException e) {
+                LOG.log(Level.WARNING, "exception caught while trying to close PreparedStatement", e);
             }
         }
     }
 
     protected abstract E getResultFromResulSet(ResultSet rs) throws SQLException;
-    protected  void setInputParametersOfThePreparedSt(PreparedStatement pstmt,T key) throws SQLException {
+
+    protected void setInputParametersOfThePreparedSt(PreparedStatement pstmt, T key) throws SQLException {
         if (key == null) {
             throw new IllegalArgumentException("key can't be null");
         }
         if (key instanceof Integer) {
-            pstmt.setInt(1, (Integer)key);
+            pstmt.setInt(1, (Integer) key);
         } else if (key instanceof String) {
             pstmt.setString(1, (String) key);
         } else {
-            throw new IllegalArgumentException("only keys of type Integer or String are supported. key = "+key);
+            throw new IllegalArgumentException("only keys of type Integer or String are supported. key = " + key);
         }
     }
 }
