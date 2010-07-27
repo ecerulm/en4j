@@ -39,6 +39,9 @@
         <replace file="build/launcher/etc/${app.name}.conf" token="-J-Xms24m -J-Xmx64m" value="${run.args.extra}"/>
         <!-- Replace the icon for the Windows launcher exe. -->
         <antcall target="replaceWindowsLauncherIcon"/>
+
+        <copy file="${basedir}/../README" tofile="${dist.dir}/README.txt"/>
+        <copy file="${basedir}/../LICENSE" tofile="${dist.dir}/LICENSE.txt"/>
     </target>
 
     <!-- Windows-only target that replaces the icon for the launcher exe with our own icon. -->
@@ -50,16 +53,14 @@
     </target>
 
     <target name="build-zip" depends="suite.build-zip">
+        <zip update="true" destfile="${dist.dir}/${app.name}.zip">
+            <zipfileset file="${basedir}/../README" />
+            <zipfileset file="${basedir}/../LICENSE" />
+        </zip>
         <copy file="${dist.dir}/${app.name}.zip" tofile="${dist.dir}/${app.name}-${app.version}.zip"/>
     </target>
 
-    <!-- Override to change Mac application icon. -->
-    <target name="build-mac" depends="suite.build-mac" description="Build Mac OS X Application">
-        <copy  todir="${dist.dir}/${app.name}-${app.version}.app">
-            <fileset dir="${dist.dir}/${app.name}.app"/>
-        </copy>
-    </target>
-
+    
     <target name="build" depends="build-brand,suite.build"/>
 
     <target name="build-brand" depends="-init">
