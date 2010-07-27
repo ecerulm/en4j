@@ -19,7 +19,7 @@
 ################################################################################
 
 NAME ?= EN4J
-VERSION ?= 1.0M1
+VERSION ?= 1.0M2
 
 SOURCE_DIR ?= ../NBPlatformApp/dist
 SOURCE_FILES ?= en4j.app README.txt LICENSE.txt  
