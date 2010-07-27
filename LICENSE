@@ -744,6 +744,10 @@ For the SLF4J component:
  
    See NBPlatformApp/slf4j/LICENSE.txt
 
+For the H2 Database Engine component:
+
+   See NBPlatformApp/NoteRepositoryH2/release/modules/ext/h2-license.html
+
 For the woodstox component:
   
   Woodstox is dual-licensed under 2 alternative Open Source/Free licenses: LGPL 2.1 and Apache License 2.0. (starting with Woodstox 2.0 release).
