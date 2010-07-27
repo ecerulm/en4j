@@ -116,7 +116,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             if (id != cached.getId()) {
                 LOG.log(Level.WARNING, "Weird. We asked the cache for id: {0} and we got a note with id: {1}", new Object[]{id, cached.getId()});
             }
-            LOG.log(Level.INFO, "cache hit note id:{0}", id);
+            LOG.log(Level.FINE, "cache hit note id:{0}", id);
             if (cached.getGuid() != null) {
                 return cached;
             } else {
