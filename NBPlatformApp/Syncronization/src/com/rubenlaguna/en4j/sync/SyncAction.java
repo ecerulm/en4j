@@ -24,8 +24,10 @@ import org.joda.time.Duration;
 import org.joda.time.DateTime;
 import org.joda.time.Minutes;
 import org.joda.time.Seconds;
+import org.netbeans.api.options.OptionsDisplayer;
 import org.openide.awt.StatusDisplayer;
 import org.openide.util.Lookup;
+import org.openide.util.NbPreferences;
 import org.openide.util.RequestProcessor;
 import org.openide.util.actions.Presenter;
 
@@ -37,6 +39,11 @@ public final class SyncAction implements ActionListener, Presenter.Toolbar {
     public void actionPerformed(ActionEvent e) {
         // TODO implement action body
         final SynchronizationService sservice = Lookup.getDefault().lookup(SynchronizationService.class);
+
+        if (!checkUserIsSet()) {
+            showConfigurationDialog();
+            return;
+        }
 
         Runnable task = new Runnable() {
 
@@ -57,6 +64,7 @@ public final class SyncAction implements ActionListener, Presenter.Toolbar {
                         final String message = "sync finished at " + finishTime.toString("HH:mm") + ". Sync took " + minutes.getMinutes() + " minutes and " + seconds.getSeconds() + " seconds.";
                         final StatusDisplayer.Message sbMess = StatusDisplayer.getDefault().setStatusText(message, 1);
                         RP.post(new Runnable() {
+
                             public void run() {
                                 sbMess.clear(10000);
                             }
@@ -70,5 +78,29 @@ public final class SyncAction implements ActionListener, Presenter.Toolbar {
 
     public Component getToolbarPresenter() {
         return toolbarPresenter;
+    }
+
+    private boolean checkUserIsSet() {
+        String userName = NbPreferences.forModule(EN4JPanel.class).get("username", "");
+        if (userName == null) {
+            return false;
+        }
+        userName = userName.trim();
+        if ("".equals(userName)) {
+            return false;
+        }
+        String password = NbPreferences.forModule(EN4JPanel.class).get("password", "");
+        if (password == null) {
+            return false;
+        }
+        password = password.trim();
+        if ("".equals(password)) {
+            return false;
+        }
+        return true;
+    }
+
+    private void showConfigurationDialog() {
+        OptionsDisplayer.getDefault().open("com-rubenlaguna-en4j-sync-EN4JOptionsPanelController");
     }
 }
