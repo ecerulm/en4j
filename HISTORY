@@ -1,0 +1,39 @@
+== 1.0M2 / 2010-07-26
+  * Minor Enhancements
+    * Include LICENSE
+    * Update README with included libraries
+
+== 1.0M1 / 2010-07-26
+  * Minor Enhancements
+    * Increased -Xms and -Xmx in ZIP distribution
+    * Added JMX attributes 
+    * Reuse PreparedStatements for performance. (#52)
+    * Fix URISyntaxException (#68)
+    * Delete temp files on exit (#77)
+    * Avoid exceptions while closing (#69)
+    * Enforce limit of 1 concurrent sync sessions (#71,#86)
+    * Auto clean index when stray/non-existing notes are found
+    * Fix NPE in ImageIcon (#70)
+    * Fixes misplaces images (#74)
+    * Make all windows closeable (#57)
+    * Sync button changes (#59)
+    * Show size of the resource (#55)
+    * Report sync feedback in status bar (#87)
+    * Allow copy of text from notecontentview
+    * Dim/gray out note list while the search is in progress (#62)
+    * Show number of notes in search result (#25)
+    * Added title and sourceurl (#79)
+    * Replaced BeansBinding with GlazedLists (#91)
+    * Fix NPE in valueChanged (#90)
+    * Several UI fixes
+    * Don't autoclose db on shutdown (#93)
+    * Added attributes 'Created' and 'Last modified' to notes
+    * Updated to tika-0.7
+    * Replaced nekohtml by TagSoup
+    * Removed unused menus,actions and option panels (#14,#95,#83)
+    * Update xhtmlrenderer to dev
+  * Major Enhancements
+    * Resources and expunged notes also synced (#73,#67)
+
+== 1.0M0 / 2010-04-13
+  * First version
