@@ -37,6 +37,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
+
+import org.apache.commons.codec.binary.Base64;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.THttpClient;
@@ -94,10 +96,10 @@ class EvernoteProtocolUtil  {
             Cipher dcipher = Cipher.getInstance(key.getAlgorithm());
             AlgorithmParameterSpec paramSpec = new PBEParameterSpec(salt, iterationCount);
             dcipher.init(Cipher.DECRYPT_MODE, key, paramSpec);
-            byte[] dec = new sun.misc.BASE64Decoder().decodeBuffer(consumerKey);
+            byte[] dec = new Base64().decode(consumerKey);
             byte[] utf8 = dcipher.doFinal(dec);
             a = new String(utf8, "UTF8");
-            dec = new sun.misc.BASE64Decoder().decodeBuffer(consumerSecret);
+            dec = new Base64().decode(consumerSecret);
             utf8 = dcipher.doFinal(dec);
             b = new String(utf8, "UTF8");
         } catch (Exception ex) {
