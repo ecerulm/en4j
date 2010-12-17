@@ -4,7 +4,13 @@
 <!-- If you delete this file and reopen the project it will be recreated. -->
 <project name="NBPlatformApp" basedir=".">
     <description>Builds the module suite NBPlatformApp/EN4J.</description>
+    <available file="${basedir}/../netbeans-rcp/harness/suite.xml" property="nbplatform.present" />
 
+    <fail unless="nbplatform.present">
+      Missing NB Platform.
+      Download the NB platform files files into ../netbeans-rcp by issuing:
+        ant -f download_nb_platform.xml
+    </fail>
     <exec outputproperty="app.version" failifexecutionfails="false" executable="git">
         <arg line="describe --always --dirty" />
     </exec>
