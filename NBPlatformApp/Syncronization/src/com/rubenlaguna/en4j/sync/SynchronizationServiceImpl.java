@@ -354,7 +354,7 @@ class RetrieveAndAddNoteTask implements Callable<Boolean> {
                 note = util.getNote(noteGuid, true, true, true, true);
             } catch (Exception ex) {
                 LOG.log(Level.WARNING, "Couldn't retrieve note " + noteGuid, ex);
-                return null;
+                return false;
             }
             long delta = System.currentTimeMillis() - start;
             final String guid = note.getGuid();
