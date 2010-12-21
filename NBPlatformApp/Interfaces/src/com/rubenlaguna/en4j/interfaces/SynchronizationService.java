@@ -25,11 +25,16 @@ import java.util.concurrent.Future;
  */
 public interface SynchronizationService {
 
+    interface Result {
+        boolean isSucceeded();
+        int getUsn();
+    }
+
     final String PROP_PENDINGREMOTEUPDATENOTES = "PendingRemoteUpdateNotes";
 
     boolean sync();
 
-    Future<Boolean> downloadNote(String noteguid);
+    Future<Result> downloadNote(String noteguid);
 
     public int getPendingRemoteUpdateNotes();
 

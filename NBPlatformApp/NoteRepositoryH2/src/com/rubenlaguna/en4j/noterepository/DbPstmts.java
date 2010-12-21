@@ -48,23 +48,23 @@ public class DbPstmts {
     private static final Logger LOG = Logger.getLogger(DbPstmts.class.getName());
     private static DbPstmts theInstance = null;
     private static boolean closed = false;
-    PreparedStatementWrapper<Integer, String> sourceurlPstmt;
-    PreparedStatementWrapper<Integer, Reader> contentFromNotes;
-    PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
-    PreparedStatementWrapper<String, Integer> dataLengthFromResourcesPstmt;
-    PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
-    PreparedStatementWrapper<Integer, Date> createdIdFromNotesPstmt;
-    PreparedStatementWrapper<Integer, Date> updatedIdFromNotesPstmt;
-    PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
-    PreparedStatementWrapper<String, Integer> usnFromResourcesGuidPstmt;
-    PreparedStatementWrapper<String, String> ownerguidFromResourcesPstmt;
-    PreparedStatementWrapper<String, String> mimeFromResources;
-    PreparedStatementWrapper<String, Collection<String>> hashResourcesOwnerPstmt;
-    PreparedStatementWrapper<Integer, Integer> usnFromNotesPstmt;
-    PreparedStatementWrapper<String, String> filenameFromResourcesPstmt;
-    PreparedStatementWrapper<String, String> hashFromResourcesPstmt;
-    PreparedStatementWrapper<Integer, String> titleFromNotes;
-    PreparedStatementWrapper<Integer, Boolean> isNoteActiveFromId;
+    final PreparedStatementWrapper<Integer, String> sourceurlPstmt;
+    final PreparedStatementWrapper<Integer, Reader> contentFromNotes;
+    final PreparedStatementWrapper<String, InputStream> dataFromResourcesPstmt;
+    final PreparedStatementWrapper<String, Integer> dataLengthFromResourcesPstmt;
+    final PreparedStatementWrapper<Integer, String> guidFromNotesPstmt;
+    final PreparedStatementWrapper<Integer, Date> createdIdFromNotesPstmt;
+    final PreparedStatementWrapper<Integer, Date> updatedIdFromNotesPstmt;
+    final PreparedStatementWrapper<String, byte[]> recogFromResourcesPstmt;
+    final PreparedStatementWrapper<String, Integer> usnFromResourcesGuidPstmt;
+    final PreparedStatementWrapper<String, String> ownerguidFromResourcesPstmt;
+    final PreparedStatementWrapper<String, String> mimeFromResources;
+    final PreparedStatementWrapper<String, Collection<String>> hashResourcesOwnerPstmt;
+    final PreparedStatementWrapper<Integer, Integer> usnFromNotesPstmt;
+    final PreparedStatementWrapper<String, String> filenameFromResourcesPstmt;
+    final PreparedStatementWrapper<String, String> hashFromResourcesPstmt;
+    final PreparedStatementWrapper<Integer, String> titleFromNotes;
+    final PreparedStatementWrapper<Integer, Boolean> isNoteActiveFromId;
 
     private DbPstmts() throws SQLException {
         contentFromNotes = new PreparedStatementWrapper<Integer, Reader>(getConnection().prepareStatement("SELECT CONTENT FROM NOTES WHERE ID=?")) {
@@ -122,6 +122,13 @@ public class DbPstmts {
                     toReturn.add(rs.getString("HASH"));
                 } while (rs.next());
                 return toReturn;
+            }
+        };
+        hashFromResourcesPstmt = new PreparedStatementWrapper<String, String>(getConnection().prepareStatement("SELECT HASH FROM RESOURCES WHERE GUID=?")) {
+
+            @Override
+            protected String getResultFromResulSet(ResultSet rs) throws SQLException {
+                    return rs.getString("HASH");
             }
         };
         guidFromNotesPstmt = new PreparedStatementWrapper<Integer, String>(getConnection().prepareStatement("SELECT GUID FROM NOTES WHERE ID =?")) {
@@ -234,13 +241,13 @@ public class DbPstmts {
         }
         if (hash.length() < 32) {
             //if we (incorrectly stored the hash without the left paddind we will add it now
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             for (int i = hash.length(); i < 32; i++) {
                 sb.append("0");
             }
             sb.append(hash);
             final String paddedHash = sb.toString();
-            LOG.warning("padding hash to " + paddedHash + " length:" + paddedHash.length());
+            LOG.log(Level.WARNING, "padding hash to {0} length:{1}", new Object[]{paddedHash, paddedHash.length()});
             return paddedHash;
         }
         return hash;
@@ -252,8 +259,6 @@ public class DbPstmts {
 
     public String getDataHash(String resGuid) {
         final String hash = hashFromResourcesPstmt.get(resGuid);
-
-
         return padded(hash);
     }
 
@@ -330,8 +335,8 @@ public class DbPstmts {
                         PreparedStatementWrapper toClose = (PreparedStatementWrapper) value;
                         LOG.log(Level.INFO, "closing field {0}", fieldName);
                         toClose.close();
-                        LOG.log(Level.INFO, "set field {0} to null", fieldName);
-                        field.set(this, null);
+//                        LOG.log(Level.INFO, "set field {0} to null", fieldName);
+//                        field.set(this, null);
                     }
                 } catch (IllegalArgumentException ex) {
                     LOG.log(Level.SEVERE, "exception field '" + fieldName + "'", ex);

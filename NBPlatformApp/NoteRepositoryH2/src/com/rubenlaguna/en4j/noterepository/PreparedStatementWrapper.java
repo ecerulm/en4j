@@ -31,6 +31,7 @@ public abstract class PreparedStatementWrapper<T, E> {
 
     private static final Logger LOG = Logger.getLogger(PreparedStatementWrapper.class.getName());
     final PreparedStatement pstmt;
+    private boolean alreadyClosed=false;
 
     public PreparedStatementWrapper(PreparedStatement ps) {
         this.pstmt = ps;
@@ -62,10 +63,16 @@ public abstract class PreparedStatementWrapper<T, E> {
     }
 
     public void close() {
+        if (alreadyClosed) {
+            LOG.log(Level.INFO, "{0} is already closed.",new Object[]{this});
+            return;
+        }
+        alreadyClosed=true;
         if (pstmt != null) {
             try {
+                final String st = pstmt.toString();
                 pstmt.close();
-                LOG.log(Level.OFF, "PreparedStatement {0} closed", pstmt);
+                LOG.log(Level.OFF, "PreparedStatement {0} closed", st);
             } catch (SQLException e) {
                 LOG.log(Level.WARNING, "exception caught while trying to close PreparedStatement", e);
             }
