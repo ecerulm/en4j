@@ -41,9 +41,16 @@
             <version>RELEASE70-BETA</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>Interfaces</artifactId>
-            <version>${project.version}</version>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>1.4</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.netbeans.api</groupId>
+            <artifactId>org-openide-util</artifactId>
+            <version>RELEASE70-BETA</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -51,20 +58,45 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.xhtmlrenderer</groupId>
+            <artifactId>core-renderer</artifactId>
+            <version>8.1</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>Interfaces</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.netbeans.api</groupId>
             <artifactId>org-openide-windows</artifactId>
             <version>RELEASE70-BETA</version>
+            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.netbeans.api</groupId>
             <artifactId>org-netbeans-modules-settings</artifactId>
             <version>RELEASE70-BETA</version>
+            <type>jar</type>
         </dependency>
         <dependency>
-            <groupId>org.xhtmlrenderer</groupId>
-            <artifactId>core-renderer</artifactId>
-            <version>R8</version>
+            <artifactId>org-openide-util-lookup</artifactId>
+            <groupId>org.netbeans.api</groupId>
             <type>jar</type>
+            <version>RELEASE70-BETA</version>
+        </dependency>
+        <dependency>
+            <artifactId>org-openide-awt</artifactId>
+            <groupId>org.netbeans.api</groupId>
+            <type>jar</type>
+            <version>RELEASE70-BETA</version>
+        </dependency>
+        <dependency>
+            <artifactId>org-openide-actions</artifactId>
+            <groupId>org.netbeans.api</groupId>
+            <type>jar</type>
+            <version>RELEASE70-BETA</version>
         </dependency>
     </dependencies>
 

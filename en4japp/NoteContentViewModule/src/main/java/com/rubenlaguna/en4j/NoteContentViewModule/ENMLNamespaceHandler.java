@@ -29,7 +29,7 @@ import org.xhtmlrenderer.extend.NamespaceHandler;
  */
 class ENMLNamespaceHandler implements NamespaceHandler {
 
-    private final Logger LOG = Logger.getLogger(ENMLNamespaceHandler.class.getName());
+    private static final Logger LOG = Logger.getLogger(ENMLNamespaceHandler.class.getName());
     private final NamespaceHandler delegate;
 
     public ENMLNamespaceHandler(NamespaceHandler h) {
