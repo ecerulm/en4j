@@ -71,6 +71,7 @@
     <module>NoteInterface</module>
     <module>NoteContentViewModule</module>
     <module>NoteRepositoryH2</module>
+    <module>SearchLucene</module>
   </modules>
 
     <properties>
