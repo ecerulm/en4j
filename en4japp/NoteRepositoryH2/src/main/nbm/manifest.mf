@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+OpenIDE-Module-Install: com/rubenlaguna/en4j/noterepository/Installer.class
+OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/noterepository/Bundle.properties
+OpenIDE-Module-Layer: com/rubenlaguna/en4j/noterepository/layer.xml
+OpenIDE-Module-Provides: com.rubenlaguna.en4j.interfaces.NoteRepository
