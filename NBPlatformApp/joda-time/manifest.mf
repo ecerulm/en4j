@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-OpenIDE-Module: com.rubenlaguna.en4j.jodatime
-OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/jodatime/Bundle.properties
-OpenIDE-Module-Specification-Version: 1.0
-

@@ -1,5 +1,0 @@
-Manifest-Version: 1.0
-OpenIDE-Module: com.rubenlaguna.en4j.tika
-OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/tika/Bundle.properties
-OpenIDE-Module-Specification-Version: 0.7
-

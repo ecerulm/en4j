@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/sync/Bundle.properties
+OpenIDE-Module-Layer: com/rubenlaguna/en4j/sync/layer.xml
+OpenIDE-Module-Install: com/rubenlaguna/en4j/sync/Installer.class
+OpenIDE-Module-Provides: com.rubenlaguna.en4j.interfaces.SynchronizationService
+
