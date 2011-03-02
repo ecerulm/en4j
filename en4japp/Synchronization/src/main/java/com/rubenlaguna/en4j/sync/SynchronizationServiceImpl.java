@@ -50,11 +50,13 @@ import org.openide.awt.StatusDisplayer;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.NbPreferences;
+import org.openide.util.lookup.ServiceProvider;
 
 /**
  *
  * @author ecerulm
  */
+@ServiceProvider(service=SynchronizationService.class)
 public class SynchronizationServiceImpl implements SynchronizationService {
 
     public static final String HIGHESTUSN = "highestUSN";

@@ -37,12 +37,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Lookup;
+import org.openide.util.lookup.ServiceProvider;
 //import com.rubenlaguna.en4j.hsqldbnoterep.Installer;
 
 /**
  *
  * @author ecerulm
  */
+@ServiceProvider(service=NoteRepository.class)
 public class NoteRepositoryH2Impl implements NoteRepository {
 
     private static final Logger LOG = Logger.getLogger(NoteRepositoryH2Impl.class.getName());

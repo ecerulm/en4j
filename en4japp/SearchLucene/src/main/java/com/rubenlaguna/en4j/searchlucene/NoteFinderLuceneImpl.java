@@ -62,6 +62,7 @@ import org.netbeans.api.progress.ProgressHandle;
 import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 import org.openide.util.RequestProcessor;
+import org.openide.util.lookup.ServiceProvider;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.InputSource;
@@ -73,6 +74,7 @@ import org.xml.sax.XMLReader;
  *
  * @author ecerulm
  */
+@ServiceProvider(service=NoteFinder.class)
 public class NoteFinderLuceneImpl implements NoteFinder {
 
     private final int REPORTEVERY = 100;
