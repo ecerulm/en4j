@@ -1,6 +1,6 @@
 <!DOCTYPE mode PUBLIC "-//NetBeans//DTD Mode Properties 2.3//EN" "http://www.netbeans.org/dtds/mode-properties2 3.dtd">
 <mode version="2.3"> 
- <module name="com.rubenlaguna.en4j.mainmodule" spec="1.0"/>
+ <module name="com.rubenlaguna.en4j.MainModule" spec="1.0"/>
  <name	unique="NoteListMode"/>
  <kind	type="view"/>
  <state type="joined"/>
