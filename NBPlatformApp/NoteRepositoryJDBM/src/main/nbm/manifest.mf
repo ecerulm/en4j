@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+OpenIDE-Module-Localizing-Bundle: com/rubenlaguna/en4j/noterepositoryjdbm/Bundle.properties
+OpenIDE-Module-Layer: com/rubenlaguna/en4j/noterepositoryjdbm/layer.xml
