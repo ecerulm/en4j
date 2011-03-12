@@ -27,19 +27,17 @@ import org.apache.commons.math.stat.descriptive.SynchronizedDescriptiveStatistic
  */
 public class JdbmMgmt implements JdbmMgmtMBean {
 
-    
-    private DescriptiveStatistics getAllNotesDs = new SynchronizedDescriptiveStatistics(10);
-    private DescriptiveStatistics getByIdDs = new SynchronizedDescriptiveStatistics(10);
-    private DescriptiveStatistics getByGuiDs = new SynchronizedDescriptiveStatistics(10);
-    private DescriptiveStatistics insertNoteDs = new SynchronizedDescriptiveStatistics(10);
-
-    private final List<Long> samplesGetById = new LinkedList<Long>();
-    private final List<Long> samplesGetByGuid = new LinkedList<Long>();
-    private final List<Long> samplesGetAllNotes = new LinkedList<Long>();
+    private final int SAMPLES = 50;
+    private DescriptiveStatistics getAllNotesDs = new SynchronizedDescriptiveStatistics(SAMPLES);
+    private DescriptiveStatistics getByIdDs = new SynchronizedDescriptiveStatistics(SAMPLES);
+    private DescriptiveStatistics getByGuiDs = new SynchronizedDescriptiveStatistics(SAMPLES);
+    private DescriptiveStatistics insertNoteDs = new SynchronizedDescriptiveStatistics(SAMPLES);
+//    private final List<Long> samplesGetById = new LinkedList<Long>();
+//    private final List<Long> samplesGetByGuid = new LinkedList<Long>();
+//    private final List<Long> samplesGetAllNotes = new LinkedList<Long>();
     private long countGetById = 0;
     private long countGetByGuid = 0;
     private long countGetAllNotes = 0;
-    private final int SAMPLES = 50;
     private long countInsertNote;
     private List<Long> samplesInsertNotes = new LinkedList<Long>();
 
@@ -51,30 +49,35 @@ public class JdbmMgmt implements JdbmMgmtMBean {
         for (Long s : theList) {
             total += s;
         }
-        
-        
+
+
         return total / theList.size();
     }
 
     public JdbmMgmt() {
     }
-    
-    
 
     @Override
-    public long getAvgMsGetById() {
+    public double getAvgMsGetById() {
         return (long) getByIdDs.getMean();
 //        return doAvg(samplesGetById);
     }
 
     @Override
-    public long getAvgMsGetByGuid() {
-        return doAvg(samplesGetByGuid);
+    public double getAvgMsGetByGuid() {
+        return getByGuiDs.getMean();
+//        return doAvg(samplesGetByGuid);
     }
 
     @Override
-    public long getAvgMsGetAllNotes() {
-        return doAvg(samplesGetAllNotes);
+    public double getAvgMsGetAllNotes() {
+        return getAllNotesDs.getMean();
+//        return doAvg(samplesGetAllNotes);
+    }
+    @Override
+    public double getAvgMsInsertNote() {
+        return insertNoteDs.getMean();
+//        return doAvg(samplesInsertNotes);
     }
 
     @Override
@@ -92,6 +95,11 @@ public class JdbmMgmt implements JdbmMgmtMBean {
         return countGetAllNotes;
     }
 
+
+    @Override
+    public long getNumberOfCallsInsertNote() {
+        return countInsertNote;
+    }
     private void doSample(List<Long> theList, long delta) {
         theList.add(delta);
         while (theList.size() > SAMPLES) {
@@ -99,29 +107,23 @@ public class JdbmMgmt implements JdbmMgmtMBean {
         }
     }
 
+
     void sampleGetById(long delta) {
         countGetById++;
-        doSample(samplesGetById, delta);
+        getByIdDs.addValue(delta);
+//        doSample(samplesGetById, delta);
     }
 
-    void sampleGetAllNotes(long l) {
+    void sampleGetAllNotes(long delta) {
         countGetAllNotes++;
-        doSample(samplesGetAllNotes, l);
+        getAllNotesDs.addValue(delta);
+//        doSample(samplesGetAllNotes, delta);
 
     }
 
-    void sampleInsertNote(long l) {
+    void sampleInsertNote(long delta) {
         countInsertNote++;
-        doSample(samplesInsertNotes, l);
-    }
-
-    @Override
-    public long getAvgMsInsertNote() {
-        return doAvg(samplesInsertNotes);
-    }
-
-    @Override
-    public long getNumberOfCallsInsertNote() {
-        return countInsertNote;
+        insertNoteDs.addValue(delta);
+//        doSample(samplesInsertNotes, l);
     }
 }

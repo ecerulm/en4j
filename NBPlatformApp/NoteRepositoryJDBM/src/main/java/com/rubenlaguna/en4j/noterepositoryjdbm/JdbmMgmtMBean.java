@@ -22,13 +22,13 @@ package com.rubenlaguna.en4j.noterepositoryjdbm;
  */
 public interface JdbmMgmtMBean {
 
-    long getAvgMsGetById();
+    double getAvgMsGetById();
 
-    long getAvgMsGetByGuid();
+    double getAvgMsGetByGuid();
 
-    long getAvgMsGetAllNotes();
+    double getAvgMsGetAllNotes();
 
-    long getAvgMsInsertNote();
+    double getAvgMsInsertNote();
 
     long getNumberOfCallsGetById();
 
