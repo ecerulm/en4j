@@ -154,7 +154,7 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
             }
             final Note note = (Note) notesById.find(id);
             long delta = System.currentTimeMillis() - start;
-            Installer.mbean.sampleGetById(delta);
+            Installer.mbean.sampleGetByGuidId(delta);
             return note;
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, "caught exception", ex);

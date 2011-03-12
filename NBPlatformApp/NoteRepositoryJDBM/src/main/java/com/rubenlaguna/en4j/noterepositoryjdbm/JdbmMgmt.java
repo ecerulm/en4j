@@ -113,6 +113,11 @@ public class JdbmMgmt implements JdbmMgmtMBean {
         getByIdDs.addValue(delta);
 //        doSample(samplesGetById, delta);
     }
+    void sampleGetByGuidId(long delta) {
+        countGetByGuid++;
+        getByGuiDs.addValue(delta);
+//        doSample(samplesGetById, delta);
+    }
 
     void sampleGetAllNotes(long delta) {
         countGetAllNotes++;
