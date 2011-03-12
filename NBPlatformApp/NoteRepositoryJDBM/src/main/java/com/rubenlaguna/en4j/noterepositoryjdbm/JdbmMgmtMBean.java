@@ -30,6 +30,8 @@ public interface JdbmMgmtMBean {
 
     double getAvgMsInsertNote();
 
+    double getAvgMsAddNote();
+
     long getNumberOfCallsGetById();
 
     long getNumberOfCallsGetByGuid();
@@ -37,4 +39,6 @@ public interface JdbmMgmtMBean {
     long getNumberOfCallsGetAllNotes();
 
     long getNumberOfCallsInsertNote();
+
+    long getNumberOfCallsAddNote();
 }
