@@ -35,20 +35,18 @@ import org.openide.util.Lookup;
  */
 class NoteImpl implements Note, Serializable, Comparable {
 
-    private String content;
-    private Date created;
-    private Date deleted;
-    private String guid;
-    private String sourceUrl;
-    private String title;
-    private int usn;
-    private Date updated;
-    private Collection<String> resourceHashes;
-    private boolean isActive;
-    private int id;
-
-    NoteImpl() {
-    }
+    static final long serialVersionUID = 2L;
+    private final String content;
+    private final Date created;
+    private final Date deleted;
+    private final String guid;
+    private final String sourceUrl;
+    private final String title;
+    private final int usn;
+    private final Date updated;
+    private final Collection<String> resourceHashes;
+    private final boolean isActive;
+    private final int id;
 
     NoteImpl(NoteReader note, int id) {
         content = note.getContent();
@@ -194,5 +192,27 @@ class NoteImpl implements Note, Serializable, Comparable {
             }
         }
         return 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final NoteImpl other = (NoteImpl) obj;
+        if (this.id != other.id) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 89 * hash + this.id;
+        return hash;
     }
 }

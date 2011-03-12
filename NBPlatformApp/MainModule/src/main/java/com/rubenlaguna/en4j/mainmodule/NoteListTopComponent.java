@@ -128,6 +128,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 final Collection<Note> toRemove = CollectionUtils.subtract(allNotes, allNotesInDb);
                 final Collection<Note> toAdd = CollectionUtils.subtract(allNotesInDb, allNotes);
 
+                LOG.log(Level.INFO,"remove ("+toRemove.size()+") elements and add ("+toAdd.size()+") elements");
                 long startLockList = System.currentTimeMillis();
                 //allNotes.getReadWriteLock().writeLock().lock();
                 try {
