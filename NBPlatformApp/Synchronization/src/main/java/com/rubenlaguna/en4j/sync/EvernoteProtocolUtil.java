@@ -223,18 +223,14 @@ class EvernoteProtocolUtil  {
             }
             return toReturn;
     }
-    public SyncChunk getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) {
-        try {
+    public SyncChunk getSyncChunk(int highestUSN, int numnotes, boolean isFirstSync) throws  EDAMUserException, EDAMSystemException, TTransportException, TException {
             SyncChunk sc = getValidNoteStore().getSyncChunk(getValidAuthToken(), highestUSN, numnotes, isFirstSync);
             updateCount.set(sc.getUpdateCount());
             return sc;
-        } catch (Exception ex) {
-            LOG.log(Level.WARNING, "exception caught:", ex);
-        }
-        return null;
     }
 
     public int getUpdateCount() {
+        if (updateCount == null) return 0;
         return updateCount.get();
     }
 
