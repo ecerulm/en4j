@@ -55,10 +55,12 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
     private static final String NOTESBYID = "byId";
     private static final String NOTESBYGUID = "byGuid";
     private static final String RESBYPARENTGUIDPLUSHASH = "resByGuidPlusHash";
+    private static final String RESBYID = "resById";
     private static final String RESBYGUID = "resByGuid";
     private final RecordManager recman;
     private final BTree notesById;
     private final HTree notesByGuid;
+    private final BTree resById;
     private final HTree resByGuid;
     private final HTree resByPGuidAndHash;
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
@@ -81,6 +83,14 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         } else {
             notesByGuid = HTree.createInstance(recman);
             recman.setNamedObject(NOTESBYGUID, notesByGuid.getRecid());
+        }
+
+        recid = recman.getNamedObject(RESBYID);
+        if (recid != 0) {
+            resById = BTree.load(recman, recid);
+        } else {
+            resById = BTree.createInstance(recman, new ComparableComparator());
+            recman.setNamedObject(RESBYID, resById.getRecid());
         }
 
         recid = recman.getNamedObject(RESBYPARENTGUIDPLUSHASH);
@@ -178,7 +188,8 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         }
 
         try {
-            return (Resource) resByPGuidAndHash.get(parentNoteGuid + hash);
+            Integer resId = (Integer) resByPGuidAndHash.get(parentNoteGuid + hash);
+            return (Resource)resById.find(resId);
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, "caught exception", ex);
         }
@@ -209,6 +220,7 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
             if (null == note) {
                 return false;
             }
+            long start = System.currentTimeMillis();
             if (null == note.getGuid()) {
                 LOG.log(Level.WARNING, "Refuse to store a corrupted note without guid into the db: ({0})", note.getTitle());
             }
@@ -278,6 +290,18 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         this.pcs.removePropertyChangeListener(listener);
     }
 
+    private synchronized Integer getNewId() throws IOException {
+        long recid = recman.getNamedObject(LASTNOTEID);
+        if (recid == 0) {
+            recid = recman.insert(Integer.valueOf(0));
+            recman.setNamedObject(LASTNOTEID, recid);
+        }
+        Integer noteid = (Integer) recman.fetch(recid);
+        noteid++;
+        recman.update(recid, noteid);
+        return noteid;
+    }
+
     private Resource getResourceByGuid(String guid) {
         if (guid == null) {
             throw new IllegalArgumentException("guid can't be null");
@@ -287,11 +311,11 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         }
 
         try {
-            String guid_and_hash = (String) resByGuid.get(guid);
-            if (null == guid_and_hash) {
+            Integer resId = (Integer) resByGuid.get(guid);
+            if (null == resId) {
                 return null;
             }
-            return (Resource) resByPGuidAndHash.get(guid_and_hash);
+            return (Resource) resById.find(resId);
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, "caught exception", ex);
         }
@@ -302,12 +326,17 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         if (null == resource) {
             return false;
         }
-        ResourceImpl impl = new ResourceImpl(resource);
         final String guid_and_hash = resource.getNoteguid() + resource.getDataHash();
-        resByPGuidAndHash.put(guid_and_hash, impl);
+        Integer id = getNewId();
+        ResourceImpl impl = new ResourceImpl(resource,id);
+        Object prev = resById.insert(id,impl,false);
+        if (prev!=null) {
+            throw new IllegalStateException("there was an existing entry with same id");
+        }
+        resByPGuidAndHash.put(guid_and_hash, id);
         final String guid = resource.getGuid();
         if (null != guid) {
-            resByGuid.put(guid, guid_and_hash);
+            resByGuid.put(guid, id);
         }
         return true;
     }
@@ -317,17 +346,13 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
             return false;
         }
         long start = System.currentTimeMillis();
-        long recid = recman.getNamedObject(LASTNOTEID);
-        if (recid == 0) {
-            recid = recman.insert(Integer.valueOf(0));
-            recman.setNamedObject(LASTNOTEID, recid);
-        }
-        Integer noteid = (Integer) recman.fetch(recid);
-        noteid++;
+        Integer noteid = getNewId();
         NoteImpl n = new NoteImpl(note, noteid);
-        notesById.insert(noteid, n, false);
+        Object prev = notesById.insert(noteid, n, false);
+        if (prev!=null) {
+            throw new IllegalStateException("there was an existing entry with same id");
+        }
         notesByGuid.put(n.getGuid(), noteid);
-        recman.update(recid, noteid);
         Installer.mbean.sampleInsertNote(System.currentTimeMillis() - start);
         return true;
     }

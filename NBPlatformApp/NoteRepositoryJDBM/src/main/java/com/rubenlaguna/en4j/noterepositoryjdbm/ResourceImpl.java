@@ -41,30 +41,28 @@ import java.util.logging.Logger;
  */
 final class ResourceImpl implements Resource, Serializable {
 
-    static final long serialVersionUID = 1L;
-    private byte[] data;
-    private byte[] alternateData;
+    static final long serialVersionUID = 3L;
+    private final byte[] data;
+    private final byte[] alternateData;
     private static final Logger LOG = Logger.getLogger(ResourceImpl.class.getName());
     private String hashword;
     private String altDataHashword;
-    private double altitude;
-    private String cameraMake;
-    private String cameraModel;
-    private String filename;
-    private String guid;
-    private double lat;
-    private String noteguid;
-    private double lon;
-    private boolean premiumAtt;
-    private byte[] recog;
-    private Date tstamp;
-    private String mime;
-    private int usn;
+    private final double altitude;
+    private final String cameraMake;
+    private final String cameraModel;
+    private final String filename;
+    private final String guid;
+    private final double lat;
+    private final String noteguid;
+    private final double lon;
+    private final boolean premiumAtt;
+    private final byte[] recog;
+    private final Date tstamp;
+    private final String mime;
+    private final int usn;
+    private final int id;
 
-    ResourceImpl() { // Serializable needs a no-arguments constructor
-    }
-
-    ResourceImpl(Resource resource) throws IOException {
+    ResourceImpl(Resource resource,int id) throws IOException {
         data = getData(resource.getDataAsInputStream());
         alternateData = resource.getAlternateData();
         altitude = resource.getAltitude();
@@ -80,7 +78,7 @@ final class ResourceImpl implements Resource, Serializable {
         recog = resource.getRecognition();
         tstamp = resource.getTimestamp();
         usn = resource.getUpdateSequenceNumber();
-
+        this.id = id;
     }
 
     @Override
