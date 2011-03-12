@@ -20,6 +20,7 @@ import java.lang.management.ManagementFactory;
 import javax.management.JMException;
 import javax.management.ObjectName;
 import org.openide.modules.ModuleInstall;
+import org.openide.util.Lookup;
 
 /**
  *
@@ -31,6 +32,7 @@ public class Installer extends ModuleInstall {
 
     @Override
     public void close() {
+        Lookup.getDefault().lookup(NoteRepositoryJDBMImpl.class).close();
     }
 
     @Override

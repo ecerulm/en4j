@@ -24,6 +24,7 @@ import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
@@ -204,25 +205,31 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
 
     @Override
     public boolean add(NoteReader note) {
-        if (null == note) {
-            return false;
-        }
-        if (null == note.getGuid()) {
-            LOG.log(Level.WARNING, "Refuse to store a corrupted note without guid into the db: ({0})", note.getTitle());
-        }
-        //first iterate over resources and
-        for (Resource resource : note.getResources()) {
-            if (!insertResource(resource)) {
+        try {
+            if (null == note) {
                 return false;
             }
-        }
-        // and then add the note
-        if (!insertNote(note)) {
-            return false;
-        }
+            if (null == note.getGuid()) {
+                LOG.log(Level.WARNING, "Refuse to store a corrupted note without guid into the db: ({0})", note.getTitle());
+            }
+            //first iterate over resources and
+            for (Resource resource : note.getResources()) {
+                if (!insertResource(resource)) {
+                    return false;
+                }
+            }
+            // and then add the note
+            if (!insertNote(note)) {
+                return false;
+            }
 
-        this.pcs.firePropertyChange("notes", null, null);
-        return true;
+            this.pcs.firePropertyChange("notes", null, null);
+            recman.commit();
+            return true;
+        } catch (IOException ex) {
+            LOG.log(Level.WARNING, "caught exception:", ex);
+        } 
+        return false;
 
     }
 
@@ -235,6 +242,7 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
             }
             notesById.remove(noteid);
             notesByGuid.remove(noteguid);
+            recman.commit();
             return true;
         } catch (IOException ex) {
             LOG.log(Level.SEVERE, "caught exception:", ex);
@@ -244,9 +252,15 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
 
     @Override
     public boolean add(Resource r) {
-        boolean toReturn = insertResource(r);
-        this.pcs.firePropertyChange("notes", null, null);
-        return toReturn;
+        try {
+            boolean toReturn = insertResource(r);
+            this.pcs.firePropertyChange("notes", null, null);
+            recman.commit();
+            return toReturn;
+        } catch (IOException ex) {
+            LOG.log(Level.WARNING, "caught exception:", ex);
+            return false;
+        }
     }
 
     @Override
@@ -284,47 +298,46 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
         return null;
     }
 
-    private boolean insertResource(Resource resource) {
-        try {
-            if (null == resource) {
-                return false;
-            }
-            ResourceImpl impl = new ResourceImpl(resource);
-            final String guid_and_hash = resource.getNoteguid() + resource.getDataHash();
-            resByPGuidAndHash.put(guid_and_hash, impl);
-            final String guid = resource.getGuid();
-            if (null != guid) {
-                resByGuid.put(guid, guid_and_hash);
-            }
-            return true;
-        } catch (IOException ex) {
-            LOG.log(Level.SEVERE, "caught exception:", ex);
+    private boolean insertResource(Resource resource) throws IOException {
+        if (null == resource) {
             return false;
         }
+        ResourceImpl impl = new ResourceImpl(resource);
+        final String guid_and_hash = resource.getNoteguid() + resource.getDataHash();
+        resByPGuidAndHash.put(guid_and_hash, impl);
+        final String guid = resource.getGuid();
+        if (null != guid) {
+            resByGuid.put(guid, guid_and_hash);
+        }
+        return true;
     }
 
-    private boolean insertNote(NoteReader note) {
-        try {
-            if (null == note) {
-                return false;
-            }
-            long start = System.currentTimeMillis();
-            long recid = recman.getNamedObject(LASTNOTEID);
-            if (recid == 0) {
-                recid = recman.insert(Integer.valueOf(0));
-                recman.setNamedObject(LASTNOTEID, recid);
-            }
-            Integer noteid = (Integer) recman.fetch(recid);
-            noteid++;
-            NoteImpl n = new NoteImpl(note,noteid);
-            notesById.insert(noteid, n, false);
-            notesByGuid.put(n.getGuid(), noteid);
-            recman.update(recid, noteid);
-            Installer.mbean.sampleInsertNote(System.currentTimeMillis() - start);
-            return true;
-        } catch (IOException ex) {
-            LOG.log(Level.SEVERE, "caught exception:", ex);
+    private boolean insertNote(NoteReader note) throws IOException {
+        if (null == note) {
             return false;
+        }
+        long start = System.currentTimeMillis();
+        long recid = recman.getNamedObject(LASTNOTEID);
+        if (recid == 0) {
+            recid = recman.insert(Integer.valueOf(0));
+            recman.setNamedObject(LASTNOTEID, recid);
+        }
+        Integer noteid = (Integer) recman.fetch(recid);
+        noteid++;
+        NoteImpl n = new NoteImpl(note, noteid);
+        notesById.insert(noteid, n, false);
+        notesByGuid.put(n.getGuid(), noteid);
+        recman.update(recid, noteid);
+        Installer.mbean.sampleInsertNote(System.currentTimeMillis() - start);
+        return true;
+    }
+
+    void close() {
+        try {
+            recman.commit();
+            recman.close();
+        } catch (IOException ex) {
+            LOG.log(Level.SEVERE, "caught exception", ex);
         }
     }
 }

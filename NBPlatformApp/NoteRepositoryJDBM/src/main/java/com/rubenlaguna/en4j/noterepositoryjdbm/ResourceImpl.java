@@ -64,7 +64,7 @@ final class ResourceImpl implements Resource, Serializable {
     ResourceImpl() { // Serializable needs a no-arguments constructor
     }
 
-    ResourceImpl(Resource resource) {
+    ResourceImpl(Resource resource) throws IOException {
         data = getData(resource.getDataAsInputStream());
         alternateData = resource.getAlternateData();
         altitude = resource.getAltitude();
@@ -179,23 +179,18 @@ final class ResourceImpl implements Resource, Serializable {
         return data.length;
     }
 
-    private byte[] getData(InputStream inputStream) {
-        try {
-            BufferedInputStream is = new BufferedInputStream(inputStream);
-            ReadableByteChannel isc = Channels.newChannel(is);
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            WritableByteChannel osc = Channels.newChannel(os);
-            ByteBuffer bb = ByteBuffer.allocate(32000);
-            while (isc.read(bb) != -1) {
-                bb.flip();
-                osc.write(bb);
-                bb.clear();
-            }
-            return os.toByteArray();
-        } catch (IOException ex) {
-            LOG.log(Level.SEVERE, "caught exception:", ex);
+    private byte[] getData(InputStream inputStream) throws IOException {
+        BufferedInputStream is = new BufferedInputStream(inputStream);
+        ReadableByteChannel isc = Channels.newChannel(is);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        WritableByteChannel osc = Channels.newChannel(os);
+        ByteBuffer bb = ByteBuffer.allocate(32000);
+        while (isc.read(bb) != -1) {
+            bb.flip();
+            osc.write(bb);
+            bb.clear();
         }
-        return null;
+        return os.toByteArray();
     }
 
     private String generateHash(byte[] data) {
