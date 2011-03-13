@@ -44,7 +44,7 @@ import org.openide.util.lookup.ServiceProvider;
  *
  * @author ecerulm
  */
-@ServiceProvider(service=NoteRepository.class)
+@ServiceProvider(service = NoteRepository.class)
 public class NoteRepositoryH2Impl implements NoteRepository {
 
     private static final Logger LOG = Logger.getLogger(NoteRepositoryH2Impl.class.getName());
@@ -572,5 +572,10 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         softrefMapById.clear();
         resSoftMapByGuid.clear();
         resSoftMapByOwnerGuidAndHash.clear();
+    }
+
+    @Override
+    public String getName() {
+        return "H2";
     }
 }

@@ -21,6 +21,7 @@ import com.rubenlaguna.en4j.interfaces.NoteRepository;
 
 import com.rubenlaguna.en4j.noteinterface.Note;
 import com.rubenlaguna.en4j.noteinterface.Resource;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryChooser;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.ByteArrayInputStream;
@@ -94,7 +95,7 @@ public class NoteFinderLuceneImpl implements NoteFinder {
     private long lastRun = 0;
 
     public NoteFinderLuceneImpl() {
-        this(Lookup.getDefault().lookup(NoteRepository.class));
+        this(NoteRepositoryChooser.getDefault());
     }
 
     NoteFinderLuceneImpl(NoteRepository testNoteRepository) {

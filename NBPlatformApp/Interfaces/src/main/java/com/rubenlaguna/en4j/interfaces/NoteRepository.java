@@ -59,4 +59,6 @@ public interface NoteRepository {
     void addPropertyChangeListener(PropertyChangeListener listener);
 
     void removePropertyChangeListener(PropertyChangeListener listener);
+
+    public String getName();
 }

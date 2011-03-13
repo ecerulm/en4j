@@ -50,6 +50,30 @@
             <artifactId>org-netbeans-api-progress</artifactId>
             <version>RELEASE70-BETA</version>
         </dependency>
+        <dependency>
+            <groupId>org.netbeans.api</groupId>
+            <artifactId>org-netbeans-modules-options-api</artifactId>
+            <version>RELEASE70-BETA</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <artifactId>org-openide-util</artifactId>
+            <groupId>org.netbeans.api</groupId>
+            <type>jar</type>
+            <version>RELEASE70-BETA</version>
+        </dependency>
+        <dependency>
+            <artifactId>org-openide-util-lookup</artifactId>
+            <groupId>org.netbeans.api</groupId>
+            <type>jar</type>
+            <version>RELEASE70-BETA</version>
+        </dependency>
+        <dependency>
+            <artifactId>org-openide-awt</artifactId>
+            <groupId>org.netbeans.api</groupId>
+            <type>jar</type>
+            <version>RELEASE70-BETA</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -62,6 +86,7 @@
                 <configuration>
                     <publicPackages>
                         <publicPackage>com.rubenlaguna.en4j.interfaces</publicPackage>
+                        <publicPackage>com.rubenlaguna.en4j.noterepository</publicPackage>
                     </publicPackages>
                 </configuration>
             </plugin>

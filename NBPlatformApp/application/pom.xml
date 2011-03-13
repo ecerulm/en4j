@@ -72,6 +72,11 @@
             <artifactId>NoteRepositoryJDBM</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>NoteRepositoryH2</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

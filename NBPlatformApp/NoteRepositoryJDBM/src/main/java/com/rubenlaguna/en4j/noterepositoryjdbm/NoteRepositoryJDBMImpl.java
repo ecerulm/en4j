@@ -366,4 +366,9 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
             LOG.log(Level.SEVERE, "caught exception", ex);
         }
     }
+
+    @Override
+    public String getName() {
+        return "JDBM";
+    }
 }
