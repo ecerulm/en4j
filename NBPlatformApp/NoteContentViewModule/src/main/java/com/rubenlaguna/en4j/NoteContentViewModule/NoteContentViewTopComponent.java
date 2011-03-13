@@ -18,6 +18,7 @@ package com.rubenlaguna.en4j.NoteContentViewModule;
 
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryChooser;
 import java.awt.Desktop;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -208,7 +209,7 @@ public final class NoteContentViewTopComponent extends TopComponent implements L
                 int id = notes.iterator().next().getId();
 
                 //get(id) will gives us a fully loaded entity
-                lastNoteSeen = Lookup.getDefault().lookup(NoteRepository.class).get(id);
+                lastNoteSeen = NoteRepositoryChooser.getDefault().get(id);
                 if (lastNoteSeen != null) {
                     parseAndSetNote(lastNoteSeen);
                 }

@@ -35,7 +35,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.TableModel;
-import org.openide.util.Exceptions;
 import org.openide.util.NbBundle;
 import org.openide.windows.TopComponent;
 import org.openide.windows.WindowManager;
@@ -47,11 +46,11 @@ import org.openide.util.lookup.InstanceContent;
 import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryChooser;
 import java.beans.PropertyChangeListener;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
@@ -59,7 +58,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.TableCellRenderer;
 import org.apache.commons.collections.Closure;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.Predicate;
 import org.openide.util.RequestProcessor;
 
 /**
@@ -93,6 +91,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     private SortedList<Note> sortedList = new SortedList<Note>(filteredList);
     private EventSelectionModel selectionModel = null;
     private long lastPropertyChangeTimestamp = 0;
+    private final NoteRepository rep = NoteRepositoryChooser.getDefault();
 
     public NoteListTopComponent() {
         LOG.log(Level.INFO, "creating NoteListTopComponen {0}", this.toString());
@@ -128,6 +127,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 final Collection<Note> toRemove = CollectionUtils.subtract(allNotes, allNotesInDb);
                 final Collection<Note> toAdd = CollectionUtils.subtract(allNotesInDb, allNotes);
 
+                LOG.log(Level.INFO,"remove ("+toRemove.size()+") elements and add ("+toAdd.size()+") elements");
                 long startLockList = System.currentTimeMillis();
                 //allNotes.getReadWriteLock().writeLock().lock();
                 try {
@@ -262,7 +262,7 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                     LOG.log(Level.FINE, "search for {0} returned {1} results.", new Object[]{text, prelList.size()});
                     notesMatcher.refilter(prelList);
                 }
-                final int repSize = Lookup.getDefault().lookup(NoteRepository.class).size();
+                final int repSize = rep.size();
                 SwingUtilities.invokeLater(new Runnable() {
 
                     @Override
@@ -358,7 +358,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
                 jTable1, sortedList, TableComparatorChooser.SINGLE_COLUMN);
 
 
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         rep.addPropertyChangeListener(this);
         Lookup.getDefault().lookup(NoteFinder.class).addPropertyChangeListener(this);
         LOG.log(Level.INFO, "{0} registered as listener to NoteRepositor and NoteFinder", this.toString());
@@ -391,7 +390,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     @Override
     public void componentClosed() {
         // TODO add custom code on component closing
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         rep.removePropertyChangeListener(this);
         Lookup.getDefault().lookup(NoteFinder.class).removePropertyChangeListener(this);
         LOG.log(Level.INFO, "{0} removed as listener to NoteRepositor and NoteFinder", this.toString());
@@ -426,7 +424,6 @@ public final class NoteListTopComponent extends TopComponent implements ListSele
     }
 
     private Collection<Note> getAllNotesInDb() {
-        NoteRepository rep = Lookup.getDefault().lookup(NoteRepository.class);
         return rep.getAllNotes();
     }
 

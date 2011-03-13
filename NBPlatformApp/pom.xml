@@ -8,6 +8,15 @@
     <packaging>pom</packaging>
 
     <name>en4japp - NB App Parent</name>
+    
+    
+    <licenses>
+        <license>
+            <name>GPLv3</name>
+            <url>http://www.gnu.org/licenses/gpl-3.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <repositories>
         <!--
@@ -47,6 +56,7 @@
                     <configuration>
                         <brandingToken>${brandingToken}</brandingToken>
                         <cluster>${brandingToken}</cluster>
+                        <additionalArguments>-J-Xmx400m -J-Xms90m -J-Dnetbeans.winsys.hideEmptyDocArea=true -J-Dcom.rubenlaguna.level=INFO -J-Dcom.rubenlaguna.en4j.sync.level=INFO -J-Dnetbeans.exception.report.min.level=901</additionalArguments> 
                     </configuration>
                 </plugin>
                 <plugin>
@@ -59,11 +69,11 @@
                         <target>1.6</target>
                     </configuration>
                 </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.3.1</version>
-            </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.3.1</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -71,14 +81,15 @@
     <modules>
         <module>branding</module>
         <module>application</module>
-    <module>MainModule</module>
-    <module>Interfaces</module>
-    <module>NoteInterface</module>
-    <module>NoteContentViewModule</module>
-    <module>NoteRepositoryH2</module>
-    <module>SearchLucene</module>
-    <module>Synchronization</module>
-  </modules>
+        <module>MainModule</module>
+        <module>Interfaces</module>
+        <module>NoteInterface</module>
+        <module>NoteContentViewModule</module>
+        <module>NoteRepositoryH2</module>
+        <module>SearchLucene</module>
+        <module>Synchronization</module>
+        <module>NoteRepositoryJDBM</module>
+    </modules>
 
     <properties>
         <netbeans.version>RELEASE70-BETA</netbeans.version>

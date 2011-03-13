@@ -22,6 +22,7 @@ import com.rubenlaguna.en4j.interfaces.NoteFinder;
 import com.rubenlaguna.en4j.interfaces.NoteRepository;
 import com.rubenlaguna.en4j.interfaces.SynchronizationService;
 import com.rubenlaguna.en4j.noteinterface.Note;
+import com.rubenlaguna.en4j.noterepository.NoteRepositoryChooser;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.util.Collection;
@@ -217,7 +218,7 @@ public class SynchronizationServiceImpl implements SynchronizationService {
                     public Result call()
                             throws Exception {
                         Lookup.getDefault().lookup(NoteFinder.class).removeByGuid(noteguid);
-                        Lookup.getDefault().lookup(NoteRepository.class).deleteNoteByGuid(noteguid);
+                        NoteRepositoryChooser.getDefault().deleteNoteByGuid(noteguid);
                         return new ResultImpl(0, true);
                     }
                 };
@@ -287,7 +288,8 @@ public class SynchronizationServiceImpl implements SynchronizationService {
             synchronized (this) {
                 if (i > getHighestUSN()) {
                     LOG.log(Level.INFO, "setUSN: Updating USN from {0} to {1}", new Object[]{getHighestUSN(), i});
-                    NbPreferences.forModule(SynchronizationServiceImpl.class).putInt(HIGHESTUSN, i);
+                    String repname = NoteRepositoryChooser.getDefault().getName();
+                    NbPreferences.forModule(SynchronizationServiceImpl.class).putInt(HIGHESTUSN+repname, i);
                 }
             }
         }
@@ -397,18 +399,21 @@ public class SynchronizationServiceImpl implements SynchronizationService {
     }
 
     private boolean isFirstSync() {
-        long lastSync = NbPreferences.forModule(SynchronizationServiceImpl.class).getLong(LASTSYNC, 0);
+        String repname = NoteRepositoryChooser.getDefault().getName();
+        long lastSync = NbPreferences.forModule(SynchronizationServiceImpl.class).getLong(LASTSYNC+repname, 0);
         LOG.log(
                 Level.INFO, "Last sync was {0}", new Date(lastSync).toString());
         return lastSync == 0;
     }
 
     private void setLastSync(long currentTimeMillis) {
-        NbPreferences.forModule(SynchronizationServiceImpl.class).putLong(LASTSYNC, currentTimeMillis);
+        String repname = NoteRepositoryChooser.getDefault().getName();
+        NbPreferences.forModule(SynchronizationServiceImpl.class).putLong(LASTSYNC+repname, currentTimeMillis);
     }
 
     private int getHighestUSN() {
-        int highestUSN = NbPreferences.forModule(SynchronizationServiceImpl.class).getInt(HIGHESTUSN, 0);
+        String repname = NoteRepositoryChooser.getDefault().getName();
+        int highestUSN = NbPreferences.forModule(SynchronizationServiceImpl.class).getInt(HIGHESTUSN+repname, 0);
         LOG.log(
                 Level.FINE, "Highest USN is {0}", highestUSN);
         return highestUSN;
@@ -482,7 +487,7 @@ class RetrieveAndAddNoteTask implements Callable<SynchronizationService.Result> 
 
     private boolean addToDb(com.rubenlaguna.en4j.noteinterface.NoteReader note) {
         final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        final NoteRepository nr = NoteRepositoryChooser.getDefault();
         boolean suceeded = nr.add(note);
         if (suceeded) {
             final String guid = note.getGuid();
@@ -501,7 +506,7 @@ class RetrieveAndAddNoteTask implements Callable<SynchronizationService.Result> 
     }
 
     private boolean isUpToDate() {
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        final NoteRepository nr = NoteRepositoryChooser.getDefault();
         Note byGuid = nr.getByGuid(noteGuid, false);
         if (byGuid != null) {
             this.usn = byGuid.getId();
@@ -546,7 +551,7 @@ class RetrieveAndAddResourceTask implements Callable<SynchronizationService.Resu
             long delta = System.currentTimeMillis() - start;
             LOG.log(Level.INFO, "It took {0} ms" + " to download res " + "{1} usn: {2}", new Object[]{delta, guid, this.usn});
             final String noteguid = res.getNoteguid();
-            final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+            final NoteRepository nr = NoteRepositoryChooser.getDefault();
             final com.rubenlaguna.en4j.noteinterface.Note byGuid = nr.getByGuid(noteguid, false);
             if (byGuid == null) {
                 LOG.info("The parent note is missing from the database download it too");
@@ -568,7 +573,7 @@ class RetrieveAndAddResourceTask implements Callable<SynchronizationService.Resu
 
     private boolean addToDb(com.rubenlaguna.en4j.noteinterface.Resource res) {
         final NoteFinder nf = Lookup.getDefault().lookup(NoteFinder.class);
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        final NoteRepository nr = NoteRepositoryChooser.getDefault();
         boolean suceeded = nr.add(res);
         if (suceeded) {
             final String guid = res.getNoteguid();
@@ -587,7 +592,7 @@ class RetrieveAndAddResourceTask implements Callable<SynchronizationService.Resu
     }
 
     private boolean isUpToDate() {
-        final NoteRepository nr = Lookup.getDefault().lookup(NoteRepository.class);
+        final NoteRepository nr = NoteRepositoryChooser.getDefault();
         final Note byGuid = nr.getByGuid(resGuid, false);
         if (byGuid != null) {
             this.usn = byGuid.getUpdateSequenceNumber();
