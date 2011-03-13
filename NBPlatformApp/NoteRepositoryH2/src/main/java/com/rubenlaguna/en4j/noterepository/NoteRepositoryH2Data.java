@@ -28,6 +28,7 @@ public class NoteRepositoryH2Data implements NoteRepositoryH2DataMBean {
 
     private DescriptiveStatistics getAllNotesDs = new SynchronizedDescriptiveStatistics(10);
     private DescriptiveStatistics getNoteDs = new SynchronizedDescriptiveStatistics(10);
+    private DescriptiveStatistics addNoteDs = new SynchronizedDescriptiveStatistics(10);
 
     public NoteRepositoryH2Data() {
     }
@@ -51,6 +52,14 @@ public class NoteRepositoryH2Data implements NoteRepositoryH2DataMBean {
     }
 
     public void sampleGetNote(long i) {
+        getNoteDs.addValue(i);
+    }
+    
+    public double getAddNoteAverageMs() {
+        return getNoteDs.getMean();
+    }
+
+    public void sampleAddNote(long i) {
         getNoteDs.addValue(i);
     }
 }

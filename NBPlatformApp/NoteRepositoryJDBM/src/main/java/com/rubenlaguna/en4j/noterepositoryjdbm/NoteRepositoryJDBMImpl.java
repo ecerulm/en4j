@@ -235,9 +235,9 @@ public class NoteRepositoryJDBMImpl implements NoteRepository {
                 return false;
             }
 
-            this.pcs.firePropertyChange("notes", null, null);
             recman.commit();
             Installer.mbean.sampleAddNote(System.currentTimeMillis()-start);
+            this.pcs.firePropertyChange("notes", null, null);
             return true;
         } catch (IOException ex) {
             LOG.log(Level.WARNING, "caught exception:", ex);

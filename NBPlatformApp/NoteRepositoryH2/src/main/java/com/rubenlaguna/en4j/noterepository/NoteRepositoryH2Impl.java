@@ -221,6 +221,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
         if (null == note.getGuid()) {
             LOG.log(Level.WARNING, "Refuse to store a corrupted note without guid into the db: ({0})", note.getTitle());
         }
+        long start = System.currentTimeMillis();
         //first iterate over resources and
         for (Resource resource : note.getResources()) {
             if (!insertResource(resource)) {
@@ -232,6 +233,7 @@ public class NoteRepositoryH2Impl implements NoteRepository {
             return false;
         }
 
+        Installer.mbean.sampleAddNote(System.currentTimeMillis()-start);
         this.pcs.firePropertyChange("notes", null, null);
         return true;
     }

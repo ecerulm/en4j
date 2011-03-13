@@ -14,7 +14,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package com.rubenlaguna.en4j.noterepository;
 
 /**
@@ -22,8 +21,7 @@ package com.rubenlaguna.en4j.noterepository;
  *
  * @author Ruben Laguna <ruben.laguna@gmail.com>
  */
-public interface NoteRepositoryH2DataMBean
-{
+public interface NoteRepositoryH2DataMBean {
 
     /**
      * Get Number of ms that takes to retrieve all notes from database
@@ -35,8 +33,7 @@ public interface NoteRepositoryH2DataMBean
      */
     public double getGetNoteAverage();
 
+    public double getAddNoteAverageMs();
 
-    
+    public void sampleAddNote(long i);
 }
-
-
